@@ -1,0 +1,124 @@
+{
+  "benchmark": "MMLU-Pro",
+  "dataset_version": "mmlu_pro_v1",
+  "splits": {
+    "test": {
+      "questions_loaded": 12032,
+      "questions_valid": 12031,
+      "unique_questions_removed": 1,
+      "removed_by_reason": {
+        "empty_question_text": 0,
+        "invalid_options": 0,
+        "empty_option": 0,
+        "duplicate_options": 1,
+        "invalid_correct_answer": 0
+      },
+      "removed_questions": [
+        {
+          "stable_id": "mmlu_pro_v1:test:8584",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        }
+      ]
+    },
+    "validation": {
+      "questions_loaded": 70,
+      "questions_valid": 56,
+      "unique_questions_removed": 14,
+      "removed_by_reason": {
+        "empty_question_text": 0,
+        "invalid_options": 0,
+        "empty_option": 0,
+        "duplicate_options": 14,
+        "invalid_correct_answer": 0
+      },
+      "removed_questions": [
+        {
+          "stable_id": "mmlu_pro_v1:validation:4",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:9",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:11",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:16",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:20",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:21",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:23",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:24",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:30",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:40",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:45",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:47",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:50",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        },
+        {
+          "stable_id": "mmlu_pro_v1:validation:55",
+          "failure_reasons": [
+            "duplicate_options"
+          ]
+        }
+      ]
+    }
+  }
+}
