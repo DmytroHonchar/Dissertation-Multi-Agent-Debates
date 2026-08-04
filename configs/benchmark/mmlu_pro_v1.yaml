@@ -1,0 +1,20 @@
+benchmark:
+  name: MMLU-Pro
+
+dataset:
+  url: https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro
+  local_version: mmlu_pro_v1
+  revision: b189ec765aa7ed75c8acfea42df31fdae71f97be
+  download_date: 2026-08-04
+
+splits:
+  primary: test
+  development_only: validation
+
+files:
+  test:
+    path: data/raw/mmlu_pro/test-00000-of-00001.parquet
+    sha256: 0e24a191921c2f453518a537a8b2117bd137e7714d4ef1565e9ba06c1ecb9ad8
+  validation:
+    path: data/raw/mmlu_pro/validation-00000-of-00001.parquet
+    sha256: 139423c23722e480c807ac4a191409a710cfce4eba744c1d641cf88e730e2078
