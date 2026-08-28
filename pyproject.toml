@@ -5,6 +5,7 @@ requires-python = ">=3.11"
 dependencies = [
     "pyarrow>=15.0",
     "PyYAML>=6.0",
+    "requests>=2.32",
 ]
 
 [project.optional-dependencies]
