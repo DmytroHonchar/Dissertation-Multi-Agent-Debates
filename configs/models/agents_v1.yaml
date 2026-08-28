@@ -5,12 +5,19 @@ registry:
 
 # Applied to every agent unless the agent overrides the same key.
 defaults:
-  temperature: 0.7
+  # Temperature 0: the experiment measures the effect of voting and of
+  # cross-model communication. Sampling randomness would add a third source of
+  # variation and make that comparison less controlled. Decision D002.
+  temperature: 0
   top_p: 1.0
   max_tokens: 1024
-  # Pin generation to a single upstream provider so a silent failover cannot
-  # change quantisation or serving stack halfway through a run.
-  allow_provider_fallbacks: false
+  # OpenRouter chooses an available upstream provider. Pinning each agent to one
+  # named provider is deferred until before the pilot (D015). The served model
+  # and provider are recorded on every response regardless, so any routing
+  # change stays auditable.
+  allow_provider_fallbacks: true
+  # Route only to providers that honour the requested parameters, so
+  # temperature 0 is not silently ignored by a provider that cannot apply it.
   require_parameters: true
 
 agents:
