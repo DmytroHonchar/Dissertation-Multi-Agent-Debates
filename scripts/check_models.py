@@ -1,8 +1,19 @@
 """Verify every configured agent slug exists on OpenRouter and answers a prompt.
 
+A model passes the smoke test when the request succeeds, the response body is
+well formed, and the visible content is not empty. Empty content is a FAILURE,
+not a pass: some reasoning models spend their whole completion budget before
+emitting anything visible, which is exactly the condition the pilot must catch.
+See docs/decisions.md D002.
+
+OpenRouter chooses the upstream provider. The served model and provider are
+logged on every call, but a response is never rejected for coming from a
+different provider than last time — pinning is deferred until before the pilot
+(D015).
+
 Usage:
-    python scripts/check_models.py                 # registry check only
-    python scripts/check_models.py --smoke-test    # also send one cheap prompt each
+    python scripts/check_models.py                 # registry check only, no cost
+    python scripts/check_models.py --smoke-test    # also send one real prompt each
 """
 
 from __future__ import annotations
@@ -23,12 +34,16 @@ MODEL_CONFIG_PATH = Path(__file__).resolve().parents[1] / "configs/models/agents
 SMOKE_TEST_MESSAGES = [
     {"role": "user", "content": "Reply with exactly one word: ready"},
 ]
+# Large enough that a reasoning model can finish thinking and still emit visible
+# content. At 16 tokens Qwen and DeepSeek returned nothing on 2026-08-26.
+SMOKE_TEST_MAX_TOKENS = 256
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=MODEL_CONFIG_PATH)
     parser.add_argument("--smoke-test", action="store_true")
+    parser.add_argument("--smoke-max-tokens", type=int, default=SMOKE_TEST_MAX_TOKENS)
     args = parser.parse_args()
 
     registry = load_model_registry(args.config)
@@ -56,16 +71,35 @@ def main() -> int:
 
             if args.smoke_test:
                 try:
-                    result = client.complete(spec, SMOKE_TEST_MESSAGES, max_tokens=16)
+                    result = client.complete(
+                        spec, SMOKE_TEST_MESSAGES, max_tokens=args.smoke_max_tokens
+                    )
                 except ApiRequestError as error:
                     failures += 1
                     print(f"           smoke test FAILED: {error}")
-                else:
+                    continue
+
+                print(
+                    f"           requested={result.requested_slug} "
+                    f"served={result.served_slug} provider={result.provider!r}"
+                )
+                print(
+                    f"           finish={result.finish_reason!r} "
+                    f"tokens={result.prompt_tokens}+{result.completion_tokens} "
+                    f"{result.latency_seconds:.1f}s ${result.cost_usd:.6f} "
+                    f"attempts={result.attempts}"
+                )
+
+                if not result.text.strip():
+                    failures += 1
                     print(
-                        f"           smoke test ok: {result.text.strip()!r} "
-                        f"via {result.provider} "
-                        f"({result.latency_seconds:.1f}s, ${result.cost_usd:.6f})"
+                        "           smoke test FAILED: empty visible content "
+                        f"(finish_reason={result.finish_reason!r}, "
+                        f"{result.completion_tokens} completion tokens). "
+                        "Raise --smoke-max-tokens or treat this model as unusable."
                     )
+                else:
+                    print(f"           smoke test ok: {result.text.strip()!r}")
 
     print(f"\n{len(registry) - failures}/{len(registry)} agents usable.")
     return 1 if failures else 0

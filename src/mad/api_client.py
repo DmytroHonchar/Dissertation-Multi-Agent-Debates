@@ -12,7 +12,8 @@ import yaml
 
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_TIMEOUT_SECONDS = 120.0
-DEFAULT_MAX_ATTEMPTS = 5
+# One initial attempt plus exactly one retry after a temporary failure (D012).
+DEFAULT_MAX_ATTEMPTS = 2
 RETRYABLE_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504})
 
 
@@ -149,7 +150,12 @@ class OpenRouterClient:
             "max_tokens": max_tokens if max_tokens is not None else spec.max_tokens,
             "usage": {"include": True},
             "provider": {
+                # OpenRouter picks an available provider. Pinning to one named
+                # provider is deferred until before the pilot (D015); the served
+                # provider is recorded on every response either way.
                 "allow_fallbacks": spec.allow_provider_fallbacks,
+                # Still route only to providers that honour temperature/top_p,
+                # so temperature 0 is not silently ignored.
                 "require_parameters": spec.require_parameters,
             },
         }
