@@ -1,0 +1,388 @@
+# Build Pipeline
+
+How each stage of the experiment is built. This document is the **technical
+reference**: it says *how* to implement a stage.
+
+Precedence, so there is exactly one answer to any question:
+
+| Document | Answers | Authority |
+|---|---|---|
+| `docs/decisions.md` | *What is decided and frozen* | Highest. If this file disagrees with it, this file is wrong. |
+| `docs/pipeline.md` (here) | *How to build each stage* | Implementation detail only. |
+| `docs/checklist.md` | *What order, and what is done* | Progress tracking only. |
+| `docs/development_log.md` | *What actually happened* | Append-only history. |
+
+This pipeline replaces the obsolete three-model `0.x` version, which assumed
+GPT/Claude/Gemini through three separate SDKs and a two-of-three vote. Its
+stage-by-stage engineering detail was kept; every count, provider and threshold
+was updated to the fixed five-agent design in `decisions.md`.
+
+Stages marked **DONE** are built and tested. Stages marked **OPEN** contain a
+decision that must be recorded in `decisions.md` before the pilot is frozen.
+
+---
+
+## P1 — Question set — DONE
+
+Implemented in `src/mad/benchmark.py`, frozen in `data/frozen/mmlu_pro_v1`.
+
+MMLU-Pro test split, revision pinned in `configs/benchmark/mmlu_pro_v1.yaml`.
+Every question carries a stable ID assigned before filtering. Questions were
+validated (non-empty text, non-empty options, no duplicate options, correct
+letter maps to a real option); one invalid question was removed and the removal
+is recorded in `metadata/validation_report.json`.
+
+Seed 42, category-stratified: 300 experimental questions and 20 non-overlapping
+pilot questions. Model inputs and answer keys are stored in separate files with
+SHA-256 checksums. Prompt-building and calling code receives question ID, text
+and options only — never the answer. Guarded by `tests/test_no_answer_leakage.py`.
+
+**Do not regenerate.** The frozen set is final.
+
+## P2 — Round 1 prompt
+
+New file `src/mad/prompts_v1.py`, carrying `PROMPT_VERSION = "round1_v1"`.
+
+The version label covers the system instructions, the prompt wording, and the
+question-formatting function together. Change any one of them and the version
+changes.
+
+The prompt instructs the model to reason, then to end with `FINAL ANSWER: X` on
+its own line, where `X` is exactly one of the letters offered by that question,
+chosen even when the model is uncertain.
+
+One formatting function renders the stored question as its text followed by
+every option in stored order. MMLU-Pro questions have up to ten options, so the
+option count must be read from the question — never hardcoded to four.
+
+The same wording goes to all five agents. Round 1 must not mention other
+agents, a later round, review, or the correct answer.
+
+Record `PROMPT_VERSION` on every stored response.
+
+## P3 — Generation settings
+
+Shared defaults live in `configs/models/agents_v1.yaml`: **temperature `0`**,
+**top-p `1.0`**, `max_tokens 1024`, `allow_provider_fallbacks: true`,
+`require_parameters: true`.
+
+Temperature 0 is fixed (D002): the study measures the effect of aggregation and
+of communication, and sampling noise would add a third source of variation.
+Diversity comes from five different model families, not from sampling.
+`require_parameters` keeps routing to providers that actually honour those
+settings, so temperature 0 cannot be silently dropped.
+
+**Provider routing is automatic for now and pinning is deferred until before the
+pilot (D015).** The served model and provider are recorded on every response, and
+a response is never rejected for coming from a different provider. This is
+adequate for building and for connectivity checks; it is not adequate for the
+main run, because automatic routing was observed changing provider between
+consecutive runs and providers serve the same model at different quantisations.
+
+Still open before the pilot freeze:
+
+- **Provider pinning** (D015) — resolve and record it, together with what happens
+  when a pinned provider is unavailable.
+- **Mistral availability** (D016) — measure the real HTTP 429 rate during the
+  pilot and decide how to handle it.
+- **`max_tokens` per round.** 1024 is provisional. Reasoning models bill and
+  consume tokens before emitting anything visible — on 2026-08-28 Qwen used up to
+  33 and DeepSeek 11 completion tokens to answer a one-word prompt, and at 16
+  tokens on 2026-08-26 both returned nothing at all. Round 2 also carries four
+  peer responses in its prompt. Treat `max_tokens` as a per-round setting and
+  confirm both values in the pilot.
+- **Bootstrap seed** for P12, so the confidence interval is reproducible.
+
+Do not rely on the API `seed` parameter. Support varies and the experiment does
+not depend on it. Record the limitation that identical settings still do not
+guarantee byte-identical outputs from a hosted API.
+
+## P4 — Results database
+
+New file `src/mad/database.py`. SQLite. Four tables.
+
+`runs` — one row per run: run ID, configuration name, question-set version,
+prompt version, settings version, parser version, start time, end time.
+
+`model_responses` — one row per `(run, question, round, agent)`: run ID, question
+ID, round, `agent_id`, requested slug, served slug, provider, generation ID, raw
+response text, extracted letter, extraction method, status, attempt count,
+selected attempt, finish reason, prompt version, temperature, `top_p`,
+`max_tokens`, prompt tokens, completion tokens, cost, latency, cache-hit flag,
+timestamp. For Round 2, also the anonymised references to the four peer
+responses supplied to that agent (D007).
+
+`response_attempts` — one row per API attempt, linked to its parent
+`model_responses` row: attempt number, raw response, extracted letter, status,
+finish reason, tokens, latency, cache-hit flag.
+
+`question_outcomes` — one row per `(run, question, round)`: consensus state,
+consensus answer, whether decided, valid-answer count, total tokens, total
+latency. Round 1 and Round 2 outcomes are separate rows, because comparing them
+is the research question.
+
+Rules: store the full raw response before parsing, never only the letter. Never
+overwrite a row — a repeat means a new run ID. The correct answer never enters
+this path; only evaluation reads the answer key.
+
+## P5 — Response cache
+
+New file `src/mad/cache.py`. Separate store from the results database. It exists
+only to avoid paying twice; it is not part of the experimental record.
+
+Every call passes through it. The key hashes: model slug, the full message list,
+temperature, `top_p`, `max_tokens`, and `agent_id`. `agent_id` is included even
+though it is not sent to the API, so two agents issuing an identical request
+cannot share one response. Round and peer content need no separate key field —
+they are already inside the message list. The run ID is excluded, so responses
+are reusable across runs.
+
+Store the complete raw API body, not just the text, and store the original
+latency — return that on a hit, not the lookup time.
+
+Cache genuine model outcomes, including refusals and unparseable replies. Never
+cache transport, rate-limit or provider errors; caching those would make a
+temporary failure permanent.
+
+Provide a `--no-cache` flag for deliberately measuring non-determinism.
+
+## P6 — Parser and failure statuses
+
+New file `src/mad/parser_v1.py`, one parser for all five agents.
+
+Input: raw text, the valid letters for that question, the provider finish
+reason, and any refusal signal.
+
+Search the whole response for `FINAL ANSWER: X`, case-insensitively, tolerating
+extra spaces. On multiple matches use the last, and record the extraction method
+as `LAST_FINAL_ANSWER_MATCH`. Accept only a bare letter belonging to that
+question's real options; uppercase it. `FINAL ANSWER: B` is accepted,
+`FINAL ANSWER: [B]` is not. Text after the answer line is allowed. Never infer
+an answer from the reasoning.
+
+Statuses: `OK`, `REFUSAL`, `TRUNCATED`, `PARSE_FAIL`, `API_ERROR`.
+
+An empty response is `PARSE_FAIL`. `REFUSAL` and `TRUNCATED` take priority even
+when a letter is present. Identify truncation from the provider finish reason
+first; inspect text only when no finish reason is returned.
+
+**Retry (D012, settled).** One initial attempt plus exactly one retry — two in
+total. This lives in `OpenRouterClient._post_with_retries`, where
+`DEFAULT_MAX_ATTEMPTS = 2`. Do not add a second retry loop on top of it; the
+parser and orchestrator add none. `REFUSAL`, `TRUNCATED` and `PARSE_FAIL` are
+never retried: they are real model outcomes, and an identical retry stops in the
+same place. An upstream provider error that survives both attempts is recorded as
+`API_ERROR`, never as a wrong answer.
+
+Summary selection for `model_responses`: the first `OK` attempt; if none, the
+last failed attempt. Record which attempt was selected and how many were made.
+
+Count tokens and cost from every live attempt, not only the selected one —
+failures cost money. Cache hits keep their stored token counts but add no spend.
+
+Never count a failure as a wrong answer. Always report accuracy among
+successfully answered questions *together with* the failure rate broken down by
+status and by agent.
+
+Test before the pilot against: valid answers, lowercase, extra spaces, bracketed
+letters, multiple answer lines, trailing text, letters outside the option set,
+missing answers, empty responses, refusals, truncation, and API errors.
+
+## P7 — Shared calling layer — DONE
+
+`src/mad/api_client.py`. One OpenRouter key reaches all five models, so the old
+three-SDK normalisation problem no longer exists.
+
+`OpenRouterClient.complete()` returns a `CompletionResult` carrying text,
+`agent_id`, requested slug, served slug, provider, generation ID, finish reason,
+prompt and completion tokens, cost, latency and attempt count — the provenance
+D007 requires. `load_model_registry()` builds a `ModelSpec` per agent from
+`configs/models/agents_v1.yaml`. Verified against all five models by
+`scripts/check_models.py` on 2026-08-26.
+
+Still to add when the orchestrator is built: fixed call order — cache lookup,
+API call on miss, parse, store — five parallel calls per question per round, and
+per-call exception isolation so one agent's failure cannot end the run.
+
+## P8 — Round 1 configuration
+
+New versioned config, `CONFIG_VERSION = "round1_config_v1"`, recording the
+question-set version, the five model slugs and their `agent_id`s, prompt
+version, settings version, parser version, cache on/off, timeout, retry policy,
+and whether calls run in parallel.
+
+The agent-to-model mapping is fixed for the whole experiment.
+
+Round 1 has no communication between agents: same question and options to all
+five, answered independently, no agent sees another's answer, no agent is told a
+second round follows.
+
+API keys stay in the ignored `.env` only — never in configs, the database, git,
+prompts or results.
+
+## P9 — Voting
+
+Fixed rule (D004): a group answer requires **at least three matching votes out
+of the five configured agents**. A failed, missing, empty or unparseable
+response contributes no vote, and the threshold stays at three — it is never
+reduced to a majority of the successful responses. No judge model, no tie-break.
+
+Recorded consensus states, all derived from that single rule:
+
+| State | Condition |
+|---|---|
+| `UNANIMOUS` | five valid answers, all identical |
+| `CONSENSUS` | some answer holds three or four votes |
+| `NO_CONSENSUS` | three or more valid answers, none reaching three votes |
+| `INSUFFICIENT_ANSWERS` | fewer than three valid answers, so three votes is unreachable |
+
+`INSUFFICIENT_ANSWERS` is a reporting label, not a second rule — it separates
+"the agents disagreed" from "too many agents failed", which matter differently
+in the results chapter. Both are undecided.
+
+Store the state, the consensus letter where one exists, whether the question was
+decided, and the valid-answer count — separately for Round 1 and Round 2.
+
+**Scoring (D010).** An undecided question counts as **incorrect** in group
+accuracy, and is also reported as its own category. Group accuracy therefore
+always has a denominator of all 300 questions, which is what keeps Round 1 and
+Round 2 comparable when the two rounds decide different numbers of questions.
+Do not silently drop undecided questions from the denominator — that would
+inflate whichever round failed more.
+
+## P10 — Round 2
+
+New file `src/mad/debate.py`. This stage did not exist in the old pipeline.
+
+Each agent receives the original question and options plus the anonymised Round
+1 responses of the **other four** agents. It never receives its own Round 1
+response as a peer response, and peer model identities are never disclosed.
+Peer ordering must be deterministic given the run and question, so the run can
+be reconstructed.
+
+Each agent answers again in the same `FINAL ANSWER: X` format. Round 2 answers
+are parsed and voted on separately under the same three-of-five rule.
+
+A Round 1 failure means that agent contributes no peer response, so some agents
+may see fewer than four. Record how many peer responses each agent actually
+received — it is a confound the results chapter must report.
+
+A third round is desirable future work, not part of this implementation. If it
+is ever built, D014 restricts it: it is offered only to questions still without a
+majority after Round 2, not to every question, and it must not alter the frozen
+core configuration or the D009 headline comparison.
+
+## P11 — Pilot
+
+The 20 frozen pilot questions, both rounds, full pipeline.
+
+Confirm by hand: all five agents received identical Round 1 input; no prompt
+ever contained the correct answer; each Round 2 prompt contained exactly the
+four other agents' anonymised responses and never the agent's own; letters were
+extracted correctly; raw responses were preserved; served model, provider,
+tokens, cost, latency and finish reason were stored; cache hits do not reach the
+API; an induced API error does not end the run; five parallel calls do not
+interfere; every row links to the right run, question, round and agent.
+
+Check `TRUNCATED` rates specifically — the smoke test already warned about
+reasoning models. If truncation is common, raise `max_tokens`, bump the settings
+version and rerun the pilot. Resolve this before the main run.
+
+Re-estimate cost from real pilot token usage against the £15 budget (D006).
+
+Then **freeze** prompts, model settings, parser rules, retry policy and
+configuration, and record every final version name in `decisions.md`.
+
+Pilot results are development data. They never appear in the final results.
+
+## P12 — Main run and evaluation
+
+New file `src/mad/evaluation.py`, built and validated on pilot data *before* the
+main run. It reads the stored database and the separate answer key. It never
+makes a model call, and the answer key never returns to prompt-building or
+calling code. It is the only module permitted to open an answer key.
+
+The main run processes all 300 frozen questions through both rounds under the
+frozen configuration, with a fresh run ID. Nothing changes mid-run. On
+completion, record the end time, mark the run complete, and back up the database.
+
+### The three headline measures (D009)
+
+Computed on the same 300 questions and never collapsed into one figure:
+
+1. **Per-agent Round 1 accuracy**, over that agent's valid parsed answers only.
+2. **Round 1 group vote accuracy** — aggregation, no communication.
+3. **Round 2 group vote accuracy** — after one round of communication.
+
+(2) − (1) isolates aggregation. (3) − (2) isolates debate and answers the
+research question.
+
+### Statistics (D011)
+
+Fixed in D011 on 2026-08-28, before any results exist.
+
+**Primary outcome:** (3) − (2), in percentage points, on the same 300 questions.
+
+**Confidence interval — paired question-level bootstrap.** Resample the 300
+questions with replacement 10,000 times. For each resample recompute both round
+accuracies and their difference. Report the 2.5th and 97.5th percentiles as the
+95% interval. Resample whole *questions*, never rounds independently: each
+question's Round 1 and Round 2 outcomes must stay paired. Fix and record the
+bootstrap seed so the interval is reproducible.
+
+**Significance:** McNemar's exact test on the paired correct/incorrect results.
+If there are no discordant pairs, report **p = 1** rather than an error.
+
+Report the four-way transition counts between rounds:
+
+| | Round 2 correct | Round 2 incorrect |
+|---|---|---|
+| **Round 1 correct** | stayed correct | became incorrect |
+| **Round 1 incorrect** | became correct | stayed incorrect |
+
+The off-diagonal cells are the substance of the dissertation: how often debate
+repaired a wrong group answer, and how often it broke a right one. Produce the
+same table for individual agents over their valid answers.
+
+### Also report, per round
+
+Per-agent failure rate split by `REFUSAL`, `TRUNCATED`, `PARSE_FAIL` and
+`API_ERROR`; unanimous / consensus / no-consensus / insufficient-answer rates;
+token usage; actual cost against the £15 budget; wall-clock time and per-call
+latency.
+
+**Desirable (D014):** the same breakdown per MMLU-Pro subject category. Build it
+only after the core results exist.
+
+Dependencies: McNemar's exact test needs `scipy` or `statsmodels`. Add it when
+this module is written, not before. The bootstrap itself needs nothing beyond
+the standard library.
+
+## P13 — Replay interface
+
+New file `app/viewer.py`. Streamlit. **Read-only**: it opens the results
+database, never calls a model, never writes, never changes a stored result.
+
+Required by CA2 on 2026-11-06 — the demonstration uses a real stored debate, so
+this cannot be left to the end.
+
+Layout, per the CA1 mockup:
+
+- Question selector, showing the question's subject.
+- The question text and every option (up to ten).
+- **Round 1** — the five agents side by side, each with its answer letter and
+  reasoning. Then the first majority vote and how it was reached
+  ("B — majority reached with three of five votes").
+- **Round 2** — the same five agents, each marked **changed** or **unchanged**
+  against its Round 1 answer, with the revised reasoning. Then the final vote and
+  the outcome (correct / incorrect / no consensus).
+- Per-question totals: tokens, estimated cost, response time.
+
+Agents are shown as `agent_1`…`agent_5` or by model name, but the *stored* Round
+2 peer inputs stay anonymised — the viewer may reveal identities after the fact,
+the debate never did.
+
+Show failures honestly. An agent that returned `TRUNCATED` or `PARSE_FAIL` is
+displayed as such, not as a blank or a guess.
+
+Dependencies: `streamlit`. Add it when this module is written, not before.
