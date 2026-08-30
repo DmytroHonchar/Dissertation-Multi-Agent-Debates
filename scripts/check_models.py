@@ -30,16 +30,22 @@ from mad.api_client import (  # noqa: E402
     load_model_registry,
 )
 
+# 1. Settings
+
 MODEL_CONFIG_PATH = Path(__file__).resolve().parents[1] / "configs/models/agents_v1.yaml"
 SMOKE_TEST_MESSAGES = [
     {"role": "user", "content": "Reply with exactly one word: ready"},
 ]
-# Large enough that a reasoning model can finish thinking and still emit visible
-# content. At 16 tokens Qwen and DeepSeek returned nothing on 2026-08-26.
+# Big enough that a reasoning model can think and still say something.
+# At 16 tokens, Qwen and DeepSeek returned nothing at all.
 SMOKE_TEST_MAX_TOKENS = 256
 
 
+# 2. The check
+
+
 def main() -> int:
+    """Look up all five models, and optionally send each one a real prompt."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=MODEL_CONFIG_PATH)
     parser.add_argument("--smoke-test", action="store_true")
@@ -105,8 +111,11 @@ def main() -> int:
     return 1 if failures else 0
 
 
+# 3. Helpers
+
+
 def _suggest(slug: str, available: dict[str, dict]) -> list[str]:
-    """Offer same-family slugs so a renamed or hallucinated model is easy to fix."""
+    """If a model ID is wrong, list others from the same company as hints."""
     family = slug.split("/")[0]
     return sorted(other for other in available if other.startswith(f"{family}/"))[:8]
 
