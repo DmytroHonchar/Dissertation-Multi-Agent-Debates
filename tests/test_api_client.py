@@ -1,7 +1,6 @@
-"""Offline tests for the shared OpenRouter calling layer.
+"""Tests for the OpenRouter client. None of these touch the network.
 
-Nothing here touches the network. Anything needing a real call belongs in
-scripts/check_models.py, which costs money and is run deliberately.
+Real API calls live in scripts/check_models.py, because they cost money.
 """
 
 from __future__ import annotations

@@ -1,3 +1,5 @@
+"""Tests for loading, checking and ID-ing the raw MMLU-Pro questions."""
+
 from pathlib import Path
 
 import pytest

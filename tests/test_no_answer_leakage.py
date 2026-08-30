@@ -1,3 +1,9 @@
+"""Proves the frozen question files carry no answers.
+
+This is the most important test in the project. If it ever fails, every
+result produced afterwards is worthless.
+"""
+
 import json
 from pathlib import Path
 

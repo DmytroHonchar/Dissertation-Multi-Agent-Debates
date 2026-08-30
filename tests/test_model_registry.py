@@ -1,7 +1,7 @@
-"""The five-agent registry is part of the experimental design, so it is tested.
+"""Tests for the five-agent config in configs/models/agents_v1.yaml.
 
-Changing any value here changes the experiment and requires a new configuration
-version and a dated entry in docs/decisions.md.
+Changing a value here changes the experiment, so these tests are meant to fail
+loudly if someone edits the file without meaning to.
 """
 
 from __future__ import annotations

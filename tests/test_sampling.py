@@ -1,3 +1,8 @@
+"""Tests that the 300 and the 20 are picked the same way every time.
+
+Seed 42, no overlap between the two sets, every subject represented.
+"""
+
 import hashlib
 import json
 from collections import Counter

@@ -1,3 +1,12 @@
+"""Talks to OpenRouter. Every paid API call in the project goes through here.
+
+One key, five models. Nothing else in the project may contact a provider
+directly - if it did, the run would stop being auditable.
+
+Every reply comes back with its cost, timing and which provider actually served
+it, so the results can be checked later.
+"""
+
 from __future__ import annotations
 
 import os
@@ -10,24 +19,41 @@ from typing import Any
 import requests
 import yaml
 
+
+# 1. Settings
+
 DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_TIMEOUT_SECONDS = 120.0
-# One initial attempt plus exactly one retry after a temporary failure (D012).
+
+# One try, then one retry. That is the whole retry budget.
 DEFAULT_MAX_ATTEMPTS = 2
+
+# Temporary problems worth retrying: timeouts, rate limits, provider outages.
+# Anything else (bad key, unknown model) fails immediately - retrying won't help.
 RETRYABLE_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504})
 
 
+# 2. Errors
+
+
 class ApiConfigurationError(RuntimeError):
-    """Raised when credentials or the model registry are missing or malformed."""
+    """The key or the model config is missing or broken."""
 
 
 class ApiRequestError(RuntimeError):
-    """Raised when a completion could not be obtained after every retry."""
+    """The call failed and the retry didn't save it."""
+
+
+# 3. What goes out, what comes back
 
 
 @dataclass(frozen=True)
 class ModelSpec:
-    """One debate agent: which OpenRouter model it is and how it is sampled."""
+    """One agent: which model it is and how to sample it.
+
+    Built from configs/models/agents_v1.yaml. Frozen means it can't be edited
+    after creation, so nothing can quietly change a model's settings mid-run.
+    """
 
     agent_id: str
     slug: str
@@ -42,15 +68,15 @@ class ModelSpec:
 
 @dataclass(frozen=True)
 class CompletionResult:
-    """A single assistant turn plus the provenance needed to audit the run."""
+    """One reply from a model, plus everything needed to audit it later."""
 
     text: str
     agent_id: str
-    requested_slug: str
-    served_slug: str
-    provider: str
+    requested_slug: str      # the model we asked for
+    served_slug: str         # the model OpenRouter actually used
+    provider: str            # who served it, e.g. DeepInfra
     generation_id: str
-    finish_reason: str
+    finish_reason: str       # "stop" = finished, "length" = ran out of tokens
     prompt_tokens: int
     completion_tokens: int
     cost_usd: float
@@ -58,8 +84,15 @@ class CompletionResult:
     attempts: int
 
 
+# 4. Loading the key and the model config
+
+
 def load_env_file(env_path: str | Path | None = None) -> None:
-    """Load KEY=VALUE lines from a .env file without overriding real env vars."""
+    """Read KEY=VALUE lines from .env into the environment.
+
+    Skips blanks and # comments. Never overwrites a variable that is already
+    set, so a real environment variable always wins over the file.
+    """
     path = Path(env_path) if env_path else _repository_root() / ".env"
     if not path.is_file():
         return
@@ -73,7 +106,7 @@ def load_env_file(env_path: str | Path | None = None) -> None:
 
 
 def load_api_key() -> str:
-    """Return the OpenRouter key, reading .env first if the var is unset."""
+    """Get the OpenRouter key. Crashes if it's missing."""
     load_env_file()
     api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not api_key:
@@ -84,7 +117,7 @@ def load_api_key() -> str:
 
 
 def load_model_registry(config_path: str | Path) -> dict[str, ModelSpec]:
-    """Load configs/models/*.yaml into one ModelSpec per debate agent."""
+    """Turn the agents YAML into one ModelSpec per agent."""
     resolved_path = Path(config_path).resolve()
     with resolved_path.open(encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
@@ -97,6 +130,7 @@ def load_model_registry(config_path: str | Path) -> dict[str, ModelSpec]:
 
     registry: dict[str, ModelSpec] = {}
     for agent_id, agent_config in agents.items():
+        # The agent's own settings win over the shared defaults.
         settings = {**defaults, **dict(agent_config)}
         try:
             registry[agent_id] = ModelSpec(
@@ -116,8 +150,11 @@ def load_model_registry(config_path: str | Path) -> dict[str, ModelSpec]:
     return registry
 
 
+# 5. The client
+
+
 class OpenRouterClient:
-    """Thin, retrying wrapper over the OpenRouter chat-completions endpoint."""
+    """Sends requests to OpenRouter and retries once on a temporary failure."""
 
     def __init__(
         self,
@@ -130,6 +167,7 @@ class OpenRouterClient:
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
         self._max_attempts = max_attempts
+        # One Session reuses the same connection for every call, which is faster.
         self._session = requests.Session()
         self._session.headers.update(_build_headers(api_key or load_api_key()))
 
@@ -141,21 +179,22 @@ class OpenRouterClient:
         seed: int | None = None,
         max_tokens: int | None = None,
     ) -> CompletionResult:
-        """Send one chat completion and return the reply with its usage metadata."""
+        """Send one question to one model. Returns the reply, its cost and timing.
+
+        `messages` is what prompts_v1.build_round1_messages produced.
+        """
         payload: dict[str, Any] = {
             "model": spec.slug,
             "messages": messages,
             "temperature": spec.temperature,
             "top_p": spec.top_p,
             "max_tokens": max_tokens if max_tokens is not None else spec.max_tokens,
-            "usage": {"include": True},
+            "usage": {"include": True},   # ask for token counts and cost back
             "provider": {
-                # OpenRouter picks an available provider. Pinning to one named
-                # provider is deferred until before the pilot (D015); the served
-                # provider is recorded on every response either way.
+                # OpenRouter picks the provider for now. Pinning comes before the pilot.
                 "allow_fallbacks": spec.allow_provider_fallbacks,
-                # Still route only to providers that honour temperature/top_p,
-                # so temperature 0 is not silently ignored.
+                # Only use providers that honour temperature and top_p, so
+                # temperature 0 can't be silently ignored.
                 "require_parameters": spec.require_parameters,
             },
         }
@@ -165,6 +204,7 @@ class OpenRouterClient:
         started_at = time.monotonic()
         body = self._post_with_retries("/chat/completions", payload)
         latency_seconds = time.monotonic() - started_at
+
         return _parse_completion(
             body,
             spec=spec,
@@ -173,7 +213,7 @@ class OpenRouterClient:
         )
 
     def list_available_models(self) -> dict[str, dict[str, Any]]:
-        """Return every model OpenRouter currently serves, keyed by slug."""
+        """Every model OpenRouter currently serves. Free - uses no tokens."""
         response = self._session.get(f"{self._base_url}/models", timeout=self._timeout_seconds)
         response.raise_for_status()
         return {model["id"]: model for model in response.json()["data"]}
@@ -181,6 +221,8 @@ class OpenRouterClient:
     def close(self) -> None:
         self._session.close()
 
+    # These two let you write:  with OpenRouterClient() as client:
+    # so the connection always closes, even if something crashes.
     def __enter__(self) -> OpenRouterClient:
         return self
 
@@ -188,6 +230,7 @@ class OpenRouterClient:
         self.close()
 
     def _post_with_retries(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        """Send the request. Try again once if the failure looks temporary."""
         url = f"{self._base_url}{path}"
         last_error = "unknown error"
 
@@ -195,11 +238,13 @@ class OpenRouterClient:
             try:
                 response = self._session.post(url, json=payload, timeout=self._timeout_seconds)
             except requests.RequestException as error:
+                # Network died, DNS failed, timed out. Worth another go.
                 last_error = f"transport error: {error}"
             else:
                 if response.status_code == 200:
                     body = response.json()
-                    # OpenRouter reports upstream failures with HTTP 200 too.
+                    # OpenRouter sometimes reports upstream failures as HTTP 200
+                    # with an "error" key inside, so 200 alone isn't success.
                     if "error" not in body:
                         body["_attempts"] = attempt
                         return body
@@ -207,12 +252,15 @@ class OpenRouterClient:
                 elif response.status_code in RETRYABLE_STATUS_CODES:
                     last_error = f"HTTP {response.status_code}: {response.text[:400]}"
                 else:
+                    # Permanent problem, e.g. bad key or unknown model. Give up now.
                     raise ApiRequestError(
                         f"{payload['model']} failed with HTTP {response.status_code}: "
                         f"{response.text[:400]}"
                     )
 
             if attempt < self._max_attempts:
+                # Wait before retrying, plus a random fraction of a second so
+                # five agents retrying at once don't all hit the API together.
                 time.sleep(min(2.0**attempt, 30.0) + random.uniform(0.0, 1.0))
 
         raise ApiRequestError(
@@ -220,7 +268,11 @@ class OpenRouterClient:
         )
 
 
+# 6. Helpers
+
+
 def _build_headers(api_key: str) -> dict[str, str]:
+    """The HTTP headers, including the key. The two app headers are optional."""
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -241,8 +293,10 @@ def _parse_completion(
     latency_seconds: float,
     attempts: int,
 ) -> CompletionResult:
+    """Pull the reply text and the usage numbers out of OpenRouter's JSON."""
     try:
         choice = body["choices"][0]
+        # content can be null. Keep it as "" and let the parser decide it failed.
         text = choice["message"]["content"] or ""
     except (KeyError, IndexError, TypeError) as error:
         raise ApiRequestError(f"Malformed response for {spec.slug}: {body}") from error
@@ -265,4 +319,5 @@ def _parse_completion(
 
 
 def _repository_root() -> Path:
+    """The project folder, two levels up from src/mad/."""
     return Path(__file__).resolve().parents[2]

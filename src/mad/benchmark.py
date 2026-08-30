@@ -1,3 +1,14 @@
+"""Builds the frozen question set from the raw MMLU-Pro download.
+
+This ran once, back in August, and produced data/frozen/mmlu_pro_v1.
+It is not meant to run again - the frozen data is the experiment's input and
+must never change. The code stays here so the sampling can be shown to be
+reproducible.
+
+Questions and answers are written to separate files on purpose. Only the
+evaluation code may read the answers.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -11,6 +22,9 @@ from typing import Any
 
 import pyarrow.parquet as parquet
 import yaml
+
+
+# 1. Errors
 
 
 class BenchmarkDataError(ValueError):
@@ -32,6 +46,9 @@ SAMPLING_SEED = 42
 
 class FrozenArtifactExistsError(FileExistsError):
     """Raised when freezing would replace an existing permanent artifact."""
+
+
+# 2. Loading the raw dataset
 
 
 def load_benchmark_questions(
@@ -85,6 +102,9 @@ def load_questions(
         split=split,
         original_id_field=original_id_field,
     )
+
+
+# 3. Stable IDs
 
 
 def assign_stable_ids(
@@ -141,6 +161,9 @@ def validate_stable_ids(questions: Sequence[Mapping[str, Any]]) -> None:
         raise BenchmarkDataError(
             f"Duplicate stable IDs found: {duplicate_ids[:10]}"
         )
+
+
+# 4. Checking questions are usable
 
 
 def validate_question(question: Mapping[str, Any]) -> list[str]:
@@ -253,6 +276,9 @@ def validate_benchmark_and_save_report(
     return valid_splits, broken_splits, report
 
 
+# 5. Picking the 300 and the 20
+
+
 def select_stratified_question_sets(
     valid_questions: Sequence[Mapping[str, Any]],
     *,
@@ -319,6 +345,9 @@ def select_stratified_question_sets(
         pilot_count=pilot_count,
     )
     return experimental_questions, pilot_questions
+
+
+# 6. Writing the frozen files
 
 
 def freeze_mmlu_pro_question_sets(
@@ -507,7 +536,11 @@ def freeze_mmlu_pro_question_sets(
     return manifest, checksums
 
 
+# 7. Helpers
+
+
 def _format_original_id(value: Any, field_name: str) -> str:
+    """Turn a dataset ID into a clean string, rejecting anything odd."""
     if isinstance(value, bool) or not isinstance(value, (int, str)):
         raise BenchmarkDataError(f"Invalid value in original ID field {field_name!r}")
     formatted_value = str(value)
@@ -519,6 +552,7 @@ def _format_original_id(value: Any, field_name: str) -> str:
 def _balanced_category_quotas(
     categories: Sequence[str], total_count: int
 ) -> dict[str, int]:
+    """Split a total evenly across categories, spreading the remainder."""
     base_count, remainder = divmod(total_count, len(categories))
     return {
         category: base_count + (position < remainder)
@@ -533,6 +567,7 @@ def _validate_selected_sets(
     experimental_count: int,
     pilot_count: int,
 ) -> None:
+    """Check the two sets are the right size, unique, and don't overlap."""
     if len(experimental_questions) != experimental_count:
         raise BenchmarkDataError("Incorrect experimental question count")
     if len(pilot_questions) != pilot_count:
@@ -553,6 +588,7 @@ def _validate_selected_sets(
 def _category_counts(
     questions: Sequence[Mapping[str, Any]],
 ) -> dict[str, int]:
+    """How many questions came from each subject."""
     counts = Counter(question["category"] for question in questions)
     return {category: counts[category] for category in sorted(counts)}
 
@@ -560,6 +596,7 @@ def _category_counts(
 def _model_input_record(
     question: Mapping[str, Any], benchmark_name: str
 ) -> dict[str, Any]:
+    """One row for the questions file. Deliberately has no answer."""
     return {
         "stable_id": question["stable_id"],
         "benchmark": benchmark_name,
@@ -570,6 +607,7 @@ def _model_input_record(
 
 
 def _answer_key_record(question: Mapping[str, Any]) -> dict[str, str]:
+    """One row for the answers file. Just the ID and the letter."""
     return {
         "stable_id": question["stable_id"],
         "correct_answer": question["answer"],
@@ -577,6 +615,7 @@ def _answer_key_record(question: Mapping[str, Any]) -> dict[str, str]:
 
 
 def _frozen_target_paths(frozen_root: Path) -> dict[str, Path]:
+    """Every file the freeze will write, by name."""
     return {
         "experimental_model_inputs": (
             frozen_root / "model_inputs/experimental_questions.jsonl"
@@ -594,6 +633,7 @@ def _frozen_target_paths(frozen_root: Path) -> dict[str, Path]:
 
 
 def _require_absent_frozen_targets(target_paths: Mapping[str, Path]) -> None:
+    """Refuse to run if any frozen file already exists."""
     existing_paths = sorted(
         path for path in target_paths.values() if path.exists()
     )
@@ -607,6 +647,7 @@ def _require_absent_frozen_targets(target_paths: Mapping[str, Path]) -> None:
 def _verify_raw_file_checksums(
     config: Mapping[str, Any], repository_root: Path
 ) -> None:
+    """Confirm the raw Parquet files still match the recorded hashes."""
     mismatches: list[str] = []
     for split, file_config in sorted(config["files"].items()):
         raw_path = repository_root / file_config["path"]
@@ -625,6 +666,7 @@ def _verify_validation_report(
     valid_questions: Sequence[Mapping[str, Any]],
     broken_questions: Sequence[Mapping[str, Any]],
 ) -> None:
+    """Confirm the saved report still matches the questions we have."""
     with report_path.open(encoding="utf-8") as report_file:
         report = json.load(report_file)
     test_report = report["splits"]["test"]
@@ -644,6 +686,7 @@ def _verify_validation_report(
 
 
 def _canonical_json_bytes(value: Any) -> bytes:
+    """JSON with sorted keys and no spare spaces, so the bytes are repeatable."""
     return (
         json.dumps(
             value,
@@ -656,10 +699,12 @@ def _canonical_json_bytes(value: Any) -> bytes:
 
 
 def _canonical_jsonl_bytes(records: Sequence[Mapping[str, Any]]) -> bytes:
+    """The same, one JSON object per line."""
     return b"".join(_canonical_json_bytes(record) for record in records)
 
 
 def _write_new_file(path: Path, content: bytes) -> None:
+    """Write a file, but fail if it already exists."""
     path.parent.mkdir(parents=True, exist_ok=True)
     try:
         with path.open("xb") as output_file:
@@ -671,6 +716,7 @@ def _write_new_file(path: Path, content: bytes) -> None:
 
 
 def _display_path(path: Path, repository_root: Path) -> str:
+    """Show a path relative to the project folder when possible."""
     try:
         return path.resolve().relative_to(repository_root).as_posix()
     except ValueError:
@@ -678,6 +724,7 @@ def _display_path(path: Path, repository_root: Path) -> str:
 
 
 def _sha256_file(path: Path) -> str:
+    """SHA-256 of a file, read in chunks so big files fit in memory."""
     digest = hashlib.sha256()
     with path.open("rb") as input_file:
         for chunk in iter(lambda: input_file.read(1024 * 1024), b""):
@@ -686,6 +733,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _correct_answer_is_valid(question: Mapping[str, Any], option_count: int) -> bool:
+    """Does the answer point at a real option, and agree with itself?"""
     answer_indices: list[int] = []
 
     if "answer_index" in question:
@@ -711,6 +759,7 @@ def _correct_answer_is_valid(question: Mapping[str, Any], option_count: int) -> 
 
 
 def _question_content_hash(question: Mapping[str, Any]) -> str:
+    """Hash of the question text and options, used to build a stable ID."""
     question_text = question.get("question")
     options = question.get("options")
     if not isinstance(question_text, str):
