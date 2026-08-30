@@ -120,6 +120,32 @@ responses, compute the group vote, and store an inspectable result.
   a prompt demanding the single word `ready`, a parser concern for P6.
 - **Next:** Build P2 prompts and P6 parser toward Milestone 1.
 
+## 2026-08-30 — Round 1 prompt, and a readability pass over the whole codebase
+
+- **Built:** `src/mad/prompts_v1.py`, which turns one frozen question into the
+  two messages sent to a model. The system prompt gives a five-step reasoning
+  procedure and demands `FINAL ANSWER: X` on its own line. `FINAL_ANSWER_MARKER`
+  is exported as a constant so the parser can import it rather than repeat the
+  string. `build_round1_messages` refuses any question carrying an answer field.
+  31 tests in `tests/test_prompts.py`. Then a comments-and-layout pass over every
+  file: module docstrings everywhere, numbered sections in the four longest
+  files, and one-line docstrings on all 17 previously undocumented helpers in
+  `benchmark.py`.
+- **Why:** The prompt is the experimental instrument and gets frozen after the
+  pilot, so it needed writing before anything else in the pipeline. The
+  readability pass was necessary because the code had become hard for its own
+  author to read, which matters for a project that has to be defended in a viva.
+  `benchmark.py` was the worst case: 730 lines, no module docstring, no comments.
+- **Tested:** 60 tests pass, up from 29. Confirmed the prompt text is
+  byte-identical before and after the formatting pass, and that every one of the
+  320 frozen questions renders without error.
+- **Problems:** None. Note that the prompt asks for reasoning capped at 200
+  words; whether that fits inside the provisional 1,024-token limit is still an
+  open question for the pilot, since reasoning models spend tokens before
+  emitting visible text.
+- **Next:** `parser_v1.py` — read the answer letter out of a reply and classify
+  failures as OK, REFUSAL, TRUNCATED, PARSE_FAIL or API_ERROR.
+
 
 
 ## Entry template
