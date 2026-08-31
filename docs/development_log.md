@@ -222,6 +222,55 @@ responses, compute the group vote, and store an inspectable result.
   corrected.
 - **Next:** unchanged — `database.py`.
 
+### 2026-08-31 — Results database (P4)
+
+- **Built:** `src/mad/database.py` and `tests/test_database.py` (53 tests).
+  SQLite through the standard library, so there is no server, no driver and no
+  credential to manage. `ResultsDatabase(path)` defaults to
+  `storage/results.sqlite` resolved from the repository root, creates the
+  directory and file on first open, enables foreign keys, and stamps
+  `PRAGMA user_version`. The four P4 tables are created as specified: `runs`,
+  `model_responses`, `response_attempts`, `question_outcomes`. Writing goes
+  through `start_run`, `record_response`, `record_outcome` and `finish_run`;
+  reading through `read_runs`, `read_run`, `read_responses`, `read_attempts` and
+  `read_outcomes`. `response_from_completion`, `response_from_failed_call` and
+  `attempt_rows` join what `api_client` and `parser_v1` return, so neither of
+  those modules learns about the database and the database does no parsing.
+- **Why:** Nothing downstream can be built without a place to put results, and
+  several project rules are better enforced by the schema than by discipline. A
+  `CHECK` allows `extracted_letter` only on an `OK` row, so a failure cannot
+  become a vote at the storage layer. `UNIQUE (run_id, question_id, round,
+  agent_id)` makes a repeat insert fail rather than overwrite, which is the
+  "never overwrite a run's rows" rule made structural. Round 1 and Round 2
+  outcomes are separate rows because comparing them is the research question.
+  No table has a column capable of holding a correct answer.
+- **Tested:** 188 tests pass, up from 135. Coverage includes schema and
+  directory creation, the schema-version guard, foreign-key enforcement, a full
+  raw-text round trip, duplicate rejection for runs, responses, attempts and
+  outcomes, rollback of a response when one of its attempts is rejected, all
+  four failure statuses stored without a letter, a failure carrying a letter
+  being refused, retry attempts kept with their HTTP status and raw body, peer
+  references including the fewer-than-four case, the four consensus states,
+  Round 1 and Round 2 outcomes staying separate, `finish_run` working exactly
+  once, and a test that parses the module's own SQL to prove `finish_run`'s
+  `ended_at` stamp is the only `UPDATE` and that no `DELETE` or
+  `INSERT OR REPLACE` exists. Every test builds its database under `tmp_path`;
+  no real `storage/results.sqlite` is created, no API call is made and
+  `data/frozen/` is not read.
+- **Problems:** Checking the integration boundary found that `AttemptRecord` had
+  no raw body and no finish reason, and that its `error` field was truncated to
+  400 characters — so a failed attempt could not satisfy `response_attempts`'s
+  raw-response column, and P4 would have stored a summary where the record
+  requires the reply. `AttemptRecord` gained `raw_response` and `finish_reason`,
+  populated from the untruncated `response.text`; `error` stays short as a log
+  summary. A transport error still stores an empty raw body, because no response
+  arrived and inventing one would be fabrication. Three tests cover this.
+  Separately, the first version of the SQL-scanning test failed on the module's
+  own comment containing the words it was banning; it now parses the AST and
+  inspects only strings that begin with an SQL keyword.
+- **Next:** `cache.py` (P5), so a repeated call is not paid for twice, then
+  `debate.py` (P9-P10).
+
 
 ## Entry template
 

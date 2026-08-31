@@ -97,9 +97,9 @@ Do not rely on the API `seed` parameter. Support varies and the experiment does
 not depend on it. Record the limitation that identical settings still do not
 guarantee byte-identical outputs from a hosted API.
 
-## P4 — Results database
+## P4 — Results database — DONE
 
-New file `src/mad/database.py`. SQLite. Four tables.
+`src/mad/database.py`. SQLite, no server. Four tables.
 
 `runs` — one row per run: run ID, configuration name, question-set version,
 prompt version, settings version, parser version, start time, end time.
@@ -124,6 +124,20 @@ is the research question.
 Rules: store the full raw response before parsing, never only the letter. Never
 overwrite a row — a repeat means a new run ID. The correct answer never enters
 this path; only evaluation reads the answer key.
+
+Built 2026-08-31. `ResultsDatabase(path)` creates `storage/results.sqlite` and
+its parent directory on first open, turns foreign keys on, and stamps
+`PRAGMA user_version` with `SCHEMA_VERSION`; a file written by a different
+schema version is refused rather than migrated. Rules that could be enforced
+structurally are: `UNIQUE (run_id, question_id, round, agent_id)` and the
+`question_outcomes` primary key make a duplicate insert fail instead of
+overwrite; a `CHECK` permits `extracted_letter` only on an `OK` row, so a
+failure cannot carry a vote; `round = 2 OR peer_count = 0` keeps Round 1 free of
+peers; and no table has a column that could hold a correct answer, which a test
+asserts by name. `record_response()` writes a response and all of its attempts
+in one transaction, so a half-written pair cannot understate what the run cost.
+`finish_run()` is the only `UPDATE` in the module — `ended_at`, once — and a
+test parses the module's SQL to keep it that way.
 
 ## P5 — Response cache
 

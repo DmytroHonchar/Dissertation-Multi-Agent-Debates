@@ -20,6 +20,7 @@ class FakeResponse:
     """Stands in for a requests Response. Nothing here touches the network."""
 
     def __init__(self, status_code=200, body=None, text="", bad_json=False):
+        # text is the raw body as it arrived; body is what .json() would give.
         self.status_code = status_code
         self._body = body
         self.text = text
@@ -258,3 +259,38 @@ def test_every_attempt_is_costed_not_only_the_successful_one(monkeypatch):
 
     assert result.cost_usd == 0.0001
     assert sum(record.cost_usd for record in result.attempt_log) == pytest.approx(0.00012)
+
+
+def test_a_failed_attempt_keeps_its_whole_raw_body(monkeypatch):
+    """P4 stores a raw response per attempt, so a failure must keep one too."""
+    long_body = "gateway timeout: " + "x" * 900
+    client, _ = _client_with(
+        monkeypatch, [FakeResponse(504, text=long_body), FakeResponse(200, _ok_body())]
+    )
+    result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    failed = result.attempt_log[0]
+    assert failed.raw_response == long_body, "the raw body must not be truncated"
+    assert len(failed.error) <= 400, "the summary stays short; the raw body is the record"
+
+
+def test_a_successful_attempt_keeps_its_raw_body_and_finish_reason(monkeypatch):
+    import json as _json
+
+    body = _ok_body()
+    client, _ = _client_with(monkeypatch, [FakeResponse(200, body, text=_json.dumps(body))])
+    result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert _json.loads(result.attempt_log[0].raw_response) == body
+    assert result.attempt_log[0].finish_reason == "stop"
+
+
+def test_a_transport_error_has_no_raw_body_and_none_is_invented(monkeypatch):
+    client, _ = _client_with(
+        monkeypatch,
+        [api_client.requests.Timeout("timed out"), FakeResponse(200, _ok_body())],
+    )
+    result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert result.attempt_log[0].raw_response == "", "no response arrived, so nothing to store"
+    assert "timed out" in result.attempt_log[0].error
