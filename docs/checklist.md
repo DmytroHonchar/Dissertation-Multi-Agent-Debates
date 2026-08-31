@@ -44,7 +44,7 @@ updated, in `docs/pipeline.md`.
 ## Now — before anything else
 
 - [ ] Commit the five-model work, the scaffold deletion and the documentation consolidation
-- [ ] Build P2 prompts and P6 parser toward Milestone 1
+- [x] Build P2 prompts and P6 parser toward Milestone 1
 
 Settled on 2026-08-28: temperature `0` and top-p `1.0` (D002), retry once /
 two attempts total (D012), paired bootstrap plus McNemar (D011). Connectivity to
@@ -56,7 +56,7 @@ all five model IDs confirmed with live calls.
 - [ ] **Mistral availability (D016).** Intermittent HTTP 429 from the shared upstream pool. Measure the real rate over the 20 pilot questions and decide how to handle it. Do not change the model.
 - [ ] Confirm `max_tokens` per round — 1024 is provisional and reasoning models spend tokens before answering (D002)
 - [ ] Fix and record the bootstrap seed for the D011 confidence interval
-- [ ] Note for P6: Mistral answered `'Yes.'` to a prompt demanding the single word `ready`, twice. Test the parser against loose instruction-format compliance.
+- [x] Note for P6: Mistral answered `'Yes.'` to a prompt demanding the single word `ready`, twice. Test the parser against loose instruction-format compliance.
 
 ## Pending proposal corrections — do before submitting CA1 on 11 September
 
@@ -72,7 +72,7 @@ the proposal source, not in this repository.
 
 ## Build
 
-- [ ] Round 1 prompt and formatting function — `prompts_v1.py` (P2)
+- [x] Round 1 prompt and formatting function — `prompts_v1.py` (P2)
 - [x] Parser and failure statuses, with the full test set — `parser_v1.py` (P6)
 - [ ] Results database and schema — `database.py` (P4)
 - [ ] Three-of-five voting and consensus states (P9)

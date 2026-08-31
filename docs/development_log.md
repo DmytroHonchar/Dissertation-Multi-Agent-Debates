@@ -187,6 +187,41 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** `database.py` — the SQLite results store, so a response and its
   parsed outcome can be written down.
 
+### 2026-08-31 — Review fixes to `prompts_v1.py` and `api_client.py`
+
+- **Built:** A review of the two existing modules found six defects, all fixed.
+  In `prompts_v1.py`, `format_question` coerced its input with `str()`, so a
+  question whose text was `None` or `123` would have been sent to a model as
+  `"None"` or `"123"`; it now rejects anything that is not a non-empty string.
+  In `api_client.py`: `AttemptRecord` was added and `CompletionResult` gained
+  `raw_response` and `attempt_log`, because the previous version threw away the
+  first attempt's tokens, cost and timing when the retry succeeded, and never
+  exposed the complete API body that P5's cache is required to store;
+  `ApiRequestError` now carries the same `attempt_log`, so a call that failed
+  both attempts is still costable; an HTTP 200 whose body is not valid JSON is
+  now treated as a retryable failure instead of raising a raw `requests` error;
+  and the comment claiming a `Session` "reuses the same connection for every
+  call" was corrected, since it reuses when it can and reopens when it must.
+- **Why:** Two of these were silent-corruption risks rather than crashes. The
+  `str()` coercion would have produced a plausible-looking prompt with no
+  question in it. Discarding failed attempts contradicts P5 and P6, which
+  require the complete raw body to be cached and the cost of every live attempt
+  to be counted against the £15 budget.
+- **Tested:** 135 tests pass, up from 121. Nine new tests drive the real retry
+  loop through a fake session rather than stubbing it out: temporary failure
+  then success, two temporary failures, an immediate permanent failure that must
+  not be retried, a transport exception, an HTTP 200 carrying an `error` key,
+  and a body that is not JSON. Two more assert the raw body is kept whole and
+  that the cost of a failed attempt is recorded alongside the successful one.
+  Five new tests in `tests/test_prompts.py` cover the non-string question text.
+- **Problems:** The retry branches had been almost untested — the only retry
+  test asserted `DEFAULT_MAX_ATTEMPTS == 2`, which proves a constant, not
+  behaviour. Three existing tests stubbed `_post_with_retries` and had to be
+  updated for its new return shape; that stubbing was what hid the gap.
+  `docs/checklist.md` still listed the Round 1 prompt as unbuilt and is now
+  corrected.
+- **Next:** unchanged — `database.py`.
+
 
 ## Entry template
 

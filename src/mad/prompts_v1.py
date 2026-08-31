@@ -118,13 +118,16 @@ def format_question(question: Mapping[str, Any]) -> str:
     """The part the model sees: question text, blank line, then the options."""
     assert_no_answer_key(question)
 
-    text = str(question.get("question", "")).strip()
-    if not text:
+    # Must already be text. Converting a number or None into a string here
+    # would build a prompt out of "123" or "None" and never say anything.
+    text = question.get("question")
+    if not isinstance(text, str) or not text.strip():
         raise PromptConstructionError(
-            f"Question {question.get('stable_id', '<unknown>')!r} has no text."
+            f"Question {question.get('stable_id', '<unknown>')!r} has no usable text "
+            f"(got {type(text).__name__})."
         )
 
-    return f"{text}\n\n{format_options(_options(question))}"
+    return f"{text.strip()}\n\n{format_options(_options(question))}"
 
 
 def build_round1_messages(question: Mapping[str, Any]) -> list[dict[str, str]]:
