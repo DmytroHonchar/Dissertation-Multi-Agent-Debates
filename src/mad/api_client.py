@@ -85,7 +85,12 @@ class AttemptRecord:
     outcome: str                 # ok, http_error, upstream_error, transport_error, bad_json
     latency_seconds: float
     status_code: int | None = None
-    error: str = ""
+    # The response body exactly as it arrived, untruncated. P4 stores this per
+    # attempt, so a failed attempt is as auditable as a successful one. Empty
+    # only when the request never got a response at all.
+    raw_response: str = ""
+    finish_reason: str = ""
+    error: str = ""              # short summary for logs; raw_response is the record
     prompt_tokens: int = 0
     completion_tokens: int = 0
     cost_usd: float = 0.0
@@ -286,7 +291,7 @@ class OpenRouterClient:
                         attempt=attempt,
                         outcome="transport_error",
                         latency_seconds=time.monotonic() - started_at,
-                        error=last_error[:400],
+                        error=last_error[:400],  # no response arrived, so nothing raw to keep
                     )
                 )
             else:
@@ -304,6 +309,7 @@ class OpenRouterClient:
                                 outcome="bad_json",
                                 latency_seconds=elapsed,
                                 status_code=200,
+                                raw_response=response.text,
                                 error=last_error[:400],
                             )
                         )
@@ -316,6 +322,8 @@ class OpenRouterClient:
                             outcome="ok" if "error" not in body else "upstream_error",
                             latency_seconds=elapsed,
                             status_code=200,
+                            raw_response=response.text,
+                            finish_reason=_finish_reason_of(body),
                             error="" if "error" not in body else str(body["error"])[:400],
                             prompt_tokens=int(usage.get("prompt_tokens", 0)),
                             completion_tokens=int(usage.get("completion_tokens", 0)),
@@ -333,6 +341,7 @@ class OpenRouterClient:
                             outcome="http_error",
                             latency_seconds=elapsed,
                             status_code=response.status_code,
+                            raw_response=response.text,
                             error=last_error[:400],
                         )
                     )
@@ -344,6 +353,7 @@ class OpenRouterClient:
                             outcome="http_error",
                             latency_seconds=elapsed,
                             status_code=response.status_code,
+                            raw_response=response.text,
                             error=response.text[:400],
                         )
                     )
@@ -414,6 +424,17 @@ def _parse_completion(
         raw_response=body,
         attempt_log=attempt_log,
     )
+
+
+def _finish_reason_of(body: dict[str, Any]) -> str:
+    """Read the finish reason out of a reply body, or "" if it has none.
+
+    Metadata, not parsing - the answer letter is the parser's job, not this file's.
+    """
+    try:
+        return body["choices"][0].get("finish_reason") or ""
+    except (KeyError, IndexError, TypeError, AttributeError):
+        return ""
 
 
 def _repository_root() -> Path:
