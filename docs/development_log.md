@@ -147,6 +147,46 @@ responses, compute the group vote, and store an inspectable result.
   failures as OK, REFUSAL, TRUNCATED, PARSE_FAIL or API_ERROR.
 
 
+### 2026-08-31 — Response parser (P6)
+
+- **Built:** `src/mad/parser_v1.py` and `tests/test_parser.py` (53 tests). The
+  parser takes a reply, the letters that question actually offers, and the
+  provider finish reason, and returns a `ParsedResponse` carrying a status, a
+  letter, the extraction method and a short note. Statuses are `OK`, `REFUSAL`,
+  `TRUNCATED`, `PARSE_FAIL` and `API_ERROR`. The answer-line regex is built from
+  `prompts_v1.FINAL_ANSWER_MARKER` so the prompt and the parser cannot drift
+  apart.
+- **Why:** The vote has nothing to count until the letter is separated from the
+  reasoning, and the three headline numbers depend on failures being kept apart
+  from wrong answers. One parser serves all five agents, so the results measure
+  the models rather than how forgiving the reading was.
+- **Tested:** 113 tests pass, up from 60. Covers every letter of a ten-option
+  question, case and spacing variants, multiple answer lines, trailing text,
+  letters outside the option set, bracketed letters, empty replies, refusals,
+  truncation by finish reason and by heuristic, and API errors. One test asserts
+  the reasoning is never used to infer an answer: a reply that argues for C and
+  writes `FINAL ANSWER: A` parses as A. A final parametrised test asserts that no
+  failure of any kind ever contributes a vote.
+- **Problems:** Markdown broke the first version — `**FINAL ANSWER:** B` failed
+  to parse, which would have turned valid answers into failures. Asterisks are
+  now stripped from the matching copy only. Refusal detection had the opposite
+  risk: a loose phrase list would classify ordinary reasoning containing
+  "cannot" as a refusal, so the list is short and must be rechecked against the
+  pilot transcripts. Both choices are recorded as D017. Mistral's `'Yes.'` from
+  the 2026-08-28 smoke test is in the test set and parses as `PARSE_FAIL`.
+  Four further defects were found by review on the same day and fixed before
+  anything was committed: `FINAL ANSWER: B2` parsed as `B` because the lookahead
+  only excluded letters, not digits or underscore; the refusal phrase search
+  matched anywhere in the reply, so `I cannot answer A, so FINAL ANSWER: B` was
+  classified `REFUSAL` despite answering; a `max_tokens` finish reason was
+  recorded in the note as `length`; and the truncation heuristic rested on
+  punctuation alone, making `Yes` truncated and `Yes.` a parse failure. Text
+  evidence is now ranked below provider signals, and a text-guessed truncation
+  needs at least 200 characters. D017 and P6 were both updated, since the
+  refusal change narrows a rule P6 had stated absolutely.
+- **Next:** `database.py` — the SQLite results store, so a response and its
+  parsed outcome can be written down.
+
 
 ## Entry template
 

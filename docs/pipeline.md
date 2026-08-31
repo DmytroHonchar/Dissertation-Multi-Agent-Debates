@@ -162,9 +162,14 @@ an answer from the reasoning.
 
 Statuses: `OK`, `REFUSAL`, `TRUNCATED`, `PARSE_FAIL`, `API_ERROR`.
 
-An empty response is `PARSE_FAIL`. `REFUSAL` and `TRUNCATED` take priority even
-when a letter is present. Identify truncation from the provider finish reason
-first; inspect text only when no finish reason is returned.
+An empty response is `PARSE_FAIL`. A provider signal — `content_filter` for
+refusal, `length` or `max_tokens` for truncation — takes priority even when a
+letter is present. Evidence read out of the text itself does not: a refusal
+phrase or a mid-sentence ending only counts when no valid letter was extracted.
+See D017, which narrowed this after `I cannot answer A, so FINAL ANSWER: B` was
+being classified as a refusal. Identify truncation from the provider finish
+reason first; inspect text only when no finish reason is returned, and only when
+the reply is long enough for the guess to mean anything.
 
 **Retry (D012, settled).** One initial attempt plus exactly one retry — two in
 total. This lives in `OpenRouterClient._post_with_retries`, where
