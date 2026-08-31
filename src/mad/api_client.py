@@ -35,7 +35,6 @@ RETRYABLE_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504})
 
 # 2. Errors
 
-
 class ApiConfigurationError(RuntimeError):
     """The key or the model config is missing or broken."""
 

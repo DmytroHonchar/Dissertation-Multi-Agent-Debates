@@ -73,7 +73,7 @@ the proposal source, not in this repository.
 ## Build
 
 - [ ] Round 1 prompt and formatting function — `prompts_v1.py` (P2)
-- [ ] Parser and failure statuses, with the full test set — `parser_v1.py` (P6)
+- [x] Parser and failure statuses, with the full test set — `parser_v1.py` (P6)
 - [ ] Results database and schema — `database.py` (P4)
 - [ ] Three-of-five voting and consensus states (P9)
 - [ ] **Milestone 1** — one real pilot question through Round 1: five calls, parsed, stored, voted, inspected by hand

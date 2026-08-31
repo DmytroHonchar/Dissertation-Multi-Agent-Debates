@@ -351,3 +351,55 @@ accepted and reported failure rate is the answer. Do not change the model.
 Separately noted for the parser (P6): Mistral answered `'Yes.'` to a prompt
 asking for the single word `ready`, as it did on 2026-08-26. Weak
 instruction-format compliance is a parser concern, not a connection fault.
+
+## D017 — Parser tolerance rules
+
+- **Status:** Implemented, open for review before the pilot freeze
+- **Decision:** `parser_v1.py` accepts a bare letter on a `FINAL ANSWER:` line
+  and rejects everything else.
+- **Recorded:** 2026-08-31
+
+P6 in `docs/pipeline.md` fixed the rules the parser must follow. Two cases it did
+not name came up while implementing it, and both are settled here.
+
+**Markdown asterisks are ignored.** Asterisks are stripped from a copy of the
+reply before matching, so `**FINAL ANSWER:** B`, `**FINAL ANSWER: B**` and
+`FINAL ANSWER: **B**` all parse as `B`. These models emit markdown constantly,
+and treating bold text as a parse failure would discard valid answers and
+inflate the failure rate. The raw text is stored unmodified; only the copy used
+for matching is stripped. Brackets and parentheses are still rejected, as P6
+requires: `FINAL ANSWER: [B]` is not an answer.
+
+**Trailing punctuation after the letter is allowed, word characters are not.**
+`FINAL ANSWER: B.` and `FINAL ANSWER: B, because ...` parse as `B`. The letter
+must be bare, so `FINAL ANSWER: Berlin`, `FINAL ANSWER: BC`, `FINAL ANSWER: B2`
+and `FINAL ANSWER: B_x` are all rejected. The lookahead is `(?!\w)`, which
+covers letters, digits and underscore; an earlier `(?![A-Za-z])` accepted `B2`
+as `B` and was wrong.
+
+**Refusal detection is deliberately conservative, and text evidence is ranked
+below a provider signal.** A reply is classified `REFUSAL` on an explicit
+provider signal (`content_filter`, or a refusal flag passed in), or on one of
+eleven fixed phrases of the form "I cannot answer". Words like "cannot" and
+"unable" occur constantly inside legitimate reasoning, and a loose list would
+silently convert correct answers into failures.
+
+The phrase search is not sentence-aware, so a phrase can appear in a reply that
+does answer: `I cannot answer A, so FINAL ANSWER: B`. This **narrows P6's rule
+that refusal takes priority over a present letter.** A provider signal still
+takes priority over any letter. A refusal *phrase in the text* is only trusted
+when no valid letter was extracted. Text is weak evidence, and discarding a real
+answer because of a substring is worse than missing a refusal — a missed refusal
+becomes `PARSE_FAIL`, which is still not scored as a wrong answer.
+
+**Truncation guessed from text requires a long reply.** Where the provider
+returns a finish reason, that decides it, and the note records the reason
+actually returned (`length` or `max_tokens`). Where no finish reason comes back,
+truncation is guessed only when the reply is at least 200 characters *and* does
+not end in sentence punctuation. Punctuation alone is weak evidence: it made
+`Yes` truncated and `Yes.` a parse failure, which is noise, not a measurement.
+Short replies are `PARSE_FAIL`. Since failure categories are reported
+separately, a wrong guess puts a failure in the wrong column of the table.
+
+The phrase list and the 200-character floor must both be checked against the
+pilot transcripts before the freeze.
