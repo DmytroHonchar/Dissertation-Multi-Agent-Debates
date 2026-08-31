@@ -16,6 +16,52 @@ from mad.api_client import (
 )
 
 
+class FakeResponse:
+    """Stands in for a requests Response. Nothing here touches the network."""
+
+    def __init__(self, status_code=200, body=None, text="", bad_json=False):
+        self.status_code = status_code
+        self._body = body
+        self.text = text
+        self._bad_json = bad_json
+
+    def json(self):
+        if self._bad_json:
+            raise ValueError("Expecting value: line 1 column 1 (char 0)")
+        return self._body
+
+
+def _client_with(monkeypatch, responses):
+    """A client whose session replays the given responses, one per attempt.
+
+    A response may be an exception, which is raised instead of returned.
+    """
+    sent: list = []
+
+    def fake_post(url, json, timeout):
+        item = responses[len(sent)]
+        sent.append(json)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    # No waiting between retries - these tests must stay instant.
+    monkeypatch.setattr(api_client.time, "sleep", lambda seconds: None)
+    client = OpenRouterClient(api_key="test-key-not-real")
+    monkeypatch.setattr(client._session, "post", fake_post)
+    return client, sent
+
+
+def _ok_body(content="B", cost=0.0001):
+    return {
+        "id": "gen-1",
+        "model": "vendor/model-1",
+        "provider": "SomeProvider",
+        "choices": [{"message": {"content": content}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 2, "cost": cost},
+    }
+
+
 def _spec(**overrides) -> ModelSpec:
     base = dict(
         agent_id="agent_test",
@@ -50,8 +96,7 @@ def test_request_sends_fixed_generation_settings_and_no_provider_pin(monkeypatch
             "provider": "SomeProvider",
             "choices": [{"message": {"content": "B"}, "finish_reason": "stop"}],
             "usage": {"prompt_tokens": 10, "completion_tokens": 2, "cost": 0.0001},
-            "_attempts": 1,
-        }
+        }, ()
 
     monkeypatch.setattr(OpenRouterClient, "_post_with_retries", fake_post)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key-not-real")
@@ -80,8 +125,7 @@ def test_empty_content_is_returned_as_empty_string_not_none(monkeypatch):
         return {
             "choices": [{"message": {"content": None}, "finish_reason": "length"}],
             "usage": {},
-            "_attempts": 1,
-        }
+        }, ()
 
     monkeypatch.setattr(OpenRouterClient, "_post_with_retries", fake_post)
     client = OpenRouterClient(api_key="test-key-not-real")
@@ -93,7 +137,7 @@ def test_empty_content_is_returned_as_empty_string_not_none(monkeypatch):
 
 def test_malformed_body_raises_rather_than_returning_a_blank_answer(monkeypatch):
     def fake_post(self, path, payload):
-        return {"unexpected": True}
+        return {"unexpected": True}, ()
 
     monkeypatch.setattr(OpenRouterClient, "_post_with_retries", fake_post)
     client = OpenRouterClient(api_key="test-key-not-real")
@@ -108,3 +152,109 @@ def test_missing_api_key_is_reported_clearly(monkeypatch, tmp_path):
 
     with pytest.raises(api_client.ApiConfigurationError):
         api_client.load_api_key()
+
+
+# Retry behaviour. These drive the real _post_with_retries through a fake session.
+
+
+def test_a_temporary_failure_is_retried_and_the_second_attempt_can_succeed(monkeypatch):
+    client, sent = _client_with(
+        monkeypatch,
+        [FakeResponse(429, text="rate limited"), FakeResponse(200, _ok_body())],
+    )
+    result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert result.text == "B"
+    assert result.attempts == 2
+    assert len(sent) == 2
+    assert [record.outcome for record in result.attempt_log] == ["http_error", "ok"]
+    assert result.attempt_log[0].status_code == 429
+
+
+def test_two_temporary_failures_exhaust_the_budget(monkeypatch):
+    client, sent = _client_with(
+        monkeypatch,
+        [FakeResponse(503, text="unavailable"), FakeResponse(503, text="unavailable")],
+    )
+    with pytest.raises(ApiRequestError) as caught:
+        client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert "failed after 2 attempts" in str(caught.value)
+    assert len(sent) == DEFAULT_MAX_ATTEMPTS
+    # The failed call is still costable: both attempts are on the error.
+    assert len(caught.value.attempt_log) == 2
+
+
+def test_a_permanent_failure_is_not_retried(monkeypatch):
+    client, sent = _client_with(monkeypatch, [FakeResponse(401, text="bad key")])
+    with pytest.raises(ApiRequestError) as caught:
+        client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert len(sent) == 1, "a bad key is not worth a second attempt"
+    assert caught.value.attempt_log[0].status_code == 401
+
+
+def test_a_transport_error_is_retried(monkeypatch):
+    client, sent = _client_with(
+        monkeypatch,
+        [api_client.requests.Timeout("timed out"), FakeResponse(200, _ok_body())],
+    )
+    result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert result.attempts == 2
+    assert result.attempt_log[0].outcome == "transport_error"
+
+
+def test_http_200_carrying_an_error_key_is_not_treated_as_success(monkeypatch):
+    error_body = {"error": {"code": 502, "message": "upstream is down"}}
+    client, sent = _client_with(
+        monkeypatch, [FakeResponse(200, error_body), FakeResponse(200, _ok_body())]
+    )
+    result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert result.text == "B"
+    assert result.attempt_log[0].outcome == "upstream_error"
+    assert "upstream is down" in result.attempt_log[0].error
+
+
+def test_a_body_that_is_not_json_is_retried_not_crashed(monkeypatch):
+    client, sent = _client_with(
+        monkeypatch,
+        [FakeResponse(200, bad_json=True, text="<html>gateway</html>"), FakeResponse(200, _ok_body())],
+    )
+    result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert result.text == "B"
+    assert result.attempt_log[0].outcome == "bad_json"
+
+
+def test_a_body_that_is_never_json_ends_as_an_api_error(monkeypatch):
+    client, sent = _client_with(
+        monkeypatch,
+        [FakeResponse(200, bad_json=True), FakeResponse(200, bad_json=True)],
+    )
+    with pytest.raises(ApiRequestError) as caught:
+        client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert "invalid JSON" in str(caught.value)
+
+
+def test_the_whole_raw_body_is_kept_for_the_cache(monkeypatch):
+    """P5: the cache stores the complete API body, not a selection of fields."""
+    body = _ok_body()
+    client, sent = _client_with(monkeypatch, [FakeResponse(200, body)])
+    result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert result.raw_response == body
+
+
+def test_every_attempt_is_costed_not_only_the_successful_one(monkeypatch):
+    """P6: failures cost money, so tokens and cost are recorded per attempt."""
+    failed = {"error": "upstream", "usage": {"prompt_tokens": 10, "completion_tokens": 0, "cost": 0.00002}}
+    client, sent = _client_with(
+        monkeypatch, [FakeResponse(200, failed), FakeResponse(200, _ok_body(cost=0.0001))]
+    )
+    result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    assert result.cost_usd == 0.0001
+    assert sum(record.cost_usd for record in result.attempt_log) == pytest.approx(0.00012)

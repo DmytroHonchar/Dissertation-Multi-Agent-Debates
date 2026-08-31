@@ -201,7 +201,11 @@ three-SDK normalisation problem no longer exists.
 `OpenRouterClient.complete()` returns a `CompletionResult` carrying text,
 `agent_id`, requested slug, served slug, provider, generation ID, finish reason,
 prompt and completion tokens, cost, latency and attempt count — the provenance
-D007 requires. `load_model_registry()` builds a `ModelSpec` per agent from
+D007 requires. It also carries `raw_response`, OpenRouter's complete reply body
+for P5 to cache, and `attempt_log`, an `AttemptRecord` per attempt so the tokens
+and cost of a failed first attempt are not lost. A call that never succeeds
+raises `ApiRequestError` with the same `attempt_log` attached, so a dead call is
+still costable. `load_model_registry()` builds a `ModelSpec` per agent from
 `configs/models/agents_v1.yaml`. Verified against all five models by
 `scripts/check_models.py` on 2026-08-26.
 

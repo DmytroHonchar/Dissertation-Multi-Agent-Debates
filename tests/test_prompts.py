@@ -163,3 +163,10 @@ def test_malformed_questions_are_refused(bad):
 def test_more_options_than_letters_is_refused():
     with pytest.raises(PromptConstructionError):
         build_round1_messages(question(options=[f"o{i}" for i in range(27)]))
+
+
+@pytest.mark.parametrize("text", [None, 123, 12.5, ["a"], ""])
+def test_a_question_whose_text_is_not_a_string_is_rejected(text):
+    """Coercing this would send the model a prompt saying "None" or "123"."""
+    with pytest.raises(PromptConstructionError):
+        format_question({"stable_id": "q1", "question": text, "options": ["a", "b"]})

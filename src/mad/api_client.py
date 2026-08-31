@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 import random
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -40,7 +40,15 @@ class ApiConfigurationError(RuntimeError):
 
 
 class ApiRequestError(RuntimeError):
-    """The call failed and the retry didn't save it."""
+    """The call failed and the retry didn't save it.
+
+    Carries the record of every attempt made, so a call that never succeeded can
+    still be stored and costed instead of vanishing.
+    """
+
+    def __init__(self, message: str, attempt_log: tuple[AttemptRecord, ...] = ()) -> None:
+        super().__init__(message)
+        self.attempt_log = attempt_log
 
 
 # 3. What goes out, what comes back
@@ -66,6 +74,24 @@ class ModelSpec:
 
 
 @dataclass(frozen=True)
+class AttemptRecord:
+    """One attempt at one call, successful or not.
+
+    Failures cost money and time, so every attempt is recorded, not just the one
+    that worked. Token counts stay 0 unless the reply carried a usage block.
+    """
+
+    attempt: int
+    outcome: str                 # ok, http_error, upstream_error, transport_error, bad_json
+    latency_seconds: float
+    status_code: int | None = None
+    error: str = ""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cost_usd: float = 0.0
+
+
+@dataclass(frozen=True)
 class CompletionResult:
     """One reply from a model, plus everything needed to audit it later."""
 
@@ -81,6 +107,12 @@ class CompletionResult:
     cost_usd: float
     latency_seconds: float
     attempts: int
+
+    # OpenRouter's reply exactly as it arrived. The cache stores this whole body,
+    # so nothing is lost by the fields above being a selection.
+    raw_response: dict[str, Any] = field(default_factory=dict)
+    # Every attempt, including ones that failed before this one succeeded.
+    attempt_log: tuple[AttemptRecord, ...] = ()
 
 
 # 4. Loading the key and the model config
@@ -166,7 +198,8 @@ class OpenRouterClient:
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
         self._max_attempts = max_attempts
-        # One Session reuses the same connection for every call, which is faster.
+        # One Session, so connections can be reused between calls instead of a new
+        # handshake each time. It reopens one when it has to.
         self._session = requests.Session()
         self._session.headers.update(_build_headers(api_key or load_api_key()))
 
@@ -201,14 +234,14 @@ class OpenRouterClient:
             payload["seed"] = seed
 
         started_at = time.monotonic()
-        body = self._post_with_retries("/chat/completions", payload)
+        body, attempt_log = self._post_with_retries("/chat/completions", payload)
         latency_seconds = time.monotonic() - started_at
 
         return _parse_completion(
             body,
             spec=spec,
             latency_seconds=latency_seconds,
-            attempts=body.pop("_attempts", 1),
+            attempt_log=attempt_log,
         )
 
     def list_available_models(self) -> dict[str, dict[str, Any]]:
@@ -228,33 +261,96 @@ class OpenRouterClient:
     def __exit__(self, *exc_info: object) -> None:
         self.close()
 
-    def _post_with_retries(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
-        """Send the request. Try again once if the failure looks temporary."""
+    def _post_with_retries(
+        self, path: str, payload: dict[str, Any]
+    ) -> tuple[dict[str, Any], tuple[AttemptRecord, ...]]:
+        """Send the request. Try again once if the failure looks temporary.
+
+        Returns the reply body and the record of every attempt made. On total
+        failure the same record is attached to the ApiRequestError, so a dead
+        call can still be costed.
+        """
         url = f"{self._base_url}{path}"
+        log: list[AttemptRecord] = []
         last_error = "unknown error"
 
         for attempt in range(1, self._max_attempts + 1):
+            started_at = time.monotonic()
             try:
                 response = self._session.post(url, json=payload, timeout=self._timeout_seconds)
             except requests.RequestException as error:
                 # Network died, DNS failed, timed out. Worth another go.
                 last_error = f"transport error: {error}"
+                log.append(
+                    AttemptRecord(
+                        attempt=attempt,
+                        outcome="transport_error",
+                        latency_seconds=time.monotonic() - started_at,
+                        error=last_error[:400],
+                    )
+                )
             else:
+                elapsed = time.monotonic() - started_at
                 if response.status_code == 200:
-                    body = response.json()
-                    # OpenRouter sometimes reports upstream failures as HTTP 200
-                    # with an "error" key inside, so 200 alone isn't success.
-                    if "error" not in body:
-                        body["_attempts"] = attempt
-                        return body
-                    last_error = f"upstream error: {body['error']}"
+                    try:
+                        body = response.json()
+                    except ValueError as error:
+                        # HTTP 200 with a body that isn't JSON. Usually a proxy
+                        # or gateway page, so it is worth one more go.
+                        last_error = f"invalid JSON: {error}"
+                        log.append(
+                            AttemptRecord(
+                                attempt=attempt,
+                                outcome="bad_json",
+                                latency_seconds=elapsed,
+                                status_code=200,
+                                error=last_error[:400],
+                            )
+                        )
+                    else:
+                        # OpenRouter sometimes reports upstream failures as HTTP 200
+                        # with an "error" key inside, so 200 alone isn't success.
+                        usage = body.get("usage") or {}
+                        record = AttemptRecord(
+                            attempt=attempt,
+                            outcome="ok" if "error" not in body else "upstream_error",
+                            latency_seconds=elapsed,
+                            status_code=200,
+                            error="" if "error" not in body else str(body["error"])[:400],
+                            prompt_tokens=int(usage.get("prompt_tokens", 0)),
+                            completion_tokens=int(usage.get("completion_tokens", 0)),
+                            cost_usd=float(usage.get("cost", 0.0)),
+                        )
+                        log.append(record)
+                        if record.outcome == "ok":
+                            return body, tuple(log)
+                        last_error = f"upstream error: {body['error']}"
                 elif response.status_code in RETRYABLE_STATUS_CODES:
                     last_error = f"HTTP {response.status_code}: {response.text[:400]}"
+                    log.append(
+                        AttemptRecord(
+                            attempt=attempt,
+                            outcome="http_error",
+                            latency_seconds=elapsed,
+                            status_code=response.status_code,
+                            error=last_error[:400],
+                        )
+                    )
                 else:
                     # Permanent problem, e.g. bad key or unknown model. Give up now.
+                    log.append(
+                        AttemptRecord(
+                            attempt=attempt,
+                            outcome="http_error",
+                            latency_seconds=elapsed,
+                            status_code=response.status_code,
+                            error=response.text[:400],
+                        )
+                    )
                     raise ApiRequestError(
                         f"{payload['model']} failed with HTTP {response.status_code}: "
-                        f"{response.text[:400]}"
+                        f"{response.text[:400]}",
+                        tuple(log),
                     )
 
             if attempt < self._max_attempts:
@@ -263,7 +359,8 @@ class OpenRouterClient:
                 time.sleep(min(2.0**attempt, 30.0) + random.uniform(0.0, 1.0))
 
         raise ApiRequestError(
-            f"{payload['model']} failed after {self._max_attempts} attempts: {last_error}"
+            f"{payload['model']} failed after {self._max_attempts} attempts: {last_error}",
+            tuple(log),
         )
 
 
@@ -290,7 +387,7 @@ def _parse_completion(
     *,
     spec: ModelSpec,
     latency_seconds: float,
-    attempts: int,
+    attempt_log: tuple[AttemptRecord, ...] = (),
 ) -> CompletionResult:
     """Pull the reply text and the usage numbers out of OpenRouter's JSON."""
     try:
@@ -313,7 +410,9 @@ def _parse_completion(
         completion_tokens=int(usage.get("completion_tokens", 0)),
         cost_usd=float(usage.get("cost", 0.0)),
         latency_seconds=latency_seconds,
-        attempts=attempts,
+        attempts=len(attempt_log) or 1,
+        raw_response=body,
+        attempt_log=attempt_log,
     )
 
 
