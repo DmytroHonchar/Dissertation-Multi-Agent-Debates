@@ -337,6 +337,91 @@ responses, compute the group vote, and store an inspectable result.
   identity check does nothing.
 - **Next:** unchanged — Milestone 1, then `cache.py` (P5).
 
+### 2026-09-01 — Round 1 runner and P8 configuration
+
+- **Built:** `src/mad/round1.py`, `scripts/run_milestone1.py` and
+  `tests/test_round1.py` (23 tests). `Round1Config` freezes the P8 recipe:
+  `round1_config_v1`, question set `mmlu_pro_v1`, prompt `round1_v1`, settings
+  `agents_v1`, parser `parser_v1`, cache off, 120s timeout, two attempts,
+  sequential calls. `run_round1_question()` takes one question through the full
+  sequence — five calls, parse, store each response with its attempts, tally
+  with `expected_agents=registry.keys()`, store the outcome, finish the run —
+  and returns a report for hand inspection. `FixtureClient` supplies labelled
+  deterministic replies (provider `fixture` on every row): three agents agree,
+  one dissents, one refuses.
+- **Why:** Milestone 1 needs something that sequences the five existing modules,
+  and it is the first thing in the project that can spend money, so the
+  protections are structural rather than habits: the default is a free dry run
+  into a throwaway database; live mode needs both `--live` and
+  `--yes-spend-real-money`; only IDs from the 20-question pilot file are
+  accepted and experimental IDs are refused by name; a dry run is refused
+  `storage/results.sqlite`; a registry that does not hold exactly five agents
+  is refused before any call; and one agent failing is stored as `API_ERROR`
+  while the other four continue.
+- **Tested:** 265 tests pass, up from 242. The Round 1 tests disable the
+  network for every test, so any real call fails the suite. Covered: a full
+  fixture run storing five responses, their attempts and one outcome; every
+  version string read back from the `runs` row; one failed agent leaving a
+  five-row run with a `NO_CONSENSUS` vote; all five failing still completing;
+  a four-agent registry refused with nothing stored; a spy asserting the
+  registry keys actually reach `tally(expected_agents=...)`, since that check
+  is optional and silently skippable; experimental, unknown, empty and multiple
+  question IDs refused; both spend-guard directions; the production-path
+  refusal; and a question carrying an answer key stopping the run before any
+  row. CLI guards also exercised by hand: `--live` alone, a non-pilot ID and a
+  dry run aimed at the real database were all refused, and no `storage/`
+  directory exists.
+- **Problems:** None new. The account now holds $5 of credit, but the key still
+  has no spending limit — that stays a blocker for the live run (D015's pinning
+  question also remains open, deferred to before the pilot). `max_tokens=1024`
+  is provisional; the report prints a warning naming any truncated agent, which
+  is the signal to watch on the live run.
+- **Next:** set the key's spending limit in the OpenRouter dashboard, then run
+  Milestone 1 live: `scripts/run_milestone1.py --question <pilot-id> --live
+  --yes-spend-real-money`, inspect the five stored replies by hand, and record
+  what it cost. Then `cache.py` (P5).
+
+### 2026-09-01 — Review fixes to the Round 1 runner
+
+- **Built:** Four corrections from review, before any live call. First, retry
+  money: a call that failed once and then succeeded stored only the successful
+  attempt's tokens and cost on its response row, so the outcome totals and the
+  report understated spend; `response_from_completion` now sums every attempt
+  from the log, with the per-attempt split still visible in
+  `response_attempts`. Second, a malformed HTTP 200 body (no choices/message
+  structure) raised `ApiRequestError` with an empty attempt log, losing the raw
+  body and the cost of a paid reply; the log is now attached, with the last
+  attempt relabelled `malformed_body` instead of the `ok` it was logged as, and
+  the runner stores it as `API_ERROR` while the other four agents continue.
+  Third, `Round1Config` declared `timeout_seconds` and `max_attempts` that the
+  CLI ignored when building `OpenRouterClient`; one config now drives the
+  client, the runner and the stored labels, and a config claiming a cache or
+  parallel calls is refused, since it would describe a run that never happened.
+  Fourth, the CLI: the live default database resolves to the repository's
+  `storage/results.sqlite` regardless of the launch directory, every refusal
+  check runs before a client exists, and the client is closed even when the run
+  raises.
+- **Why:** The first two were honesty bugs in the money and audit trail — the
+  budget is £15 and D016 expects Mistral retries, so undercounted retry spend
+  and vanished malformed replies would have surfaced during the pilot as
+  unexplained account drain. The config fix closes a gap where the stored
+  version labels could disagree with the run that actually happened.
+- **Tested:** 278 tests pass, up from 265. New: a $0.00002 failed attempt plus
+  a $0.00010 success stored as a $0.00012 response, outcome and report, with
+  the per-attempt split intact; a malformed 200 body through the real client
+  keeping attempt number, full raw body, cost and a truthful outcome, then
+  through the runner as `API_ERROR` with the other four continuing; cache and
+  parallel configs refused; and seven CLI-level tests driving `main(argv)`
+  offline — dry run completes, chosen `--db` kept, `--live` alone refused, the
+  spend flag alone refused, experimental IDs refused, the production path
+  refused before any file exists, and the client closed even when the run
+  raises. The dry run was re-run and `git diff --check` is clean; no `storage/`
+  directory exists.
+- **Problems:** None outstanding from the review. The key's missing spending
+  limit remains the blocker for the live run.
+- **Next:** unchanged — spending limit, live Milestone 1, `cache.py`, provider
+  pinning before the pilot, then Round 2.
+
 
 ## Entry template
 

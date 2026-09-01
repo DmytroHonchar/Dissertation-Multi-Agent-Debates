@@ -76,9 +76,9 @@ the proposal source, not in this repository.
 - [x] Parser and failure statuses, with the full test set — `parser_v1.py` (P6)
 - [x] Results database and schema — `database.py` (P4)
 - [x] Three-of-five voting and consensus states (P9)
-- [ ] **Milestone 1** — one real pilot question through Round 1: five calls, parsed, stored, voted, inspected by hand
+- [ ] **Milestone 1** — one real pilot question through Round 1: five calls, parsed, stored, voted, inspected by hand. Runner ready (`scripts/run_milestone1.py`); needs the key's spend limit set in the dashboard first, then `--live --yes-spend-real-money`
 - [ ] Response cache — `cache.py` (P5)
-- [ ] Round 1 configuration and version labels (P8)
+- [x] Round 1 configuration and version labels (P8)
 - [ ] Round 2 with four anonymised peer responses per agent — `debate.py` (P10)
 - [ ] **Milestone 2** — one real pilot question through both rounds, peer inputs verified by hand
 - [ ] Whole pipeline on deterministic fake responses, then limited real calls
