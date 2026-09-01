@@ -303,6 +303,11 @@ class ResultsDatabase:
                 f"{self.path} was written by schema version {existing}, "
                 f"but this code is version {SCHEMA_VERSION}. Use a new file."
             )
+        if existing == SCHEMA_VERSION:
+            # Already stamped, so the tables exist. Stop here: rewriting the
+            # version would dirty the file, and merely opening a database to
+            # read it must never change a byte of it.
+            return
         with self._connection:
             for statement in SCHEMA_STATEMENTS:
                 self._connection.execute(statement)

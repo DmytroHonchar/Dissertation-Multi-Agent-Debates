@@ -118,6 +118,27 @@ def test_a_file_from_a_different_schema_version_is_refused(tmp_path):
         ResultsDatabase(path)
 
 
+def test_opening_an_existing_database_changes_none_of_its_bytes(tmp_path):
+    """Reading results must never modify them - not even the file header."""
+    import hashlib
+
+    path = tmp_path / "results.sqlite"
+    with ResultsDatabase(path) as db:
+        db.start_run(
+            RUN,
+            config_name="agents_v1",
+            question_set_version="mmlu_pro_v1",
+            prompt_version=PROMPT_VERSION,
+            settings_version="settings_v1",
+            parser_version=PARSER_VERSION,
+        )
+    before = hashlib.sha256(path.read_bytes()).hexdigest()
+
+    with ResultsDatabase(path) as db:
+        db.read_runs()
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == before
+
+
 def test_reopening_an_existing_file_keeps_its_rows(tmp_path):
     path = tmp_path / "results.sqlite"
     with ResultsDatabase(path) as db:
