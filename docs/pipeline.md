@@ -243,7 +243,7 @@ second round follows.
 API keys stay in the ignored `.env` only — never in configs, the database, git,
 prompts or results.
 
-## P9 — Voting
+## P9 — Voting — DONE
 
 Fixed rule (D004): a group answer requires **at least three matching votes out
 of the five configured agents**. A failed, missing, empty or unparseable
@@ -265,6 +265,21 @@ in the results chapter. Both are undecided.
 
 Store the state, the consensus letter where one exists, whether the question was
 decided, and the valid-answer count — separately for Round 1 and Round 2.
+
+Built 2026-08-31 as `src/mad/voting.py`. `tally()` takes a mapping of
+`agent_id` to `ParsedResponse` and returns a frozen `VoteOutcome` carrying the
+state, the consensus letter or `None`, whether it was decided, the valid-answer
+count, the per-letter vote counts for inspection and replay, and which agents
+failed. It refuses any group that is not exactly five identified agents, so the
+threshold can never be quietly rebased on however many responses arrived.
+Passing `expected_agents` additionally checks that the five *are* the configured
+five; without it, only the count and the identifiers are guaranteed. The runner
+should pass `load_model_registry()`'s keys — voting does not read the registry,
+because it has no business knowing which models the agents are. Only a
+response the parser marked `OK` votes. No judge, no tie-break: two letters
+cannot both reach three of five, so a tie is already below the threshold. The
+module imports the parser and nothing else — it cannot read a key, score an
+answer or write a row, and a test asserts that by parsing its imports.
 
 **Scoring (D010).** An undecided question counts as **incorrect** in group
 accuracy, and is also reported as its own category. Group accuracy therefore

@@ -271,6 +271,72 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** `cache.py` (P5), so a repeated call is not paid for twice, then
   `debate.py` (P9-P10).
 
+### 2026-08-31 — Three-of-five voting (P9)
+
+- **Built:** `src/mad/voting.py` and `tests/test_voting.py` (48 tests).
+  `tally()` takes a mapping of `agent_id` to `ParsedResponse` and returns a
+  frozen `VoteOutcome` holding the state, the consensus letter or `None`,
+  whether the question was decided, the valid-answer count, the per-letter vote
+  counts, and the agents that failed. `EXPECTED_AGENT_COUNT = 5` and
+  `CONSENSUS_THRESHOLD = 3` are constants, and a group that is not exactly five
+  identified agents is refused rather than accommodated.
+- **Why:** D004 fixes the threshold at three of the five *configured* agents,
+  not three of however many succeeded. Rebasing it on the survivors would make a
+  round with more failures look more decisive, which is the exact flaw the
+  project exists to measure, so the group size is validated instead of inferred.
+  Only an `OK` response votes: a failure is an absence, not a wrong answer.
+  `INSUFFICIENT_ANSWERS` and `NO_CONSENSUS` are kept apart because "the agents
+  disagreed" and "too many agents failed" mean different things in the results
+  chapter, even though D010 scores both as incorrect.
+- **Tested:** 236 tests pass, up from 188. All four states; every failure status
+  proved to cast no vote; the exactly-three boundary tested from both sides; two
+  agreeing survivors and one lone survivor both refused a group answer; mixed
+  disagreements including 2-2-1 and 2-1 with failures; five failures; every
+  option letter A to J, since MMLU-Pro runs to ten options; group sizes 0, 1, 3,
+  4, 6 and 7 refused; a duplicated `agent_id` collapsing to four entries refused;
+  responses proved unmodified; and the four state names asserted equal to the
+  database's `CHECK` constraint, so voting and storage cannot drift apart. A test
+  parses the module's imports to prove it pulls in the parser and nothing that
+  could store or score.
+- **Problems:** None in the logic. Two test-quality corrections: an import test
+  that string-matched the module source was replaced with one that parses the
+  AST, and no judge or tie-break rule was needed once it was clear that two
+  letters cannot both reach three of five, so a tie is already below the
+  threshold.
+  **Correction to the previous entry:** it names `cache.py` as next. That is
+  wrong. `docs/checklist.md` puts P9 voting before the cache, and voting is what
+  Milestone 1 needs. The order is: voting (done), then a small runner for
+  Milestone 1, then `cache.py`.
+- **Next:** Milestone 1 — one real pilot question through Round 1: five calls,
+  parsed, stored, voted and inspected by hand. It needs a small runner to
+  sequence call, parse, store and vote, and it is the first real spend on the
+  pipeline. `cache.py` (P5) follows.
+
+### 2026-08-31 — Review fixes to voting (P9)
+
+- **Built:** Two corrections found by review, before any commit. `VoteOutcome`
+  was declared frozen but held a plain dict in `vote_counts`, so
+  `outcome.vote_counts["A"] = 0` silently rewrote a tally after the vote; it is
+  now a `MappingProxyType` and read-only. `tally()` gained an optional
+  `expected_agents` argument that checks the five are the configured five and
+  names what is missing or unexpected.
+- **Why:** The first was a real hole in an immutability guarantee the file
+  claims in its own docstring. The second corrects an overstatement rather than
+  a bug: the code validated the count and the identifiers, not the names, so
+  five unrelated IDs could produce `UNANIMOUS`. Voting still does not read
+  `agents_v1.yaml` — it has no business knowing which models the agents are, so
+  the caller supplies the expected set and the runner will pass
+  `load_model_registry()`'s keys.
+- **Tested:** 242 tests pass, up from 236. Six new tests: `vote_counts` refuses
+  assignment and deletion, outcome fields refuse reassignment, five unrelated
+  IDs still vote when no expectation is given but are refused when it is, a
+  single swapped agent is named in the error, the configured five pass, and an
+  expected set that is not five agents is refused.
+- **Problems:** None outstanding. Noted for the runner: passing
+  `expected_agents` is optional, so Milestone 1 must actually pass it or the
+  identity check does nothing.
+- **Next:** unchanged — Milestone 1, then `cache.py` (P5).
+
 
 ## Entry template
 
