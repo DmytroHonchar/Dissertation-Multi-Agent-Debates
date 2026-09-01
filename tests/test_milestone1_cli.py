@@ -68,9 +68,17 @@ def test_an_experimental_question_is_refused_at_the_command_line(cli, capsys):
 
 def test_a_dry_run_aimed_at_the_real_database_is_refused_at_the_command_line(cli, capsys):
     production = REPO / "storage" / "results.sqlite"
+    # The real Milestone 1 run lives in this file now. Its bytes must not move.
+    before = production.stat() if production.exists() else None
+
     assert cli.main(["--question", PILOT_ID, "--db", str(production)]) == 1
     assert "refused" in capsys.readouterr().out
-    assert not (REPO / "storage").exists(), "the refusal happened before any file was made"
+
+    if before is not None:
+        after = production.stat()
+        assert (after.st_mtime_ns, after.st_size) == (before.st_mtime_ns, before.st_size), (
+            "the real results database was touched by a dry run"
+        )
 
 
 def test_the_client_is_closed_even_when_the_run_blows_up(cli, monkeypatch, tmp_path):
@@ -90,3 +98,37 @@ def test_the_client_is_closed_even_when_the_run_blows_up(cli, monkeypatch, tmp_p
     with pytest.raises(RuntimeError, match="boom"):
         cli.main(["--question", PILOT_ID, "--db", str(tmp_path / "x.sqlite")])
     assert closed == [True]
+
+
+def test_the_selected_registry_becomes_the_stored_settings_version(cli, tmp_path):
+    """A run on agents_v2 must never be labelled agents_v1."""
+    from mad.database import ResultsDatabase
+
+    db_path = tmp_path / "v2.sqlite"
+    assert cli.main(["--question", PILOT_ID, "--agents", "agents_v2", "--db", str(db_path)]) == 0
+
+    with ResultsDatabase(db_path) as db:
+        run = db.read_runs()[0]
+        assert run["settings_version"] == "agents_v2"
+        assert run["run_id"].startswith("round1_agents_v2_")
+
+
+def test_agents_v2_actually_raises_the_two_ceilings(cli, tmp_path, capsys):
+    assert cli.main(["--question", PILOT_ID, "--agents", "agents_v2",
+                     "--db", str(tmp_path / "x.sqlite")]) == 0
+    out = capsys.readouterr().out
+    assert "agent_qwen=2048" in out and "agent_deepseek=2048" in out
+    assert "agent_llama=1024" in out
+
+
+def test_a_dry_run_never_creates_or_touches_the_real_cache_file(cli, tmp_path):
+    real_cache = REPO / "storage" / "cache.sqlite"
+    before = real_cache.stat() if real_cache.exists() else None
+
+    assert cli.main(["--question", PILOT_ID, "--db", str(tmp_path / "y.sqlite")]) == 0
+
+    if before is None:
+        assert not real_cache.exists(), "a dry run created the real cache"
+    else:
+        after = real_cache.stat()
+        assert (after.st_mtime_ns, after.st_size) == (before.st_mtime_ns, before.st_size)

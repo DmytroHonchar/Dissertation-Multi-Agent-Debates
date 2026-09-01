@@ -62,8 +62,11 @@ answer. No agent is told a second round follows. Then the first majority vote.
 four**. Never its own. Never with model identities attached. It answers again.
 Then the second majority vote.
 
-**Settings** — temperature `0`, top-p `1.0`, `max_tokens 1024` (provisional), for
-every agent in both rounds. A temporary API failure gets one retry, two attempts
+**Settings** — temperature `0`, top-p `1.0`, for every agent in both rounds.
+`max_tokens` is under revision (D018): Milestone 1 proved 1024 too low for Qwen
+and DeepSeek (whole budget spent on internal reasoning, no visible answer);
+`agents_v2` (provisional, those two at 2048) is the first probe. `agents_v1` is
+frozen — a real stored run identifies itself by that name. A temporary API failure gets one retry, two attempts
 in total (D012). OpenRouter picks the upstream provider automatically; the served
 model and provider are recorded on every response but never used to reject one.
 **Pinning each agent to one provider is deferred until before the pilot** (D015)
@@ -157,14 +160,14 @@ storage/    gitignored: results.sqlite, cache.sqlite, logs
 ```
 
 Implemented: `benchmark.py`, `api_client.py`, `prompts_v1.py`, `parser_v1.py`,
-`database.py`, `voting.py`, `round1.py`. Still to write: `cache.py` (P5),
+`database.py`, `voting.py`, `round1.py`, `cache.py`. Still to write:
 `debate.py` (P10), `evaluation.py` (P12) and `app/viewer.py` (P13). **Create a module when you
 write its first real line — do not scaffold empty files.**
 
 ## Commands
 
 ```bash
-.venv/bin/python -m pytest                 # 278 tests, all passing, all offline
+.venv/bin/python -m pytest                 # 295 tests, all passing, all offline
 .venv/bin/python scripts/check_models.py   # live OpenRouter check — real calls, costs money
 .venv/bin/python scripts/run_milestone1.py --question <pilot-id>   # dry run, free; --live --yes-spend-real-money for the real thing
 ```

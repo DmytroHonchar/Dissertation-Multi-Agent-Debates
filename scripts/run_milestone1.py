@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from mad.api_client import OpenRouterClient, load_env_file, load_model_registry
+from mad.cache import ResponseCache
 from mad.database import ResultsDatabase
 from mad.parser_v1 import STATUS_TRUNCATED
 from mad.round1 import (
@@ -37,7 +38,8 @@ from mad.round1 import (
     run_round1_question,
 )
 
-REGISTRY_PATH = Path(__file__).resolve().parents[1] / "configs" / "models" / "agents_v1.yaml"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+KNOWN_REGISTRIES = ("agents_v1", "agents_v2")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -48,11 +50,21 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="required with --live; confirms the spend")
     parser.add_argument("--db", help="database path (default: temp file for dry runs, "
                         "storage/results.sqlite for live)")
+    parser.add_argument("--agents", choices=KNOWN_REGISTRIES, default="agents_v1",
+                        help="which settings version to run (agents_v2 is the token probe)")
+    parser.add_argument("--no-cache", action="store_true",
+                        help="skip the response cache, e.g. to measure non-determinism")
     args = parser.parse_args(argv)
 
-    # One config drives everything: the client below is built from it, and the
-    # same version labels end up stored on the run.
-    config = Round1Config()
+    # The cache only matters live: fixture replies are free and are refused by
+    # the cache anyway.
+    use_cache = args.live and not args.no_cache
+
+    # One config drives everything: the client below is built from it, the
+    # runner checks it, and the same labels end up stored on the run. The
+    # settings version is whichever registry was actually selected - a run on
+    # agents_v2 must never be labelled agents_v1.
+    config = Round1Config(settings_version=args.agents, cache_enabled=use_cache)
 
     # Every check that can refuse the command runs before a client exists.
     try:
@@ -68,9 +80,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"refused: {error}")
         return 1
 
-    registry = load_model_registry(REGISTRY_PATH)
+    registry = load_model_registry(REPO_ROOT / "configs" / "models" / f"{args.agents}.yaml")
     mode = "LIVE - this spends real money" if args.live else "dry run - fixture replies, free"
     print(f"mode: {mode}")
+    print(f"settings: {args.agents}"
+          + (f" | max_tokens: " + ", ".join(f"{a}={s.max_tokens}" for a, s in registry.items())
+             if args.agents != "agents_v1" else ""))
+    print(f"cache: {'on' if use_cache else 'off'}")
     print(f"question: {question['stable_id']} ({len(question['options'])} options)")
 
     if args.live:
@@ -82,16 +98,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         client = FixtureClient(question)
 
-    run_id = f"milestone1_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+    run_id = f"round1_{args.agents}_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
 
+    cache = ResponseCache() if use_cache else None
     try:
         with ResultsDatabase(db_path) as db:
             report = run_round1_question(
                 question, registry=registry, client=client, db=db,
-                run_id=run_id, config=config,
+                run_id=run_id, config=config, cache=cache,
             )
     finally:
         client.close()
+        if cache is not None:
+            cache.close()
 
     print(f"\nrun: {report.run_id}")
     print(f"database: {db_path}")
@@ -108,10 +127,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     truncated = [a.agent_id for a in report.agents if a.status == STATUS_TRUNCATED]
     if truncated:
-        print(f"\nWARNING: truncated: {', '.join(truncated)}. "
-              "max_tokens=1024 is provisional - this is the signal it is too low.")
-    if args.live:
-        print("\nnote: there is no cache yet. Repeating this run pays for the "
+        details = ", ".join(
+            f"{agent_id} (limit {registry[agent_id].max_tokens})" for agent_id in truncated
+        )
+        print(f"\nWARNING: truncated: {details}. "
+              "That limit is a lower bound, not a measurement - step up per D018.")
+    if args.live and use_cache:
+        print("\nnote: a rerun with these exact settings is free (cached). "
+              "Changed settings mean changed requests, so every change pays again.")
+    elif args.live:
+        print("\nnote: --no-cache means repeating this run pays for the "
               "same five answers again.")
     return 0
 

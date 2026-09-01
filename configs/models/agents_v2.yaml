@@ -1,0 +1,63 @@
+# PROVISIONAL - not frozen. Token probe after Milestone 1 (D018).
+#
+# Milestone 1 (run milestone1_20260901T161852Z, agents_v1) found Qwen and
+# DeepSeek spending the whole 1024-token budget on internal reasoning and
+# returning no visible answer: finish_reason=length, content=null, no vote.
+# This version raises only their ceiling. Nothing else changes: same models,
+# same temperature, same top_p, same routing. Reasoning behaviour is left at
+# each model's default on purpose - lowering it would change the model being
+# studied (D018).
+#
+# agents_v1 stays untouched: a real stored run identifies itself by that name.
+
+registry:
+  name: agents_v2
+  provider: openrouter
+  base_url: https://openrouter.ai/api/v1
+
+# Applied to every agent unless the agent overrides the same key.
+defaults:
+  # Temperature 0: the experiment measures the effect of voting and of
+  # cross-model communication. Sampling randomness would add a third source of
+  # variation and make that comparison less controlled. Decision D002.
+  temperature: 0
+  top_p: 1.0
+  max_tokens: 1024
+  # OpenRouter chooses an available upstream provider. Pinning each agent to one
+  # named provider is deferred until before the pilot (D015). The served model
+  # and provider are recorded on every response regardless, so any routing
+  # change stays auditable.
+  allow_provider_fallbacks: true
+  # Route only to providers that honour the requested parameters, so
+  # temperature 0 is not silently ignored by a provider that cannot apply it.
+  require_parameters: true
+
+agents:
+  agent_llama:
+    slug: meta-llama/llama-4-maverick
+    display_name: Llama 4 Maverick
+    developer: Meta
+
+  agent_qwen:
+    slug: qwen/qwen3.8-27b
+    display_name: Qwen3.8 27B
+    developer: Alibaba
+    # Used all 1024 tokens reasoning and answered nothing. First probe: 2048.
+    max_tokens: 2048
+
+  agent_mistral:
+    slug: mistralai/mistral-large-2512
+    display_name: Mistral Large 2512
+    developer: Mistral AI
+
+  agent_deepseek:
+    slug: deepseek/deepseek-v4-pro-0813
+    display_name: DeepSeek V4 Pro
+    developer: DeepSeek
+    # Used all 1024 tokens reasoning and answered nothing. First probe: 2048.
+    max_tokens: 2048
+
+  agent_gemma:
+    slug: google/gemma-4-31b-it
+    display_name: Gemma 4 31B IT
+    developer: Google

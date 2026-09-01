@@ -85,12 +85,13 @@ Still open before the pilot freeze:
   when a pinned provider is unavailable.
 - **Mistral availability** (D016) — measure the real HTTP 429 rate during the
   pilot and decide how to handle it.
-- **`max_tokens` per round.** 1024 is provisional. Reasoning models bill and
-  consume tokens before emitting anything visible — on 2026-08-28 Qwen used up to
-  33 and DeepSeek 11 completion tokens to answer a one-word prompt, and at 16
-  tokens on 2026-08-26 both returned nothing at all. Round 2 also carries four
-  peer responses in its prompt. Treat `max_tokens` as a per-round setting and
-  confirm both values in the pilot.
+- **`max_tokens` per round.** 1024 is provisional and Milestone 1
+  (2026-09-01) proved it too low: Qwen and DeepSeek spent the whole budget on
+  internal reasoning and returned `content=null`, `finish_reason=length` — no
+  vote, at 88% of the run's cost. D018 fixes the correction method; the first
+  probe is `agents_v2` with those two at 2048, default reasoning behaviour
+  kept. Round 2 also carries four peer responses in its prompt, so treat
+  `max_tokens` as a per-round setting and confirm both values in the pilot.
 - **Bootstrap seed** for P12, so the confidence interval is reproducible.
 
 Do not rely on the API `seed` parameter. Support varies and the experiment does
@@ -139,7 +140,7 @@ in one transaction, so a half-written pair cannot understate what the run cost.
 `finish_run()` is the only `UPDATE` in the module — `ended_at`, once — and a
 test parses the module's SQL to keep it that way.
 
-## P5 — Response cache
+## P5 — Response cache — DONE
 
 New file `src/mad/cache.py`. Separate store from the results database. It exists
 only to avoid paying twice; it is not part of the experimental record.
@@ -159,6 +160,22 @@ cache transport, rate-limit or provider errors; caching those would make a
 temporary failure permanent.
 
 Provide a `--no-cache` flag for deliberately measuring non-determinism.
+
+Built 2026-09-01 as `src/mad/cache.py`. One table keyed by a SHA-256 of
+agent_id, slug, messages, temperature, top_p and max_tokens; the complete raw
+body is stored and a hit rebuilds the reply with original tokens and latency at
+zero cost, making no API call. First write wins. The cache refuses fixture
+replies and results without a raw body. The runner does lookup → call on miss →
+parse → results database → cache, in that order: the paid call reaches the
+audit record before the cache, so a crash between the two can leave an
+unrecorded row in neither place, never a cached reply whose spend vanished from
+the record. A cache-hit row stores no attempt rows — that run made no API
+attempt; its `attempt_count` of 1 names the original call behind the cached
+body and `cache_hit=1` marks the difference. The runner records `cache_hit` per
+response and refuses a config whose `cache_enabled` disagrees with reality.
+Config version `round1_config_v2` labels the cache-capable runner; `v1` was the
+cacheless Milestone 1 recipe and stays on that run. The CLI enables the cache for
+live runs only and honours `--no-cache`.
 
 ## P6 — Parser and failure statuses
 

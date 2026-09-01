@@ -403,3 +403,51 @@ separately, a wrong guess puts a failure in the wrong column of the table.
 
 The phrase list and the 200-character floor must both be checked against the
 pilot transcripts before the freeze.
+
+
+## D018 — Token limits after the Milestone 1 truncations
+
+- **Status:** Provisional — method fixed, final numbers await the token probe
+- **Decision:** Output ceilings are raised per agent under new settings
+  versions, chosen on truncation rate, valid-answer rate and cost — never on
+  pilot accuracy. Reasoning behaviour stays at each model's default.
+- **Recorded:** 2026-09-01
+
+The live Milestone 1 run (`milestone1_20260901T161852Z`, settings `agents_v1`)
+found Qwen and DeepSeek spending the entire 1024-token output budget on internal
+reasoning: `finish_reason=length`, `content=null`, no visible answer, no vote.
+Those two calls cost $0.0072 of the run's $0.0082 — 88% of the spend bought
+nothing. Truncation is therefore the most expensive possible outcome, and the
+ceiling exists to prevent runaway, not to ration ability.
+
+**How the final limits are chosen.** Probe 2–3 pilot questions per candidate.
+If any response ends with `finish_reason=length`, the ceiling is a lower bound,
+not a measurement — move up one step (2048 → 3072 → 4096) under a new settings
+version. Once everything finishes, take the largest completed token count, add
+roughly 25% margin, round up to the next 256. The chosen limits are used
+unchanged in both rounds and frozen with the rest of the configuration.
+Selection uses truncation, valid-answer rate and cost only. Pilot accuracy is
+20 questions — one question is five percentage points — so choosing settings by
+it would be fitting noise, and tuning the configuration on the outcome measure
+is exactly what this project criticises elsewhere.
+
+**Why not `reasoning.effort: low`.** Lowering a model's reasoning effort
+changes the model being studied: the experiment's diversity comes from five
+model families as they actually behave, and results would describe
+"Qwen forced to think less", not Qwen. Deferred unless larger ceilings prove
+pathological (a model burning 4k+ tokens by default) or unaffordable. If it is
+ever used, it becomes a new settings version and a recorded decision, and a
+per-model `reasoning.max_tokens` cap is preferred over effort levels, because a
+cap structurally guarantees space for the visible answer.
+
+**Verified 2026-09-01** via OpenRouter's free `/api/v1/models` endpoint (no
+completion called): both `qwen/qwen3.8-27b` and `deepseek/deepseek-v4-pro-0813`
+list `reasoning` and `reasoning_effort` in `supported_parameters`. This shows
+the routing layer accepts the parameters; whether the specific serving provider
+honours `reasoning.max_tokens` is **not** proven by this and ties into provider
+pinning (D015). Do not assume it works until a pinned provider demonstrates it.
+
+`agents_v1` stays byte-for-byte untouched: run `milestone1_20260901T161852Z`
+identifies itself by that name and its provenance must stay true. The first
+probe candidate is `configs/models/agents_v2.yaml`: identical except Qwen and
+DeepSeek at `max_tokens: 2048`, clearly marked provisional.
