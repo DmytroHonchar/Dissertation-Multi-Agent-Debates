@@ -157,13 +157,13 @@ storage/    gitignored: results.sqlite, cache.sqlite, logs
 ```
 
 Implemented: `benchmark.py`, `api_client.py`, `prompts_v1.py`, `parser_v1.py`,
-`database.py`. Still to write: `cache.py` (P5), `debate.py` (P9-P10),
+`database.py`, `voting.py`. Still to write: `cache.py` (P5), `debate.py` (P10),
 `evaluation.py` (P12) and `app/viewer.py` (P13). **Create a module when you
 write its first real line — do not scaffold empty files.**
 
 ## Commands
 
 ```bash
-.venv/bin/python -m pytest                 # 188 tests, all passing, all offline
+.venv/bin/python -m pytest                 # 242 tests, all passing, all offline
 .venv/bin/python scripts/check_models.py   # live OpenRouter check — real calls, costs money
 ```
