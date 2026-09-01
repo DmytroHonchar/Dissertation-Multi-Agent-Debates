@@ -1,16 +1,18 @@
-"""The results database. Every experimental row the project produces lands here.
+"""Where every result is stored.
 
-SQLite, one file, no server. `storage/results.sqlite` is gitignored, so results
-never enter git - the frozen dataset does, the results do not.
+SQLite, so it is one file and there is no server to run. The file is
+storage/results.sqlite, which git ignores. Results stay off git; the dataset
+does not.
 
-Four rules this file exists to enforce:
-  - The full raw response is stored, never only the parsed letter.
-  - Every attempt is kept, including the ones that failed and cost money.
-  - Nothing is ever overwritten. Repeating an experiment means a new run ID.
-  - No column holds a correct answer. Only evaluation.py may read the key.
+Four rules this file has to hold:
 
-Round 1 and Round 2 outcomes are separate rows on purpose. Comparing them is the
-research question, so nothing here may collapse them into one number.
+    store the whole reply, not just the letter
+    keep every attempt, including the ones that failed and cost money
+    never overwrite a row - a repeat means a new run ID
+    no column can hold a correct answer
+
+Round 1 and Round 2 get separate rows. Comparing them is the research question,
+so nothing here is allowed to merge them.
 """
 
 from __future__ import annotations
@@ -35,15 +37,16 @@ DEFAULT_DATABASE_PATH = Path("storage") / "results.sqlite"
 
 ROUNDS = (1, 2)
 
-# From P9. Every one of these is derived from the single three-of-five rule.
+# The four ways a vote can end. All four come from the one rule: an answer needs
+# three of the five agents.
 CONSENSUS_STATES = (
-    "UNANIMOUS",              # five valid answers, all identical
-    "CONSENSUS",              # three or four votes for one answer
-    "NO_CONSENSUS",           # three or more valid answers, none reaching three
-    "INSUFFICIENT_ANSWERS",   # fewer than three valid answers, so three is unreachable
+    "UNANIMOUS",              # everyone said the same thing
+    "CONSENSUS",              # three or four said the same thing
+    "NO_CONSENSUS",           # enough agents answered, but nobody got three
+    "INSUFFICIENT_ANSWERS",   # too many agents failed, so three was impossible
 )
 
-# Round 2 shows an agent the other four agents' answers, never its own.
+# In Round 2 an agent sees the other four, never itself.
 MAX_PEER_RESPONSES = 4
 
 
@@ -51,23 +54,18 @@ MAX_PEER_RESPONSES = 4
 
 
 class DatabaseError(RuntimeError):
-    """Something was wrong with what was being stored."""
+    """Something about the row was wrong."""
 
 
 class DuplicateRecordError(DatabaseError):
-    """This row already exists. Rows are never replaced - use a new run ID."""
+    """This row is already there. Nothing gets replaced - use a new run ID."""
 
 
 # 3. Schema
 
-# Notes on the constraints, because they are doing real work:
-#   - status/round/consensus_state are constrained in SQL, so a typo in calling
-#     code fails at the insert instead of silently producing a new category.
-#   - The extracted_letter CHECK is the "a failure is never a wrong answer" rule
-#     made structural: only an OK row may carry a letter.
-#   - The UNIQUE constraints are what make a duplicate insert fail rather than
-#     overwrite. There is no INSERT OR REPLACE anywhere in this file.
-#   - No table has a column for the correct answer. That is not an oversight.
+# The CHECK and UNIQUE lines below are not decoration. They put the project's
+# rules into the file itself, so breaking one is an error instead of a quiet
+# wrong number months later. Each is explained where it sits.
 
 SCHEMA_STATEMENTS = (
     """
@@ -90,6 +88,9 @@ SCHEMA_STATEMENTS = (
         round             INTEGER NOT NULL CHECK (round IN (1, 2)),
         agent_id          TEXT NOT NULL,
 
+        -- A slug is the model's ID on OpenRouter, like "qwen/qwen3.8-27b".
+        -- We ask for one; OpenRouter can serve a different build of it. Both
+        -- are kept, and a response is never rejected for the difference.
         requested_slug    TEXT NOT NULL,
         served_slug       TEXT NOT NULL,
         provider          TEXT NOT NULL,
@@ -98,6 +99,7 @@ SCHEMA_STATEMENTS = (
         raw_response      TEXT NOT NULL,
         extracted_letter  TEXT,
         extraction_method TEXT,
+        -- A typo in calling code becomes an error here, not a new category.
         status            TEXT NOT NULL CHECK (
                               status IN ('OK', 'REFUSAL', 'TRUNCATED',
                                          'PARSE_FAIL', 'API_ERROR')),
@@ -117,18 +119,22 @@ SCHEMA_STATEMENTS = (
         latency_seconds   REAL NOT NULL DEFAULT 0.0,
         cache_hit         INTEGER NOT NULL DEFAULT 0 CHECK (cache_hit IN (0, 1)),
 
-        -- Which peer responses this agent was shown, as response_ids. Round 1
-        -- sees none. Round 2 sees at most four, and fewer when a peer failed -
-        -- P10 calls that a confound the results chapter has to report.
+        -- Which peer answers this agent was shown, by response_id. Round 1
+        -- sees none. Round 2 sees four, or fewer when a peer failed - the real
+        -- number matters, so it is stored rather than assumed.
         peer_response_ids TEXT NOT NULL DEFAULT '[]',
         peer_count        INTEGER NOT NULL DEFAULT 0
                               CHECK (peer_count BETWEEN 0 AND 4),
 
         created_at        TEXT NOT NULL,
 
+        -- One answer per agent per question per round. A second insert fails
+        -- instead of overwriting the first.
         UNIQUE (run_id, question_id, round, agent_id),
         CHECK (selected_attempt <= attempt_count),
+        -- Round 1 agents work alone.
         CHECK (round = 2 OR peer_count = 0),
+        -- Only an OK row may carry a letter, so a failure cannot become a vote.
         CHECK ((status = 'OK' AND extracted_letter IS NOT NULL)
             OR (status <> 'OK' AND extracted_letter IS NULL))
     )
@@ -154,6 +160,7 @@ SCHEMA_STATEMENTS = (
         latency_seconds   REAL NOT NULL DEFAULT 0.0,
         cache_hit         INTEGER NOT NULL DEFAULT 0 CHECK (cache_hit IN (0, 1)),
 
+        -- The same attempt cannot be logged twice.
         UNIQUE (response_id, attempt_number)
     )
     """,
@@ -178,8 +185,9 @@ SCHEMA_STATEMENTS = (
 
         created_at              TEXT NOT NULL,
 
+        -- Round is part of the key, so Round 1 and Round 2 cannot collide.
         PRIMARY KEY (run_id, question_id, round),
-        -- A decided question has an answer; an undecided one must not pretend to.
+        -- Decided means there is an answer. Undecided must not pretend to have one.
         CHECK ((decided = 1 AND consensus_answer IS NOT NULL)
             OR (decided = 0 AND consensus_answer IS NULL))
     )
@@ -194,17 +202,17 @@ SCHEMA_STATEMENTS = (
 
 @dataclass(frozen=True)
 class ResponseRecord:
-    """One agent's answer to one question in one round, ready to store."""
+    """One agent's answer to one question in one round."""
 
     run_id: str
     question_id: str
     round: int
     agent_id: str
 
-    requested_slug: str
-    served_slug: str
-    provider: str
-    generation_id: str
+    requested_slug: str      # the model ID we asked OpenRouter for
+    served_slug: str         # the model ID it actually used
+    provider: str            # the company that ran it, e.g. DeepInfra
+    generation_id: str       # OpenRouter's ID for this reply
 
     raw_response: str
     status: str
@@ -271,7 +279,7 @@ class OutcomeRecord:
 class ResultsDatabase:
     """The results file. Open it, write to it, read it back.
 
-    Use it as a context manager so it always closes:
+    Best used with `with`, so it closes itself:
 
         with ResultsDatabase(path) as db:
             db.start_run(...)
@@ -281,14 +289,14 @@ class ResultsDatabase:
         self.path = Path(path) if path is not None else _repository_root() / DEFAULT_DATABASE_PATH
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(self.path)
-        # Rows come back addressable by column name instead of position.
+        # Read rows by column name instead of position.
         self._connection.row_factory = sqlite3.Row
-        # Off by default in SQLite, so the references above would not be checked.
+        # SQLite ignores foreign keys unless you ask for them.
         self._connection.execute("PRAGMA foreign_keys = ON")
         self._create_schema()
 
     def _create_schema(self) -> None:
-        """Create the tables if this is a new file, and stamp the version on it."""
+        """Make the tables if the file is new, and write the version onto it."""
         existing = self._connection.execute("PRAGMA user_version").fetchone()[0]
         if existing and existing != SCHEMA_VERSION:
             raise DatabaseError(
@@ -322,7 +330,7 @@ class ResultsDatabase:
         parser_version: str,
         started_at: str | None = None,
     ) -> None:
-        """Open a run. The versions recorded here are what make its results citable."""
+        """Open a run. These version numbers are what make its results citable later."""
         self._insert(
             "runs",
             {
@@ -339,10 +347,10 @@ class ResultsDatabase:
         )
 
     def finish_run(self, run_id: str, ended_at: str | None = None) -> None:
-        """Stamp the end time. The only update this file performs, and only once.
+        """Write the end time. The only update in this file, and it works once.
 
-        "Never overwrite a row" is about results. A run has a start and an end,
-        and the end is not known when it starts.
+        This is not overwriting a result. A run has a start and an end, and the
+        end is not known when it starts.
         """
         with self._connection:
             cursor = self._connection.execute(
@@ -355,11 +363,10 @@ class ResultsDatabase:
     def record_response(
         self, response: ResponseRecord, attempts: Sequence[AttemptRow] = ()
     ) -> int:
-        """Store one response and all of its attempts, or store neither.
+        """Store one response with all its attempts, or store nothing.
 
-        Both inserts share one transaction. A response whose attempts failed to
-        store would understate what the run cost, so a half-written pair is worse
-        than an error.
+        One transaction for both. Half a record would undercount what the run
+        cost, which is worse than an error you can see.
         """
         _validate_response(response, attempts)
         row = _response_to_row(response)
@@ -384,7 +391,7 @@ class ResultsDatabase:
         return response_id
 
     def record_outcome(self, outcome: OutcomeRecord) -> None:
-        """Store the group's position on one question after one round."""
+        """Store where the group landed on one question after one round."""
         if outcome.round not in ROUNDS:
             raise DatabaseError(f"round must be 1 or 2, got {outcome.round}")
         if outcome.consensus_state not in CONSENSUS_STATES:
@@ -413,7 +420,7 @@ class ResultsDatabase:
         )
 
     def _insert(self, table: str, row: dict[str, Any], *, duplicate_message: str) -> None:
-        """Plain INSERT. Never INSERT OR REPLACE - a duplicate must fail."""
+        """A plain INSERT. Never INSERT OR REPLACE - a duplicate has to fail."""
         try:
             with self._connection:
                 self._connection.execute(*_insert_sql(table, row))
@@ -438,9 +445,9 @@ class ResultsDatabase:
         question_id: str | None = None,
         agent_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Responses for a run, narrowed by round, question or agent.
+        """Responses for a run, filtered by round, question or agent.
 
-        peer_response_ids comes back as a list of ints, not the stored JSON text.
+        peer_response_ids comes back as a list, not the JSON text it is stored as.
         """
         sql = "SELECT * FROM model_responses WHERE run_id = ?"
         params: list[Any] = [run_id]
@@ -456,14 +463,14 @@ class ResultsDatabase:
         return rows
 
     def read_attempts(self, response_id: int) -> list[dict[str, Any]]:
-        """Every attempt behind one response, in the order they were made."""
+        """Every attempt behind one response, in the order they happened."""
         return self._query(
             "SELECT * FROM response_attempts WHERE response_id = ? ORDER BY attempt_number",
             (response_id,),
         )
 
     def read_outcomes(self, run_id: str, *, round: int | None = None) -> list[dict[str, Any]]:
-        """Group outcomes for a run. Round 1 and Round 2 are separate rows."""
+        """Group outcomes for a run. Each round is its own row."""
         sql = "SELECT * FROM question_outcomes WHERE run_id = ?"
         params: list[Any] = [run_id]
         if round is not None:
@@ -475,7 +482,7 @@ class ResultsDatabase:
         return [dict(row) for row in self._connection.execute(sql, params).fetchall()]
 
 
-# 8. Building records from what the API client and parser return
+# 8. Turning API replies into rows
 
 
 def response_from_completion(
@@ -491,10 +498,10 @@ def response_from_completion(
     cache_hit: bool = False,
     peer_response_ids: Sequence[int] = (),
 ) -> ResponseRecord:
-    """Turn one successful call plus its parse into a storable row.
+    """Build a row from a successful call and its parse.
 
-    The API client knows nothing about the database and the database does no
-    parsing, so the joining happens here.
+    The API client knows nothing about this database, and this database does no
+    parsing. They meet here and nowhere else.
     """
     return ResponseRecord(
         run_id=run_id,
@@ -535,10 +542,11 @@ def response_from_failed_call(
     prompt_version: str,
     peer_response_ids: Sequence[int] = (),
 ) -> ResponseRecord:
-    """A call that failed every attempt. Recorded as API_ERROR, never as an answer.
+    """Build a row for a call that failed every attempt.
 
-    Built from ApiRequestError.attempt_log. The served model and provider are
-    unknown, and are stored as "unknown" rather than guessed.
+    Comes from ApiRequestError.attempt_log. Stored as API_ERROR, never as an
+    answer. Nobody served it, so the model and provider are stored as "unknown"
+    rather than guessed.
     """
     last = attempt_log[-1] if attempt_log else None
     return ResponseRecord(
@@ -575,10 +583,10 @@ def attempt_rows(
     parsed_by_attempt: dict[int, ParsedResponse] | None = None,
     cache_hit: bool = False,
 ) -> list[AttemptRow]:
-    """Turn the API client's attempt log into storable rows.
+    """Turn the API client's attempt log into rows.
 
-    An attempt that never returned a reply has no parse, so its status is the
-    API_ERROR that the failure actually was - nothing is invented.
+    An attempt that returned nothing has nothing to parse, so it is stored as
+    the API_ERROR it was. Nothing is filled in.
     """
     parsed_by_attempt = parsed_by_attempt or {}
     rows = []
@@ -608,7 +616,7 @@ def attempt_rows(
 
 
 def _validate_response(response: ResponseRecord, attempts: Sequence[AttemptRow]) -> None:
-    """Catch what SQL constraints cannot, with a message that names the problem."""
+    """Checks SQL cannot do, with an error that says what is actually wrong."""
     if response.round not in ROUNDS:
         raise DatabaseError(f"round must be 1 or 2, got {response.round}")
     if response.status != STATUS_OK and response.extracted_letter is not None:
@@ -685,21 +693,21 @@ def _attempt_to_row(attempt: AttemptRow, response_id: int) -> dict[str, Any]:
 
 
 def _insert_sql(table: str, row: dict[str, Any]) -> tuple[str, tuple[Any, ...]]:
-    """Build a plain INSERT from a column-to-value mapping."""
+    """Build an INSERT from a column-to-value mapping."""
     columns = ", ".join(row)
     placeholders = ", ".join("?" for _ in row)
     return f"INSERT INTO {table} ({columns}) VALUES ({placeholders})", tuple(row.values())
 
 
 def _integrity_error(error: sqlite3.IntegrityError, subject: str) -> DatabaseError:
-    """Say which rule was broken, since SQLite's own message is terse."""
+    """Name the rule that was broken. SQLite's own message is too short to help."""
     if "UNIQUE" in str(error):
         return DuplicateRecordError(f"{subject} already exists; rows are never replaced")
     return DatabaseError(f"{subject} was rejected: {error}")
 
 
 def _now() -> str:
-    """UTC, ISO 8601. One timezone everywhere, so runs can be compared."""
+    """The time now, in UTC. One timezone everywhere, so runs compare cleanly."""
     return datetime.now(timezone.utc).isoformat()
 
 
