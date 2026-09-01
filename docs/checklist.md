@@ -54,7 +54,7 @@ all five model IDs confirmed with live calls.
 
 - [ ] **Provider pinning (D015).** Automatic routing is fine for building, but it changed provider between consecutive runs and providers serve the same model at different quantisations. Pin each agent and record what happens when a pinned provider is unavailable, before freezing settings.
 - [ ] **Mistral availability (D016).** Intermittent HTTP 429 from the shared upstream pool. Measure the real rate over the 20 pilot questions and decide how to handle it. Do not change the model.
-- [ ] Confirm `max_tokens` per round — 1024 is provisional and reasoning models spend tokens before answering (D002)
+- [ ] Confirm `max_tokens` per round — Milestone 1 proved 1024 too low for Qwen and DeepSeek; probe `agents_v2` (2048) on 2-3 pilot questions per D018
 - [ ] Fix and record the bootstrap seed for the D011 confidence interval
 - [x] Note for P6: Mistral answered `'Yes.'` to a prompt demanding the single word `ready`, twice. Test the parser against loose instruction-format compliance.
 
@@ -76,8 +76,8 @@ the proposal source, not in this repository.
 - [x] Parser and failure statuses, with the full test set — `parser_v1.py` (P6)
 - [x] Results database and schema — `database.py` (P4)
 - [x] Three-of-five voting and consensus states (P9)
-- [ ] **Milestone 1** — one real pilot question through Round 1: five calls, parsed, stored, voted, inspected by hand. Runner ready (`scripts/run_milestone1.py`); needs the key's spend limit set in the dashboard first, then `--live --yes-spend-real-money`
-- [ ] Response cache — `cache.py` (P5)
+- [x] **Milestone 1** — done live 2026-09-01, run `milestone1_20260901T161852Z`, $0.0082. Pipeline correct end to end; found Qwen and DeepSeek truncating at 1024 tokens (D018)
+- [x] Response cache — `cache.py` (P5)
 - [x] Round 1 configuration and version labels (P8)
 - [ ] Round 2 with four anonymised peer responses per agent — `debate.py` (P10)
 - [ ] **Milestone 2** — one real pilot question through both rounds, peer inputs verified by hand

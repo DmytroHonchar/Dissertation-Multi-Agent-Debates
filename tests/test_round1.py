@@ -142,7 +142,7 @@ def test_the_run_records_every_version_that_shaped_it(question, registry, db):
         question, registry=registry, client=FixtureClient(question), db=db, run_id="run_e"
     )
     run = db.read_run("run_e")
-    assert run["config_name"] == CONFIG_VERSION == "round1_config_v1"
+    assert run["config_name"] == CONFIG_VERSION == "round1_config_v2"
     assert run["question_set_version"] == QUESTION_SET_VERSION == "mmlu_pro_v1"
     assert run["prompt_version"] == PROMPT_VERSION == "round1_v1"
     assert run["settings_version"] == SETTINGS_VERSION == "agents_v1"

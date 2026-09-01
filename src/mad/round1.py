@@ -42,7 +42,10 @@ from mad.voting import EXPECTED_AGENT_COUNT, VoteOutcome, tally
 # 1. Versions
 
 # P8: everything that shaped a run is named, so its results stay citable.
-CONFIG_VERSION = "round1_config_v1"
+# v1 was the cacheless Milestone 1 runner; run milestone1_20260901T161852Z is
+# recorded under it and that label stays true. v2 added the response cache
+# path, so new runs must not claim the old recipe.
+CONFIG_VERSION = "round1_config_v2"
 QUESTION_SET_VERSION = "mmlu_pro_v1"
 SETTINGS_VERSION = "agents_v1"    # the yaml holding temperature 0, top-p 1, 1024 tokens
 
@@ -168,6 +171,13 @@ class CompletionClient(Protocol):
     def close(self) -> None: ...
 
 
+class ResponseCacheLike(Protocol):
+    """What the runner needs from a cache. Defined here to avoid an import cycle."""
+
+    def lookup(self, spec: ModelSpec, messages: list[dict[str, str]]) -> CompletionResult | None: ...
+    def store(self, spec: ModelSpec, messages: list[dict[str, str]], result: CompletionResult) -> None: ...
+
+
 class FixtureClient:
     """Stands in for OpenRouter during dry runs. Free and deterministic."""
 
@@ -251,23 +261,30 @@ def run_round1_question(
     db: ResultsDatabase,
     run_id: str,
     config: Round1Config = Round1Config(),
+    cache: ResponseCacheLike | None = None,
 ) -> RoundReport:
-    """One question through Round 1: call, parse, store, vote, store the vote.
+    """One question through Round 1: cache lookup, call on miss, parse, store, vote.
 
     Exactly one call per agent, five in total. One agent failing is stored as
     API_ERROR and the other four continue - a failure must never end the run.
+
+    With a cache, the order per agent is: lookup, API call only on a miss,
+    then the genuine reply is cached - refusals and unparseable replies too,
+    but never an ApiRequestError, which is temporary and must stay retryable.
     """
     if len(registry) != EXPECTED_AGENT_COUNT:
         raise RunnerError(
             f"the registry must hold {EXPECTED_AGENT_COUNT} agents, got {len(registry)}. "
             "No call is made until that is right."
         )
-    # Milestone 1 has no cache and runs sequentially. A config claiming
-    # otherwise would store version labels describing a run that never happened.
-    if config.cache_enabled:
-        raise RunnerError("cache_enabled=True, but cache.py does not exist yet (P5)")
+    # The stored labels must describe the run that actually happened.
+    if config.cache_enabled != (cache is not None):
+        raise RunnerError(
+            f"config says cache_enabled={config.cache_enabled} but a cache "
+            f"{'was' if cache is not None else 'was not'} supplied. The labels must tell the truth."
+        )
     if config.parallel_calls:
-        raise RunnerError("parallel_calls=True, but Milestone 1 runs sequentially")
+        raise RunnerError("parallel_calls=True, but Round 1 runs sequentially for now")
 
     question_id = str(question["stable_id"])
     letters = answer_letters(question)
@@ -287,17 +304,25 @@ def run_round1_question(
     totals = {"prompt": 0, "completion": 0, "cost": 0.0, "latency": 0.0}
 
     for agent_id, spec in registry.items():
-        try:
-            result = client.complete(spec, messages)
-        except ApiRequestError as error:
-            # This agent is done, the other four are not.
-            parsed = api_error(str(error))
+        result = cache.lookup(spec, messages) if cache is not None else None
+        cache_hit = result is not None
+        failure: ApiRequestError | None = None
+
+        if not cache_hit:
+            try:
+                result = client.complete(spec, messages)
+            except ApiRequestError as error:
+                # This agent is done, the other four are not.
+                failure = error
+
+        if failure is not None:
+            parsed = api_error(str(failure))
             record = response_from_failed_call(
-                error.attempt_log,
+                failure.attempt_log,
                 run_id=run_id, question_id=question_id, round=1,
                 spec=spec, prompt_version=config.prompt_version,
             )
-            rows = attempt_rows(error.attempt_log)
+            rows = attempt_rows(failure.attempt_log)
         else:
             parsed = parse_response(result.text, letters, result.finish_reason)
             record = response_from_completion(
@@ -305,14 +330,26 @@ def run_round1_question(
                 run_id=run_id, question_id=question_id, round=1,
                 spec=spec, prompt_version=config.prompt_version,
                 selected_attempt=max(result.attempts, 1),
+                cache_hit=cache_hit,
             )
             # The winning attempt gets its parse; failed earlier ones get none.
+            # A cache hit stores no attempt rows at all - this run made no API
+            # attempt. Its attempt_count of 1 names the original call that
+            # produced the cached body, and cache_hit=1 marks the difference.
             rows = attempt_rows(
                 result.attempt_log,
                 parsed_by_attempt={max(result.attempts, 1): parsed},
+                cache_hit=cache_hit,
             )
 
         db.record_response(record, rows)
+        # Cached only after the paid call is on the audit record. The other way
+        # round, a crash between the two would leave a cached reply whose cost
+        # never reached the results database.
+        if cache is not None and not cache_hit and failure is None:
+            # A genuine outcome, even a refusal, is worth keeping. A failure is
+            # not cached - it might work next time.
+            cache.store(spec, messages, result)
         parsed_by_agent[agent_id] = parsed
         agent_results.append(
             AgentResult(

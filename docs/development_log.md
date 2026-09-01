@@ -422,6 +422,122 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** unchanged — spending limit, live Milestone 1, `cache.py`, provider
   pinning before the pilot, then Round 2.
 
+### 2026-09-01 — Milestone 1 ran live
+
+- **Built:** Nothing — this entry records the first real experimental-pipeline
+  run. `run_id milestone1_20260901T161852Z`, question `mmlu_pro_v1:test:7296`,
+  settings `agents_v1`, total cost **$0.0081956**, 35.9 seconds. Verified
+  directly from `storage/results.sqlite`, not from memory. Per agent:
+  Llama OK B (133 completion tokens, DeepInfra), Mistral OK B (304, Mistral),
+  Gemma OK B (417, DeepInfra), Qwen TRUNCATED (1024, AkashML), DeepSeek
+  TRUNCATED (1024, BaseTen). Vote: CONSENSUS B, 3 valid answers of 5. No
+  retries, no API errors; Mistral, the D016 worry, answered first time.
+- **Why:** Milestone 1 exists to prove the pipeline on one real question before
+  the pilot. It did, and it caught a real configuration fault cheaply.
+- **Tested:** Every stage behaved: five calls went out, raw replies and
+  attempts stored, both truncations correctly classified `TRUNCATED` with no
+  letter and no vote, the three-of-five rule held with two agents lost, and the
+  run closed cleanly. Correctness against the answer key was not checked — the
+  key stays unread outside evaluation.
+- **Problems:** Qwen and DeepSeek returned `finish_reason=length` with
+  `content=null`: the entire 1024-token budget went to internal reasoning and
+  no visible answer was produced. Those two calls cost $0.0072 of the $0.0082
+  total — 88% of the spend bought zero votes. A 40% agent-failure rate from
+  configuration alone is not acceptable for the pilot. Routing was automatic
+  (four different providers served five agents), acceptable for this milestone
+  but reinforcing D015.
+- **Next:** fix the token ceilings scientifically (D018) — cache first so later
+  probing never pays twice for the same reply.
+
+### 2026-09-01 — Response cache (P5), agents_v2 probe config, D018
+
+- **Built:** `src/mad/cache.py` and `tests/test_cache.py` (12 tests): one
+  SQLite file, `storage/cache.sqlite`, separate from the results database. The
+  key hashes agent_id, slug, the full message list, temperature, top_p and
+  max_tokens — agent_id included so two agents never share a reply, run ID
+  excluded so replies are reusable across runs. Stores the complete raw API
+  body; a hit rebuilds the reply from it with original tokens and latency,
+  zero new cost, and no API call. Genuine outcomes are cached, refusals
+  included; an `ApiRequestError` never is, and the cache itself refuses
+  fixture replies and bodyless results. First write wins — entries are never
+  overwritten. The runner gained the P5 call order (lookup → call on miss →
+  parse → store → cache), a `cache_hit` flag stored honestly per response, and
+  a guard that `config.cache_enabled` must match whether a cache was actually
+  supplied. The CLI gained `--agents {agents_v1,agents_v2}` — the selected
+  registry name becomes the stored `settings_version` and the run ID prefix —
+  and `--no-cache`; the cache is live-only, since dry runs are free.
+  `configs/models/agents_v2.yaml` was created, marked provisional: identical
+  to `agents_v1` except Qwen and DeepSeek at `max_tokens: 2048`. `agents_v1`
+  is untouched. D018 records the method: choose limits on truncation,
+  valid-answer rate and cost, never pilot accuracy; keep default reasoning
+  behaviour; verified via the free models endpoint (2026-09-01) that both
+  models list `reasoning`/`reasoning_effort` as supported parameters, while
+  noting that is not proof any given provider honours `reasoning.max_tokens`.
+- **Why:** The cache had to exist before more paid probing, because probing
+  repeats questions. The ceiling-first approach keeps the models being studied
+  unchanged — lowering reasoning effort would make the dissertation describe
+  "Qwen forced to think less". Choosing by pilot accuracy would tune the
+  configuration on the outcome measure with a 20-question sample where one
+  question moves the number by five points.
+- **Tested:** 295 tests pass, up from 278, all offline with the network
+  switched off (the count includes two tests added by the same-day review
+  below). Cache: round trip keeping tokens and latency with zero cost,
+  misses on unknown requests, first-write-wins, refusals cached, per-agent and
+  per-setting key separation (the agents_v2 probe provably misses the
+  agents_v1 cache), fixture and bodyless replies refused. Runner: a second
+  identical run makes zero client calls, all rows `cache_hit=1` at zero cost
+  with original tokens; a failed call is not cached and retries for real next
+  run; config/cache mismatches refused both ways. CLI: `--agents agents_v2`
+  stores `settings_version=agents_v2` and prints the raised ceilings; a dry
+  run neither touches the real results database (byte-checked) nor creates or
+  touches the real cache file. The free dry run passes and `git diff --check`
+  is clean.
+- **Problems:** One stale test assumed `storage/` did not exist; it now
+  asserts the real database's bytes are unchanged instead. Verification then
+  caught a real bug in this session: opening `ResultsDatabase` re-ran the DDL
+  and rewrote `PRAGMA user_version` on every open, so merely *reading* the
+  results file changed its bytes — my own read-only inspection of the
+  Milestone 1 run dirtied the file header (every row verified intact:
+  1 run, 5 responses, 5 attempts, 1 outcome, identical values). Fixed: an
+  already-stamped database is opened without a single write, proven by a test
+  hashing the file before and after, and re-proven against the real database.
+  The key's missing spending limit remains the blocker for any live probe.
+- **Next:** user sets the key's spending limit, then the token probe on 2-3
+  pilot questions: `scripts/run_milestone1.py --question <pilot-id> --agents
+  agents_v2 --live --yes-spend-real-money`. If anything still truncates, step
+  to 3072 as agents_v3. Then provider pinning (D015) before the 20-question
+  pilot. Round 2 after.
+
+### 2026-09-01 — Review fixes before the paid probe
+
+- **Built:** Two review findings fixed before any money moves. First,
+  ordering: the runner cached a successful reply *before* writing it to the
+  results database, so a crash between the two could leave a cached paid reply
+  whose cost never reached the experimental record. The order is now call →
+  parse → results database → cache; a crash can now only lose the cache entry,
+  which costs a repeat call, not audit truth. Second, provenance:
+  `CONFIG_VERSION` still said `round1_config_v1`, but v1 was the cacheless
+  Milestone 1 recipe — the cache-capable runner is `round1_config_v2`, and the
+  stored Milestone 1 run keeps its truthful v1 label. Also: the truncation
+  warning printed a hardcoded `max_tokens=1024`; it now prints the truncated
+  agent's actual limit. Cache-hit attempt provenance is now explicit and
+  tested: a hit stores zero attempt rows because that run made no API attempt,
+  while its `attempt_count` of 1 names the original call behind the cached
+  body and `cache_hit=1` marks the difference — the schema stays at version 1,
+  which the real Milestone 1 database already carries.
+- **Why:** Both P1s were provenance risks, and the entire point of the
+  database design is that the record never lies about what was spent or which
+  recipe produced a run.
+- **Tested:** 295 tests pass. New: a simulated crash while storing one agent's
+  response proves nothing lands in the cache for the unrecorded reply; cache
+  hits proven to store no attempt rows; the config-version test now pins
+  `round1_config_v2`.
+- **Problems:** None outstanding from the review. Still true: OpenRouter
+  metadata does not prove `reasoning.max_tokens` works on the serving
+  providers (D018), and the dashboard spending limit cannot be checked from
+  here - if it is set, the blocker is cleared.
+- **Next:** unchanged - the agents_v2 token probe on 2-3 pilot questions.
+
 
 ## Entry template
 
