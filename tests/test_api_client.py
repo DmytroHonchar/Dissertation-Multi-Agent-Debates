@@ -294,3 +294,26 @@ def test_a_transport_error_has_no_raw_body_and_none_is_invented(monkeypatch):
 
     assert result.attempt_log[0].raw_response == "", "no response arrived, so nothing to store"
     assert "timed out" in result.attempt_log[0].error
+
+
+def test_a_malformed_200_body_keeps_the_attempt_log_with_a_truthful_outcome(monkeypatch):
+    """The reply arrived and was paid for; losing its audit trail loses money."""
+    malformed = {
+        "id": "gen-9",
+        "model": "vendor/model-1",
+        "usage": {"prompt_tokens": 11, "completion_tokens": 0, "cost": 0.00003},
+        # no "choices" at all
+    }
+    import json as _json
+
+    client, _ = _client_with(monkeypatch, [FakeResponse(200, malformed, text=_json.dumps(malformed))])
+    with pytest.raises(ApiRequestError, match="Malformed response") as caught:
+        client.complete(_spec(), [{"role": "user", "content": "hi"}])
+
+    log = caught.value.attempt_log
+    assert len(log) == 1
+    assert log[0].attempt == 1
+    assert log[0].outcome == "malformed_body", "it was logged as ok, but it was not ok"
+    assert _json.loads(log[0].raw_response) == malformed
+    assert log[0].cost_usd == pytest.approx(0.00003)
+    assert log[0].latency_seconds >= 0.0

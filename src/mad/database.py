@@ -502,6 +502,10 @@ def response_from_completion(
 
     The API client knows nothing about this database, and this database does no
     parsing. They meet here and nowhere else.
+
+    Tokens and cost cover every attempt, not just the one that succeeded - a
+    paid failure before the retry is part of what this answer cost (P6). The
+    per-attempt split stays visible in response_attempts.
     """
     return ResponseRecord(
         run_id=run_id,
@@ -523,9 +527,9 @@ def response_from_completion(
         temperature=spec.temperature,
         top_p=spec.top_p,
         max_tokens=spec.max_tokens,
-        prompt_tokens=result.prompt_tokens,
-        completion_tokens=result.completion_tokens,
-        cost_usd=result.cost_usd,
+        prompt_tokens=sum(r.prompt_tokens for r in result.attempt_log) or result.prompt_tokens,
+        completion_tokens=sum(r.completion_tokens for r in result.attempt_log) or result.completion_tokens,
+        cost_usd=sum(r.cost_usd for r in result.attempt_log) or result.cost_usd,
         latency_seconds=result.latency_seconds,
         cache_hit=cache_hit,
         peer_response_ids=tuple(peer_response_ids),

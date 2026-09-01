@@ -218,8 +218,10 @@ prompt and completion tokens, cost, latency and attempt count — the provenance
 D007 requires. It also carries `raw_response`, OpenRouter's complete reply body
 for P5 to cache, and `attempt_log`, an `AttemptRecord` per attempt so the tokens
 and cost of a failed first attempt are not lost. A call that never succeeds
-raises `ApiRequestError` with the same `attempt_log` attached, so a dead call is
-still costable. `load_model_registry()` builds a `ModelSpec` per agent from
+raises `ApiRequestError` with the same `attempt_log` attached — including for a
+malformed HTTP 200 body, whose final attempt is relabelled `malformed_body` —
+so a dead call is still costable. On a stored response row, tokens and cost sum
+over every attempt (P6); the per-attempt split lives in `response_attempts`. `load_model_registry()` builds a `ModelSpec` per agent from
 `configs/models/agents_v1.yaml`. Verified against all five models by
 `scripts/check_models.py` on 2026-08-26.
 
@@ -227,7 +229,7 @@ Still to add when the orchestrator is built: fixed call order — cache lookup,
 API call on miss, parse, store — five parallel calls per question per round, and
 per-call exception isolation so one agent's failure cannot end the run.
 
-## P8 — Round 1 configuration
+## P8 — Round 1 configuration — DONE
 
 New versioned config, `CONFIG_VERSION = "round1_config_v1"`, recording the
 question-set version, the five model slugs and their `agent_id`s, prompt
@@ -242,6 +244,19 @@ second round follows.
 
 API keys stay in the ignored `.env` only — never in configs, the database, git,
 prompts or results.
+
+Built 2026-09-01 as `src/mad/round1.py` plus `scripts/run_milestone1.py`.
+`Round1Config` records `round1_config_v1`, `mmlu_pro_v1`, `round1_v1`,
+`agents_v1`, `parser_v1`, cache off, the timeout, the two-attempt retry budget
+and sequential calling. `run_round1_question()` runs one question end to end:
+five calls, parse, store with attempts, tally with
+`expected_agents=registry.keys()`, store the outcome, finish the run. One agent
+failing is stored as `API_ERROR` and the other four continue. The script
+defaults to a free dry run on labelled fixture replies in a throwaway database;
+live mode needs both `--live` and `--yes-spend-real-money`, accepts only an ID
+from the 20-question pilot file, refuses experimental IDs by name, and a dry
+run is refused `storage/results.sqlite` so fixture rows can never sit next to
+real results. The live Milestone 1 run itself has not happened yet.
 
 ## P9 — Voting — DONE
 

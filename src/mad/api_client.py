@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 import random
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -82,7 +82,8 @@ class AttemptRecord:
     """
 
     attempt: int
-    outcome: str                 # ok, http_error, upstream_error, transport_error, bad_json
+    outcome: str                 # ok, http_error, upstream_error, transport_error,
+                                 # bad_json, malformed_body
     latency_seconds: float
     status_code: int | None = None
     # The response body exactly as it arrived, untruncated. P4 stores this per
@@ -405,7 +406,20 @@ def _parse_completion(
         # content can be null. Keep it as "" and let the parser decide it failed.
         text = choice["message"]["content"] or ""
     except (KeyError, IndexError, TypeError) as error:
-        raise ApiRequestError(f"Malformed response for {spec.slug}: {body}") from error
+        # The reply arrived and was paid for, but has no usable choices/message
+        # structure. Keep every attempt on the error - including this one, with
+        # a truthful outcome instead of the "ok" it was logged as - so the run
+        # can still store and cost the failure.
+        if attempt_log:
+            last = replace(
+                attempt_log[-1],
+                outcome="malformed_body",
+                error=f"missing choices/message structure: {str(body)[:400]}",
+            )
+            attempt_log = attempt_log[:-1] + (last,)
+        raise ApiRequestError(
+            f"Malformed response for {spec.slug}: {str(body)[:400]}", attempt_log
+        ) from error
 
     usage = body.get("usage") or {}
     return CompletionResult(
