@@ -701,6 +701,26 @@ responses, compute the group vote, and store an inspectable result.
   `agents_v5` becomes the final frozen settings version for the 300 questions;
   if a genuine fault appears, create `agents_v6` and preserve `agents_v5`.
 
+### 2026-09-03 — The agents_v5 pins work live
+
+- **Built:** Nothing. This records the one approved validation call.
+- **Why:** The pins were chosen from metadata and stored reachability, but no
+  live call had ever used `provider.only` with exact variant tags. Metadata
+  proves a tag exists, not that a request pinned to it succeeds.
+- **Tested:** Run `round1_agents_v5_20260902T233753Z`, chemistry question
+  `mmlu_pro_v1:test:3932`, cost $0.008109. All five pins were honoured exactly:
+  Llama/DigitalOcean, Qwen/Parasail, Mistral/Mistral, DeepSeek/DigitalOcean,
+  Gemma/DeepInfra. Every agent finished (`finish_reason=stop`) and all five
+  answered D: `UNANIMOUS`, 5 valid answers. The new pins changed every cache
+  key, so all five agents paid fresh, which is the intended behaviour.
+- **Problems:** None. One cost observation for the budget: DeepSeek cost
+  $0.005089 pinned to DigitalOcean against $0.002302 for the same question
+  through NextBit under automatic routing. Pinning trades some cost for
+  experimental control; the full-run estimate must be recalculated from the
+  20-question pilot rather than from the cheapest historical routing.
+- **Next:** build `debate.py` (P10, Round 2), then Milestone 2 — one question
+  through both rounds with peer inputs checked by hand.
+
 
 ## Entry template
 
