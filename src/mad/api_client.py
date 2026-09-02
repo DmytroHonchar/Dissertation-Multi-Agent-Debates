@@ -72,6 +72,13 @@ class ModelSpec:
     allow_provider_fallbacks: bool
     require_parameters: bool
 
+    # Set to a provider name to route every call for this agent there and
+    # nowhere else. None keeps automatic routing (D015).
+    pinned_provider: str | None = None
+    # Ceiling on hidden reasoning tokens, spent inside max_tokens. Guards the
+    # space for the visible answer; None keeps the model's default behaviour.
+    reasoning_max_tokens: int | None = None
+
 
 @dataclass(frozen=True)
 class AttemptRecord:
@@ -180,6 +187,11 @@ def load_model_registry(config_path: str | Path) -> dict[str, ModelSpec]:
                 max_tokens=int(settings["max_tokens"]),
                 allow_provider_fallbacks=bool(settings.get("allow_provider_fallbacks", False)),
                 require_parameters=bool(settings.get("require_parameters", True)),
+                pinned_provider=settings.get("pinned_provider"),
+                reasoning_max_tokens=(
+                    int(settings["reasoning_max_tokens"])
+                    if settings.get("reasoning_max_tokens") is not None else None
+                ),
             )
         except (KeyError, TypeError, ValueError) as error:
             raise ApiConfigurationError(f"Invalid agent config: {agent_id!r}") from error
@@ -229,13 +241,18 @@ class OpenRouterClient:
             "max_tokens": max_tokens if max_tokens is not None else spec.max_tokens,
             "usage": {"include": True},   # ask for token counts and cost back
             "provider": {
-                # OpenRouter picks the provider for now. Pinning comes before the pilot.
                 "allow_fallbacks": spec.allow_provider_fallbacks,
                 # Only use providers that honour temperature and top_p, so
                 # temperature 0 can't be silently ignored.
                 "require_parameters": spec.require_parameters,
             },
         }
+        if spec.pinned_provider:
+            # This agent goes to one named provider and nowhere else.
+            payload["provider"]["only"] = [spec.pinned_provider]
+        if spec.reasoning_max_tokens is not None:
+            # Cap the hidden thinking so the visible answer keeps its space.
+            payload["reasoning"] = {"max_tokens": spec.reasoning_max_tokens}
         if seed is not None:
             payload["seed"] = seed
 

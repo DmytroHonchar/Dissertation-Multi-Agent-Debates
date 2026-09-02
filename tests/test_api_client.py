@@ -106,7 +106,8 @@ def test_request_sends_fixed_generation_settings_and_no_provider_pin(monkeypatch
     result = client.complete(_spec(), [{"role": "user", "content": "hi"}])
 
     provider_block = captured["payload"]["provider"]
-    assert "only" not in provider_block, "provider pinning is deferred (D015)"
+    assert "only" not in provider_block, "an unpinned agent keeps automatic routing"
+    assert "reasoning" not in captured["payload"], "no cap unless the agent sets one"
     assert provider_block["allow_fallbacks"] is True
     assert provider_block["require_parameters"] is True
     assert captured["payload"]["temperature"] == 0.0
@@ -317,3 +318,29 @@ def test_a_malformed_200_body_keeps_the_attempt_log_with_a_truthful_outcome(monk
     assert _json.loads(log[0].raw_response) == malformed
     assert log[0].cost_usd == pytest.approx(0.00003)
     assert log[0].latency_seconds >= 0.0
+
+
+def test_a_pinned_capped_agent_sends_exactly_that(monkeypatch):
+    """agents_v4 Qwen: one provider only, hidden reasoning capped inside the total."""
+    captured: dict = {}
+
+    def fake_post(self, path, payload):
+        captured["payload"] = payload
+        return {
+            "id": "gen-1",
+            "model": "vendor/model-1",
+            "provider": "Parasail",
+            "choices": [{"message": {"content": "B"}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 10, "completion_tokens": 2, "cost": 0.0001},
+        }, ()
+
+    monkeypatch.setattr(OpenRouterClient, "_post_with_retries", fake_post)
+    client = OpenRouterClient(api_key="test-key-not-real")
+    spec = _spec(max_tokens=3072, pinned_provider="Parasail",
+                 allow_provider_fallbacks=False, reasoning_max_tokens=2048)
+    client.complete(spec, [{"role": "user", "content": "hi"}])
+
+    assert captured["payload"]["provider"]["only"] == ["Parasail"]
+    assert captured["payload"]["provider"]["allow_fallbacks"] is False
+    assert captured["payload"]["reasoning"] == {"max_tokens": 2048}
+    assert captured["payload"]["max_tokens"] == 3072

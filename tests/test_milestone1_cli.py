@@ -130,6 +130,21 @@ def test_agents_v3_raises_only_qwen_again(cli, tmp_path, capsys):
     assert "agent_llama=1024" in out
 
 
+def test_agents_v4_caps_and_pins_only_qwen(cli, tmp_path):
+    from mad.api_client import load_model_registry
+
+    registry = load_model_registry(REPO / "configs" / "models" / "agents_v4.yaml")
+    qwen = registry["agent_qwen"]
+    assert (qwen.max_tokens, qwen.reasoning_max_tokens) == (3072, 2048)
+    assert qwen.pinned_provider == "Parasail" and qwen.allow_provider_fallbacks is False
+    for agent_id, spec in registry.items():
+        if agent_id != "agent_qwen":
+            assert spec.pinned_provider is None and spec.reasoning_max_tokens is None
+
+    assert cli.main(["--question", PILOT_ID, "--agents", "agents_v4",
+                     "--db", str(tmp_path / "v4.sqlite")]) == 0
+
+
 def test_a_dry_run_never_creates_or_touches_the_real_cache_file(cli, tmp_path):
     real_cache = REPO / "storage" / "cache.sqlite"
     before = real_cache.stat() if real_cache.exists() else None

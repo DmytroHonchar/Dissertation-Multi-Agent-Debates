@@ -65,8 +65,10 @@ Then the second majority vote.
 **Settings** — temperature `0`, top-p `1.0`, for every agent in both rounds.
 `max_tokens` is under revision (D018): Milestone 1 proved 1024 too low for Qwen
 and DeepSeek (whole budget spent on internal reasoning, no visible answer);
-`agents_v2` (provisional, those two at 2048) is the first probe. `agents_v1` is
-frozen — a real stored run identifies itself by that name. A temporary API failure gets one retry, two attempts
+the working candidate is `agents_v4` (provisional): Qwen at 3072 total with
+hidden reasoning capped at 2048 and pinned to Parasail, DeepSeek at 2048 —
+proven live on the maths question that defeated plain ceiling raises. Earlier
+registry versions are frozen — real stored runs identify themselves by name. A temporary API failure gets one retry, two attempts
 in total (D012). OpenRouter picks the upstream provider automatically; the served
 model and provider are recorded on every response but never used to reject one.
 **Pinning each agent to one provider is deferred until before the pilot** (D015)
@@ -167,7 +169,7 @@ write its first real line — do not scaffold empty files.**
 ## Commands
 
 ```bash
-.venv/bin/python -m pytest                 # 295 tests, all passing, all offline
+.venv/bin/python -m pytest                 # 300 tests, all passing, all offline
 .venv/bin/python scripts/check_models.py   # live OpenRouter check — real calls, costs money
 .venv/bin/python scripts/run_milestone1.py --question <pilot-id>   # dry run, free; --live --yes-spend-real-money for the real thing
 ```
