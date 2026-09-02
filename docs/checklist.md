@@ -55,8 +55,10 @@ all five model IDs confirmed with live calls.
 - [x] **Provider pinning selection (D015).** `agents_v5` pins exact endpoints
   for all five agents with fallbacks off; a temporary failure retries the same
   endpoint once, then becomes a stored `API_ERROR` with no vote.
-- [ ] Validate all five `agents_v5` pins in Milestone 2 and measure their
-  failure rate during the 20-question pilot.
+- [x] Validate all five `agents_v5` pins — done 2026-09-03, run
+  `round1_agents_v5_20260902T233753Z`: every pin honoured, all five agents
+  finished, `UNANIMOUS D`, $0.008109.
+- [ ] Measure the pins' failure rate during the 20-question pilot.
 - [ ] **Mistral availability (D016).** Intermittent HTTP 429 from the shared upstream pool. Measure the real rate over the 20 pilot questions and decide how to handle it. Do not change the model.
 - [x] Select pre-pilot `max_tokens` values (D018): Llama 1024, Qwen 3072,
   Mistral 1024, DeepSeek 2048 and Gemma 1024. Qwen's requested 2048 reasoning
