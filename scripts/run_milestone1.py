@@ -39,7 +39,7 @@ from mad.round1 import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KNOWN_REGISTRIES = ("agents_v1", "agents_v2")
+KNOWN_REGISTRIES = ("agents_v1", "agents_v2", "agents_v3")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -51,7 +51,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--db", help="database path (default: temp file for dry runs, "
                         "storage/results.sqlite for live)")
     parser.add_argument("--agents", choices=KNOWN_REGISTRIES, default="agents_v1",
-                        help="which settings version to run (agents_v2 is the token probe)")
+                        help="which versioned model settings to run")
     parser.add_argument("--no-cache", action="store_true",
                         help="skip the response cache, e.g. to measure non-determinism")
     args = parser.parse_args(argv)
@@ -63,7 +63,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # One config drives everything: the client below is built from it, the
     # runner checks it, and the same labels end up stored on the run. The
     # settings version is whichever registry was actually selected - a run on
-    # agents_v2 must never be labelled agents_v1.
+    # A later registry must never be labelled as an earlier one.
     config = Round1Config(settings_version=args.agents, cache_enabled=use_cache)
 
     # Every check that can refuse the command runs before a client exists.

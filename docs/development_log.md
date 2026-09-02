@@ -538,6 +538,52 @@ responses, compute the group vote, and store an inspectable result.
   here - if it is set, the blocker is cleared.
 - **Next:** unchanged - the agents_v2 token probe on 2-3 pilot questions.
 
+### 2026-09-02 — Qwen token probes at 2048 and 3072
+
+- **Built:** `configs/models/agents_v3.yaml`, identical to `agents_v2` except
+  Qwen's completion ceiling rises from 2048 to 3072. The Milestone 1 CLI now
+  accepts and truthfully labels `agents_v3`; one offline CLI test pins Qwen at
+  3072, DeepSeek at 2048 and the other three agents at 1024.
+- **Why:** This records the live ceiling calibration required by D018. The
+  purpose is to prevent truncation without selecting settings on pilot
+  accuracy.
+- **Tested:** Three live probes were verified directly from
+  `storage/results.sqlite` and the stored attempt bodies. On philosophy
+  `mmlu_pro_v1:test:10925`, `agents_v2` completed: Qwen returned a valid answer
+  through Io Net after 692 completion tokens, including 516 reasoning tokens;
+  all five agents were valid, the vote was `UNANIMOUS F`, and the run cost
+  $0.00411068. On maths `mmlu_pro_v1:test:8844`, Qwen through Parasail reached
+  2048 completion tokens, 2043 of them reported as reasoning, returned no
+  visible content and was `TRUNCATED`; the run had four valid answers,
+  `NO_CONSENSUS`, and cost $0.009581202. Repeating that maths question with
+  `agents_v3` made only the changed Qwen request: the other four responses were
+  cache hits at zero new cost. Qwen again used Parasail, reached 3072 completion
+  tokens, 3054 reported as reasoning, returned no visible content and was
+  `TRUNCATED`; the run again had four valid answers and `NO_CONSENSUS`, and
+  cost $0.0100131. The targeted offline CLI suite passes (11 tests).
+- **Problems:** This is not an HTTP connection problem: both failed calls
+  completed successfully at the transport/API level and returned HTTP results,
+  usage data and `finish_reason=length`. The failure occurred during model
+  generation because Qwen consumed almost the entire completion allowance in
+  reasoning before emitting an answer. The harder maths question is associated
+  with the long reasoning, while the philosophy question completed quickly,
+  so a model-by-question interaction is supported. Provider is still an
+  uncontrolled variable: the successful philosophy call used Io Net while the
+  two maths calls used Parasail. That correlation does not prove Parasail
+  caused the failure because the question also changed. Automatic routing is
+  therefore a confound, as anticipated by D015. Across the four recorded live
+  Round 1 runs, Qwen cost $0.0217709 of $0.031900582 total (about 68%), with
+  most of its cost coming from replies that produced no vote.
+- **Next:** Make no further paid ceiling probe until D015 and D018 are reviewed
+  together. A controlled provider comparison must hold the question and all
+  generation settings fixed. Before implementing pinning or an explicit
+  reasoning budget, extend `ModelSpec`, the outgoing request and the cache key
+  to include those settings; the current cache key does not include provider
+  routing or reasoning configuration and could otherwise replay a response
+  generated under different conditions. Then test the chosen provider's
+  support for the reasoning control and decide between a final ceiling probe
+  and an explicit reasoning cap.
+
 
 ## Entry template
 

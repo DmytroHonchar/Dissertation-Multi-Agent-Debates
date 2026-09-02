@@ -54,7 +54,11 @@ all five model IDs confirmed with live calls.
 
 - [ ] **Provider pinning (D015).** Automatic routing is fine for building, but it changed provider between consecutive runs and providers serve the same model at different quantisations. Pin each agent and record what happens when a pinned provider is unavailable, before freezing settings.
 - [ ] **Mistral availability (D016).** Intermittent HTTP 429 from the shared upstream pool. Measure the real rate over the 20 pilot questions and decide how to handle it. Do not change the model.
-- [ ] Confirm `max_tokens` per round — Milestone 1 proved 1024 too low for Qwen and DeepSeek; probe `agents_v2` (2048) on 2-3 pilot questions per D018
+- [ ] Confirm `max_tokens` per round — `agents_v2` succeeded on the philosophy
+  probe, but Qwen used 2043 reasoning tokens and returned no answer at 2048 on
+  the maths probe; `agents_v3` then used 3054 reasoning tokens and again
+  returned no answer at 3072. Pause paid ceiling escalation until the provider
+  and reasoning-control variables are resolved under D015/D018.
 - [ ] Fix and record the bootstrap seed for the D011 confidence interval
 - [x] Note for P6: Mistral answered `'Yes.'` to a prompt demanding the single word `ready`, twice. Test the parser against loose instruction-format compliance.
 

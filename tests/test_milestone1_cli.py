@@ -121,6 +121,15 @@ def test_agents_v2_actually_raises_the_two_ceilings(cli, tmp_path, capsys):
     assert "agent_llama=1024" in out
 
 
+def test_agents_v3_raises_only_qwen_again(cli, tmp_path, capsys):
+    assert cli.main(["--question", PILOT_ID, "--agents", "agents_v3",
+                     "--db", str(tmp_path / "v3.sqlite")]) == 0
+    out = capsys.readouterr().out
+    assert "agent_qwen=3072" in out
+    assert "agent_deepseek=2048" in out
+    assert "agent_llama=1024" in out
+
+
 def test_a_dry_run_never_creates_or_touches_the_real_cache_file(cli, tmp_path):
     real_cache = REPO / "storage" / "cache.sqlite"
     before = real_cache.stat() if real_cache.exists() else None
