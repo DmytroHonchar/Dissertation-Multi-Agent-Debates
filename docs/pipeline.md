@@ -72,26 +72,24 @@ Diversity comes from five different model families, not from sampling.
 `require_parameters` keeps routing to providers that actually honour those
 settings, so temperature 0 cannot be silently dropped.
 
-**Provider routing is automatic for now and pinning is deferred until before the
-pilot (D015).** The served model and provider are recorded on every response, and
-a response is never rejected for coming from a different provider. This is
-adequate for building and for connectivity checks; it is not adequate for the
-main run, because automatic routing was observed changing provider between
-consecutive runs and providers serve the same model at different quantisations.
+**The `agents_v5` pre-pilot candidate pins one exact endpoint per agent with
+fallbacks off (D015).** The served model and provider are still recorded on
+every response. If a pin is unavailable, the existing retry policy tries the
+same endpoint once and the failure is stored as `API_ERROR`; an experimental
+run never silently changes host or quantisation.
 
 Still open before the pilot freeze:
 
-- **Provider pinning** (D015) — resolve and record it, together with what happens
-  when a pinned provider is unavailable.
+- **Provider pins** (D015) — selected in `agents_v5`; validate their reachability
+  and failure rate in Milestone 2 and the pilot.
 - **Mistral availability** (D016) — measure the real HTTP 429 rate during the
   pilot and decide how to handle it.
-- **`max_tokens` per round.** 1024 is provisional and Milestone 1
-  (2026-09-01) proved it too low: Qwen and DeepSeek spent the whole budget on
-  internal reasoning and returned `content=null`, `finish_reason=length` — no
-  vote, at 88% of the run's cost. D018 fixes the correction method; the first
-  probe is `agents_v2` with those two at 2048, default reasoning behaviour
-  kept. Round 2 also carries four peer responses in its prompt, so treat
-  `max_tokens` as a per-round setting and confirm both values in the pilot.
+- **`max_tokens` per round.** The `agents_v5` candidate is Llama 1024, Qwen
+  3072, Mistral 1024, DeepSeek 2048 and Gemma 1024. Qwen also requests a
+  best-effort 2048 reasoning maximum, but a Parasail response exceeded it, so
+  only the total ceiling is treated as hard. Round 2 carries four peer
+  responses in its input; confirm the same output ceilings in Milestone 2 and
+  the pilot rather than tuning again on individual Round 1 questions (D018).
 - **Bootstrap seed** for P12, so the confidence interval is reproducible.
 
 Do not rely on the API `seed` parameter. Support varies and the experiment does

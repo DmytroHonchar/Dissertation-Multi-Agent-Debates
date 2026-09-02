@@ -284,47 +284,46 @@ D009.
 
 ## D015 — Provider routing
 
-- **Status:** Automatic routing for now; **pinning deferred until before the pilot**
-- **Decision:** Let OpenRouter select an available upstream provider. Record the
-  served model and provider on every response, but never reject a response
-  because a different provider served it.
+- **Status:** Pre-pilot pins selected; awaiting Milestone 2 and pilot validation
+- **Decision:** Use the exact provider pins in `agents_v5`, with fallbacks off.
+  Retry the same endpoint once on a temporary failure; if it remains
+  unavailable, store `API_ERROR` and give that agent no vote. Never silently
+  change provider during an experimental run.
 - **Recorded:** 2026-08-28
+- **Resolved for the pilot candidate:** 2026-09-03
 
-The current milestone is only to establish a working connection to the five
-model IDs. Requests send `provider: {allow_fallbacks: true,
-require_parameters: true}`. `require_parameters` is kept so a provider that
-cannot apply `temperature 0` is not selected — that is a settings guarantee, not
-a pinning rule. No `provider.only` is sent, and the registry does not require a
-provider name.
+Automatic routing was acceptable while building connectivity, but it changed
+providers repeatedly in the stored live runs. The pilot candidate therefore
+sends `provider.only` with one exact endpoint tag per agent,
+`allow_fallbacks: false`, and `require_parameters: true`.
 
-### Why pinning will still be needed before the pilot
+| Agent | Frozen pilot-candidate endpoint | Selection reason |
+|---|---|---|
+| Llama | `digitalocean` | Three successful stored calls; one endpoint; 99.90% one-day uptime in the selection snapshot |
+| Qwen | `parasail/fp8` | Five stored calls supplied the controlled comparisons; exact fp8 endpoint; 99.80% one-day uptime |
+| Mistral | `mistral/eu` | Mistral is the only provider; the EU variant had the best one-day uptime of its three variants (96.00%) |
+| DeepSeek | `digitalocean` | Two successful stored calls; avoids the first-party endpoint rejected by the account's data policy; 99.57% one-day uptime |
+| Gemma | `deepinfra/fp8` | Three successful stored calls; exact fp8 tag prevents a move to DeepInfra's fp4/turbo variant |
 
-Evidence gathered on 2026-08-28 from `GET /api/v1/models/<slug>/endpoints` and
-from repeated live smoke runs:
+Selection used stored reachability first, then the free endpoint metadata
+snapshot taken on 2026-09-03: active status, support for temperature and top-p,
+one-day availability, explicit endpoint tag/quantisation where published, and
+price. The metadata check made no completion calls and spent no tokens. Endpoint
+availability changes over time; that is why the dated choice is frozen instead
+of dynamically following whichever endpoint later looks best.
 
-- The same model is served at **different quantisations** by different providers.
-  `google/gemma-4-31b-it` alone is offered as bf16, fp8, fp4 and fp16 across
-  seventeen endpoints.
-- Automatic routing **changes provider between runs**. Across three consecutive
-  smoke runs, `agent_qwen` was served by Alibaba, then Chutes, then Reka;
-  `agent_gemma` by OpenInference, then CoreWeave, then DeepInfra; `agent_llama`
-  by DeepInfra, then DigitalOcean; `agent_deepseek` by Alibaba, then Novita.
+The reason for pinning is experimental control, not the belief that one host is
+always more accurate. OpenRouter exposed different quantisations and endpoint
+variants for the same model, and automatic routing changed provider between
+runs. An unpinned 300-question run could therefore change its serving stack
+partway through the experiment.
 
-For a connectivity check this is harmless. For the experiment it is not: an
-unpinned run could change serving stack and numeric precision partway through
-the 300 questions, which would confound the comparison the project exists to
-make. Pinning must therefore be resolved and recorded before the settings are
-frozen, along with the treatment of an unavailable pinned provider.
-
-Two facts already known, to be reused when pinning is revisited:
-
-- The first-party `DeepSeek` endpoint returns HTTP 404, "No endpoints available
-  matching your guardrail restrictions and data policy" — an account privacy
-  setting. Automatic routing avoids it. Alibaba, StreamLake, DigitalOcean and
-  Novita were each observed serving this model successfully.
-- `mistralai/mistral-large-2512` is served by Mistral alone, so it has no
-  alternative provider and no benefit from pinning. Its availability is a
-  separate risk, recorded in D016.
+Two limitations remain explicit. First, the first-party DeepSeek endpoint was
+rejected by the account's data-policy restrictions during the earlier smoke
+test, so the proven DigitalOcean route is used instead. Second, Mistral is the
+only company serving `mistralai/mistral-large-2512`: its EU pin fixes the
+endpoint variant but cannot provide a different host if Mistral is unavailable.
+That availability risk remains under D016.
 
 ## D016 — Mistral upstream availability
 
@@ -407,10 +406,12 @@ pilot transcripts before the freeze.
 
 ## D018 — Token limits after the Milestone 1 truncations
 
-- **Status:** Provisional — method fixed, final numbers await the token probe
-- **Decision:** Output ceilings are raised per agent under new settings
-  versions, chosen on truncation rate, valid-answer rate and cost — never on
-  pilot accuracy. Reasoning behaviour stays at each model's default.
+- **Status:** Pre-pilot values selected; awaiting Milestone 2 and pilot validation
+- **Decision:** The `agents_v5` candidate uses Llama 1024, Qwen 3072, Mistral
+  1024, DeepSeek 2048 and Gemma 1024 completion tokens. Qwen also requests a
+  2048 reasoning-token maximum, recorded as best-effort because Parasail did
+  not enforce it exactly. Selection uses completion, truncation and cost—not
+  answer correctness.
 - **Recorded:** 2026-09-01
 
 The live Milestone 1 run (`milestone1_20260901T161852Z`, settings `agents_v1`)
@@ -437,8 +438,10 @@ model families as they actually behave, and results would describe
 "Qwen forced to think less", not Qwen. Deferred unless larger ceilings prove
 pathological (a model burning 4k+ tokens by default) or unaffordable. If it is
 ever used, it becomes a new settings version and a recorded decision, and a
-per-model `reasoning.max_tokens` cap is preferred over effort levels, because a
-cap structurally guarantees space for the visible answer.
+per-model `reasoning.max_tokens` request is preferred over effort levels. It is
+intended to leave space for the visible answer, but endpoint metadata and an
+accepted request do not guarantee exact enforcement; the total `max_tokens`
+ceiling remains the hard termination and cost control.
 
 **Verified 2026-09-01** via OpenRouter's free `/api/v1/models` endpoint (no
 completion called): both `qwen/qwen3.8-27b` and `deepseek/deepseek-v4-pro-0813`
@@ -455,29 +458,46 @@ DeepSeek at `max_tokens: 2048`, clearly marked provisional.
 
 ## D018 addendum — the controlled reasoning-cap test (2026-09-02)
 
-- **Status of D018:** still provisional, but the mechanism is now chosen
+- **Status of D018:** corrected on 2026-09-03; pre-pilot values chosen
 - **Test:** run `round1_agents_v4_20260902T224109Z`, maths question
   `mmlu_pro_v1:test:8844`, settings `agents_v4`: Qwen pinned to Parasail (the
   provider that served both prior failures), total 3072 unchanged from
   `agents_v3`, hidden reasoning capped at 2048 via `reasoning: {max_tokens}`.
   One deliberate change from `agents_v3`; question and provider held fixed.
 
-**Result: Parasail honours the cap, and Qwen answered.** `finish_reason=stop`,
-visible `FINAL ANSWER: D`, parsed `OK`, $0.0028 — against $0.0100 for the
-uncapped 3072 truncation on the identical question and provider.
+**Initial result:** Qwen answered with `finish_reason=stop`, visible
+`FINAL ANSWER: D`, parsed `OK`, and $0.0028 cost—against the $0.0100 uncapped
+3072 truncation on the identical question and provider. It used only 578
+reasoning tokens of the requested 2048 maximum. This showed that the capped
+request could complete, but it did **not** prove enforcement because the model
+never approached the requested boundary.
 
-The unexpected part: Qwen used only **578** reasoning tokens of its 2048
-allowance (824 completion tokens in total). Uncapped, the same question drove
-3054+ reasoning tokens with no sign of concluding. The cap did not merely
-reserve space for the answer — the declared budget appears to change how the
-model deliberates. This is a single run and hosted-API outputs are not
-guaranteed identical, so it is recorded as an observation, not a mechanism.
+Run `round1_agents_v4_20260902T225035Z` then disproved the enforcement claim.
+On malformed physics question `mmlu_pro_v1:test:9622`, Parasail reported 2740
+Qwen reasoning tokens despite the requested 2048 maximum. Qwen still completed
+at 2996 of 3072 total tokens, but `reasoning.max_tokens` cannot be treated as a
+hard partition on this endpoint. The earlier short run may reflect an influence
+from the declared budget or ordinary hosted-model variation; one run cannot
+identify the mechanism.
 
-Consequences: ceiling escalation is dead — the ceiling stays at 3072 with the
-2048 reasoning cap for Qwen, subject to confirmation across the remaining
-pilot questions. The per-agent pinning mechanism (`pinned_provider`, no
-fallback) now exists and is proven live on one agent; pinning the other four
-(D015) remains open and required before the pilot. The pin and the cap are
-part of the cache key, so replies produced under different routing or
-reasoning settings can never be replayed as each other; keys of earlier
-uncapped, unpinned replies are unchanged.
+The physics item is not used to inflate ceilings. Independent unit conversion
+gives `3.8×10^7` dynes, absent from all ten options, and the stored Mistral and
+Gemma replies visibly repeat the calculation while trying to force an available
+choice. DeepSeek spent all 2048 tokens in hidden reasoning. These are valid
+recorded failures on a malformed input, not evidence that every normal
+completion ceiling should rise.
+
+On the clearly well-formed chemistry question `mmlu_pro_v1:test:3932`, run
+`round1_agents_v4_20260902T231300Z` produced five valid answers and unanimous D.
+Completion use was Llama 275/1024, Qwen 537/3072 (268 reasoning), Mistral
+291/1024, DeepSeek 436/2048 (262 reasoning), and Gemma 499/1024. Together with
+the earlier clean philosophy run, this gives at least twofold headroom for
+every agent on ordinary completed questions. The 20-question pilot, not more
+one-question tuning, now measures the real truncation rate.
+
+Consequences: ceiling escalation stops. `agents_v5` keeps Qwen's best-effort
+2048 reasoning request because the identical maths request completed once with
+it and the request adds no tokens or cost by itself; the documented 3072 total
+ceiling is the control that can be relied upon. Provider pins and reasoning
+settings are part of the cache key, so incompatible requests cannot share a
+cached response.

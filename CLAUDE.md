@@ -63,17 +63,16 @@ four**. Never its own. Never with model identities attached. It answers again.
 Then the second majority vote.
 
 **Settings** — temperature `0`, top-p `1.0`, for every agent in both rounds.
-`max_tokens` is under revision (D018): Milestone 1 proved 1024 too low for Qwen
-and DeepSeek (whole budget spent on internal reasoning, no visible answer);
-the working candidate is `agents_v4` (provisional): Qwen at 3072 total with
-hidden reasoning capped at 2048 and pinned to Parasail, DeepSeek at 2048 —
-proven live on the maths question that defeated plain ceiling raises. Earlier
-registry versions are frozen — real stored runs identify themselves by name. A temporary API failure gets one retry, two attempts
-in total (D012). OpenRouter picks the upstream provider automatically; the served
-model and provider are recorded on every response but never used to reject one.
-**Pinning each agent to one provider is deferred until before the pilot** (D015)
-— it is required before the main run, because routing changes between runs and
-providers serve the same model at different quantisations.
+The pre-pilot candidate is `agents_v5` (D015/D018): Llama 1024, Qwen 3072,
+Mistral 1024, DeepSeek 2048 and Gemma 1024 completion tokens. Qwen requests a
+2048 reasoning-token maximum, but a live Parasail response reported 2740, so
+this is best-effort; the total 3072 ceiling is the hard guard. Every agent is
+pinned to one exact endpoint with provider fallbacks off. A temporary failure
+retries the same endpoint once, then becomes `API_ERROR` and no vote. Earlier
+registry versions are immutable because real stored runs identify themselves by
+name. `agents_v5` is used unchanged for Milestone 2 and the 20-question pilot;
+it becomes the final frozen configuration only if the pilot passes. Any repair
+creates `agents_v6` rather than editing a used version.
 
 **Voting** — a group answer needs at least three matching votes out of five. A
 failed or unparseable response contributes no vote, and the threshold stays at
@@ -169,7 +168,7 @@ write its first real line — do not scaffold empty files.**
 ## Commands
 
 ```bash
-.venv/bin/python -m pytest                 # 300 tests, all passing, all offline
+.venv/bin/python -m pytest                 # 301 tests, all passing, all offline
 .venv/bin/python scripts/check_models.py   # live OpenRouter check — real calls, costs money
 .venv/bin/python scripts/run_milestone1.py --question <pilot-id>   # dry run, free; --live --yes-spend-real-money for the real thing
 ```

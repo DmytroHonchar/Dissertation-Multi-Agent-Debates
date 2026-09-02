@@ -52,12 +52,17 @@ all five model IDs confirmed with live calls.
 
 ## Before the pilot — deferred, not forgotten
 
-- [ ] **Provider pinning (D015).** The per-agent mechanism now exists (`pinned_provider`, fallbacks off) and is proven live on Qwen/Parasail. Still to do: pin the other four agents, and record what happens when a pinned provider is unavailable, before freezing settings.
+- [x] **Provider pinning selection (D015).** `agents_v5` pins exact endpoints
+  for all five agents with fallbacks off; a temporary failure retries the same
+  endpoint once, then becomes a stored `API_ERROR` with no vote.
+- [ ] Validate all five `agents_v5` pins in Milestone 2 and measure their
+  failure rate during the 20-question pilot.
 - [ ] **Mistral availability (D016).** Intermittent HTTP 429 from the shared upstream pool. Measure the real rate over the 20 pilot questions and decide how to handle it. Do not change the model.
-- [ ] Confirm `max_tokens` per round — resolved in principle by the D018
-  addendum: `agents_v4` (Qwen at 3072 total, reasoning capped at 2048, pinned
-  to Parasail) answered the maths question that defeated `agents_v2` and
-  `agents_v3`. Confirm on the remaining pilot questions, then freeze.
+- [x] Select pre-pilot `max_tokens` values (D018): Llama 1024, Qwen 3072,
+  Mistral 1024, DeepSeek 2048 and Gemma 1024. Qwen's requested 2048 reasoning
+  maximum is best-effort, not a guaranteed partition.
+- [ ] Confirm the same output ceilings in Milestone 2 and the 20-question
+  pilot; freeze them for the 300-question run only after the pilot passes.
 - [ ] Fix and record the bootstrap seed for the D011 confidence interval
 - [x] Note for P6: Mistral answered `'Yes.'` to a prompt demanding the single word `ready`, twice. Test the parser against loose instruction-format compliance.
 
