@@ -13,9 +13,10 @@
 # ceiling remains the real cost and termination guard.
 #
 # Each provider is an exact OpenRouter endpoint tag where one is exposed.
-# Fallbacks are disabled: if a pin is unavailable, the call retries the same
-# endpoint once and is then stored as API_ERROR. It must never silently switch
-# provider during the experiment.
+# Fallbacks are disabled, so a call never silently switches provider. If the
+# pinned endpoint fails temporarily (429/5xx), the client retries it once; if
+# OpenRouter rejects the pin outright (404, no matching endpoint), the call
+# fails immediately. Either way the agent is stored as API_ERROR with no vote.
 
 registry:
   name: agents_v5
