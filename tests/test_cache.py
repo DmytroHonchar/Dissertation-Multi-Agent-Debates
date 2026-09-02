@@ -110,6 +110,33 @@ def test_changed_settings_are_a_different_request(registry):
     )
 
 
+def test_a_pin_and_a_reasoning_cap_each_change_the_request_identity(registry):
+    """The controlled test must never be served an old unpinned, uncapped reply."""
+    from dataclasses import replace
+
+    spec = registry["agent_qwen"]
+    pinned = replace(spec, pinned_provider="Parasail")
+    capped = replace(spec, reasoning_max_tokens=2048)
+
+    keys = {cache_key(spec, MESSAGES), cache_key(pinned, MESSAGES), cache_key(capped, MESSAGES)}
+    assert len(keys) == 3, "pin and cap must each produce a distinct key"
+
+
+def test_unpinned_uncapped_specs_keep_their_old_cache_keys(registry):
+    """Adding the new fields must not orphan every reply cached before them."""
+    import hashlib, json
+
+    spec = registry["agent_qwen"]
+    legacy_payload = {
+        "agent_id": spec.agent_id, "slug": spec.slug, "messages": MESSAGES,
+        "temperature": spec.temperature, "top_p": spec.top_p, "max_tokens": spec.max_tokens,
+    }
+    legacy = hashlib.sha256(
+        json.dumps(legacy_payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    assert cache_key(spec, MESSAGES) == legacy
+
+
 def test_changed_messages_are_a_different_request(registry):
     spec = registry["agent_qwen"]
     other = [{"role": "user", "content": "3+3?"}]

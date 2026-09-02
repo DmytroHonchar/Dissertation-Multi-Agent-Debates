@@ -1,0 +1,73 @@
+# PROVISIONAL - not frozen. The controlled reasoning-cap test (D015/D018).
+#
+# Evidence so far: Qwen consumed its whole completion allowance in hidden
+# reasoning on the maths probe at 2048 (2043 reasoning tokens, Parasail) and
+# again at 3072 (3054, Parasail), returning no visible answer either time.
+# Raising the ceiling does not converge, so this version stops escalating and
+# divides the existing allowance instead: 3072 total, at most 2048 of it
+# hidden reasoning, leaving about 1024 for the visible answer.
+#
+# One deliberate change at a time: Qwen stays on Parasail - the provider that
+# served both failures - so the only effective difference from agents_v3 is
+# the reasoning cap. If Parasail honours the cap, the cap was the fix. If it
+# ignores it, that is a provider finding, and one other pinned provider is
+# tried before anything else changes. No other agent changes at all.
+#
+# Earlier registry versions stay untouched so stored runs remain reproducible.
+
+registry:
+  name: agents_v4
+  provider: openrouter
+  base_url: https://openrouter.ai/api/v1
+
+# Applied to every agent unless the agent overrides the same key.
+defaults:
+  # Temperature 0: the experiment measures the effect of voting and of
+  # cross-model communication. Sampling randomness would add a third source of
+  # variation and make that comparison less controlled. Decision D002.
+  temperature: 0
+  top_p: 1.0
+  max_tokens: 1024
+  # OpenRouter chooses an available upstream provider unless an agent pins one.
+  # Full pinning for every agent is still to be decided before the pilot (D015).
+  allow_provider_fallbacks: true
+  # Route only to providers that honour the requested parameters, so
+  # temperature 0 is not silently ignored by a provider that cannot apply it.
+  require_parameters: true
+
+agents:
+  agent_llama:
+    slug: meta-llama/llama-4-maverick
+    display_name: Llama 4 Maverick
+    developer: Meta
+
+  agent_qwen:
+    slug: qwen/qwen3.8-27b
+    display_name: Qwen3.8 27B
+    developer: Alibaba
+    # Same total as agents_v3, now divided: at most 2048 of the 3072 may be
+    # hidden reasoning, so roughly 1024 stays free for the visible answer.
+    max_tokens: 3072
+    reasoning_max_tokens: 2048
+    # Pinned to the provider that served both maths failures, so the cap is
+    # the only effective change. No fallback: a controlled test that silently
+    # switched provider would measure nothing.
+    pinned_provider: Parasail
+    allow_provider_fallbacks: false
+
+  agent_mistral:
+    slug: mistralai/mistral-large-2512
+    display_name: Mistral Large 2512
+    developer: Mistral AI
+
+  agent_deepseek:
+    slug: deepseek/deepseek-v4-pro-0813
+    display_name: DeepSeek V4 Pro
+    developer: DeepSeek
+    # Completed comfortably at 2048 on every probe so far.
+    max_tokens: 2048
+
+  agent_gemma:
+    slug: google/gemma-4-31b-it
+    display_name: Gemma 4 31B IT
+    developer: Google

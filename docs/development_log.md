@@ -584,6 +584,37 @@ responses, compute the group vote, and store an inspectable result.
   support for the reasoning control and decide between a final ceiling probe
   and an explicit reasoning cap.
 
+### 2026-09-02 — Reasoning cap: the controlled test worked
+
+- **Built:** `ModelSpec` gained `pinned_provider` and `reasoning_max_tokens`,
+  flowing into the request (`provider.only` with fallbacks off; `reasoning:
+  {max_tokens}`) and into the cache key - added to the key only when set, so
+  every reply cached before these fields existed keeps its key, while a pinned
+  or capped request can never be served an old unpinned, uncapped reply.
+  `configs/models/agents_v4.yaml`: Qwen pinned to Parasail, total 3072
+  unchanged, reasoning capped at 2048; every other agent identical to
+  `agents_v3`. CLI accepts `--agents agents_v4`.
+- **Why:** Ceiling escalation had failed twice on the same maths question
+  through the same provider. Holding question, provider and total fixed makes
+  the cap the only effective change, so the result is attributable.
+- **Tested:** 300 offline tests pass, then the one approved live call:
+  run `round1_agents_v4_20260902T224109Z`, $0.002815, only Qwen paid - the
+  other four agents were served from the cache at zero cost, which is the
+  cache doing exactly its job. Qwen through Parasail: `finish_reason=stop`,
+  824 completion tokens of which 578 reasoning, visible `FINAL ANSWER: D`,
+  parsed `OK`. All five agents valid for the first time on this question;
+  the vote is genuinely `NO_CONSENSUS` (E,E,D,D,H) - a hard question the
+  group disagrees on, which is data, not a fault.
+- **Problems:** None in the mechanism. The surprise is recorded in the D018
+  addendum: capped at 2048, Qwen used only 578 reasoning tokens, against
+  3054+ uncapped on the identical question and provider - the declared budget
+  seems to change the deliberation itself, not just fence it. Single run;
+  treated as an observation. Whether D's answer is correct is unknown here -
+  the key stays unread outside evaluation.
+- **Next:** confirm the capped configuration on the remaining pilot probes,
+  then pin the other four agents (D015) and freeze the settings. Round 2
+  after that.
+
 
 ## Entry template
 

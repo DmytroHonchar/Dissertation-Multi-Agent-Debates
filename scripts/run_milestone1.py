@@ -39,7 +39,7 @@ from mad.round1 import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KNOWN_REGISTRIES = ("agents_v1", "agents_v2", "agents_v3")
+KNOWN_REGISTRIES = ("agents_v1", "agents_v2", "agents_v3", "agents_v4")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

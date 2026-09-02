@@ -451,3 +451,33 @@ pinning (D015). Do not assume it works until a pinned provider demonstrates it.
 identifies itself by that name and its provenance must stay true. The first
 probe candidate is `configs/models/agents_v2.yaml`: identical except Qwen and
 DeepSeek at `max_tokens: 2048`, clearly marked provisional.
+
+
+## D018 addendum — the controlled reasoning-cap test (2026-09-02)
+
+- **Status of D018:** still provisional, but the mechanism is now chosen
+- **Test:** run `round1_agents_v4_20260902T224109Z`, maths question
+  `mmlu_pro_v1:test:8844`, settings `agents_v4`: Qwen pinned to Parasail (the
+  provider that served both prior failures), total 3072 unchanged from
+  `agents_v3`, hidden reasoning capped at 2048 via `reasoning: {max_tokens}`.
+  One deliberate change from `agents_v3`; question and provider held fixed.
+
+**Result: Parasail honours the cap, and Qwen answered.** `finish_reason=stop`,
+visible `FINAL ANSWER: D`, parsed `OK`, $0.0028 — against $0.0100 for the
+uncapped 3072 truncation on the identical question and provider.
+
+The unexpected part: Qwen used only **578** reasoning tokens of its 2048
+allowance (824 completion tokens in total). Uncapped, the same question drove
+3054+ reasoning tokens with no sign of concluding. The cap did not merely
+reserve space for the answer — the declared budget appears to change how the
+model deliberates. This is a single run and hosted-API outputs are not
+guaranteed identical, so it is recorded as an observation, not a mechanism.
+
+Consequences: ceiling escalation is dead — the ceiling stays at 3072 with the
+2048 reasoning cap for Qwen, subject to confirmation across the remaining
+pilot questions. The per-agent pinning mechanism (`pinned_provider`, no
+fallback) now exists and is proven live on one agent; pinning the other four
+(D015) remains open and required before the pilot. The pin and the cap are
+part of the cache key, so replies produced under different routing or
+reasoning settings can never be replayed as each other; keys of earlier
+uncapped, unpinned replies are unchanged.

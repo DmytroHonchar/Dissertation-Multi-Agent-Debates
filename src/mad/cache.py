@@ -58,6 +58,13 @@ def cache_key(spec: ModelSpec, messages: list[dict[str, str]]) -> str:
         "top_p": spec.top_p,
         "max_tokens": spec.max_tokens,
     }
+    # Both of these change what a call would return, so they are part of the
+    # request's identity. Added only when set, so every reply cached before
+    # they existed keeps its key.
+    if spec.pinned_provider:
+        payload["pinned_provider"] = spec.pinned_provider
+    if spec.reasoning_max_tokens is not None:
+        payload["reasoning_max_tokens"] = spec.reasoning_max_tokens
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
