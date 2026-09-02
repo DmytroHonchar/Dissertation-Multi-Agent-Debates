@@ -1,0 +1,61 @@
+# PROVISIONAL - not frozen. Second token probe under D018.
+#
+# The agents_v2 maths probe (run round1_agents_v2_20260902T220928Z) showed
+# Qwen reaching its 2048-token ceiling with finish_reason=length and returning
+# no valid vote. This version raises only Qwen's ceiling to 3072. Every other
+# model and generation setting remains unchanged so the probe isolates that
+# single change.
+#
+# Earlier registry versions stay untouched so stored runs remain reproducible.
+
+registry:
+  name: agents_v3
+  provider: openrouter
+  base_url: https://openrouter.ai/api/v1
+
+# Applied to every agent unless the agent overrides the same key.
+defaults:
+  # Temperature 0: the experiment measures the effect of voting and of
+  # cross-model communication. Sampling randomness would add a third source of
+  # variation and make that comparison less controlled. Decision D002.
+  temperature: 0
+  top_p: 1.0
+  max_tokens: 1024
+  # OpenRouter chooses an available upstream provider. Pinning each agent to one
+  # named provider is deferred until before the pilot (D015). The served model
+  # and provider are recorded on every response regardless, so any routing
+  # change stays auditable.
+  allow_provider_fallbacks: true
+  # Route only to providers that honour the requested parameters, so
+  # temperature 0 is not silently ignored by a provider that cannot apply it.
+  require_parameters: true
+
+agents:
+  agent_llama:
+    slug: meta-llama/llama-4-maverick
+    display_name: Llama 4 Maverick
+    developer: Meta
+
+  agent_qwen:
+    slug: qwen/qwen3.8-27b
+    display_name: Qwen3.8 27B
+    developer: Alibaba
+    # Reached 2048 tokens on the maths probe. Second probe: 3072.
+    max_tokens: 3072
+
+  agent_mistral:
+    slug: mistralai/mistral-large-2512
+    display_name: Mistral Large 2512
+    developer: Mistral AI
+
+  agent_deepseek:
+    slug: deepseek/deepseek-v4-pro-0813
+    display_name: DeepSeek V4 Pro
+    developer: DeepSeek
+    # Used all 1024 tokens reasoning and answered nothing. First probe: 2048.
+    max_tokens: 2048
+
+  agent_gemma:
+    slug: google/gemma-4-31b-it
+    display_name: Gemma 4 31B IT
+    developer: Google
