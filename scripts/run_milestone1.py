@@ -39,7 +39,7 @@ from mad.round1 import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KNOWN_REGISTRIES = ("agents_v1", "agents_v2", "agents_v3", "agents_v4")
+KNOWN_REGISTRIES = ("agents_v1", "agents_v2", "agents_v3", "agents_v4", "agents_v5")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -62,8 +62,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # One config drives everything: the client below is built from it, the
     # runner checks it, and the same labels end up stored on the run. The
-    # settings version is whichever registry was actually selected - a run on
-    # A later registry must never be labelled as an earlier one.
+    # settings version is whichever registry was actually selected. A later
+    # registry must never be labelled as an earlier one.
     config = Round1Config(settings_version=args.agents, cache_enabled=use_cache)
 
     # Every check that can refuse the command runs before a client exists.

@@ -615,6 +615,92 @@ responses, compute the group vote, and store an inspectable result.
   then pin the other four agents (D015) and freeze the settings. Round 2
   after that.
 
+### 2026-09-03 — Clean Round 1 check and the fully pinned pilot candidate
+
+- **Built:** `configs/models/agents_v5.yaml`, the configuration to use
+  unchanged for Milestone 2 and the 20-question pilot. Token settings remain
+  Llama 1024, Qwen 3072 total plus a best-effort 2048 reasoning request,
+  Mistral 1024, DeepSeek 2048 and Gemma 1024. Exact provider pins are Llama
+  `digitalocean`, Qwen `parasail/fp8`, Mistral `mistral/eu`, DeepSeek
+  `digitalocean`, and Gemma `deepinfra/fp8`; fallbacks are off for all five.
+  If a pin is temporarily unavailable, the existing retry policy tries the
+  same endpoint once and then stores `API_ERROR` with no vote. The Milestone 1
+  CLI accepts `agents_v5`, and an offline test fixes every pin, token value and
+  reasoning setting so they cannot drift silently.
+- **Why:** Automatic routing changed the serving company repeatedly: among
+  paid stored calls, Llama used DeepInfra and DigitalOcean; Qwen used AkashML,
+  Io Net and Parasail; DeepSeek used BaseTen, DigitalOcean, Alibaba and NextBit;
+  Gemma used DeepInfra, Friendli and CoreWeave. The same model can be hosted at
+  different endpoint variants and quantisations, so this is an uncontrolled
+  variable in a 300-question comparison. Pin selection used recorded successful
+  reachability first, followed by the free OpenRouter endpoint snapshot on
+  2026-09-03 (active status, temperature/top-p support, one-day availability,
+  exact variant/quantisation where published, and price). Llama/DigitalOcean
+  had three successful stored calls; Qwen/Parasail supplied five calls and the
+  same-provider token comparisons; Mistral has no alternative hosting company
+  and its EU variant had the best current availability; DeepSeek/DigitalOcean
+  had two successful calls and avoids the first-party endpoint previously
+  blocked by the account data policy; Gemma/DeepInfra had three successful
+  calls and the exact fp8 tag prevents a silent move to DeepInfra's fp4 route.
+- **Tested:** The free endpoint API returned HTTP 200 for all five model IDs and
+  no model completion was requested. The selected endpoint snapshot was:
+
+  | Agent | Endpoint | Quantisation | One-day uptime | Input/output price per 1M tokens |
+  |---|---|---:|---:|---:|
+  | Llama | `digitalocean` | not published | 99.90% | $0.20 / $0.696 |
+  | Qwen | `parasail/fp8` | fp8 | 99.80% | $0.35 / $3.20 |
+  | Mistral | `mistral/eu` | not published | 96.00% | $0.55 / $1.65 |
+  | DeepSeek | `digitalocean` | not published | 99.57% | $1.32 / $3.96 |
+  | Gemma | `deepinfra/fp8` | fp8 | 98.65% | $0.13 / $0.40 |
+
+  Two user-approved live runs from 2026-09-02 were then verified directly from
+  `storage/results.sqlite`; this documentation/provider-selection work made no
+  paid calls. Physics run `round1_agents_v4_20260902T225035Z`, question
+  `test:9622`, cost $0.016052312: Llama OK E (244 completion tokens), Qwen OK F
+  (2996 completion, 2740 reported reasoning), Mistral TRUNCATED at 1024,
+  DeepSeek TRUNCATED at 2048 reasoning tokens, and Gemma TRUNCATED at 1024;
+  `INSUFFICIENT_ANSWERS`, two valid votes. Independent calculation gives
+  `3.8×10^7` dynes, absent from every option, and the stored visible replies
+  show Mistral and Gemma repeatedly checking the mismatch. This item is kept as
+  audited pilot evidence but is not used to raise normal ceilings. Chemistry
+  run `round1_agents_v4_20260902T231300Z`, well-formed question `test:3932`,
+  cost $0.00525969: Llama OK D (275), Qwen OK D (537 completion, 268 reasoning),
+  Mistral OK D (291), DeepSeek OK D (436 completion, 262 reasoning), and Gemma
+  OK D (499); `UNANIMOUS D`, five valid votes. The answer was independently
+  derived from the question; no answer-key file was read.
+
+  Across every paid stored call so far (cache hits excluded):
+
+  | Agent | Paid calls | OK | Truncated | Prompt tokens | Completion tokens | Provider-reported reasoning tokens | Spend |
+  |---|---:|---:|---:|---:|---:|---:|---:|
+  | Llama | 5 | 5 | 0 | 1,859 | 1,080 | 0 | $0.001151456 |
+  | Qwen | 7 | 4 | 3 | 3,178 | 11,193 | 10,409 | $0.036197350 |
+  | Mistral | 5 | 4 | 1 | 1,880 | 2,273 | 0 | $0.004349500 |
+  | DeepSeek | 5 | 3 | 2 | 1,973 | 3,896 | 3,334 | $0.013146408 |
+  | Gemma | 5 | 4 | 1 | 1,991 | 2,696 | 0 | $0.001183170 |
+  | **Total** | **27** | **20** | **7** | **10,881** | **21,138** | **13,743** | **$0.056027884** |
+
+  Reasoning-token counts are provider-reported diagnostic fields and are not
+  perfectly comparable across hosts; completion tokens and returned cost are
+  the billing record. All 301 tests pass offline; `git diff --check` is clean.
+- **Problems:** The earlier claim that Parasail enforced Qwen's 2048 reasoning
+  maximum was wrong. On `test:9622` it reported 2740 reasoning tokens while
+  accepting the setting. The 2048 value remains a best-effort request that may
+  influence behaviour, not a hard partition; Qwen's total 3072 remains the
+  dependable termination/cost ceiling. The malformed physics item and the
+  ambiguous maths/economics items show why a valid failure must stay a failure
+  rather than be converted into a guessed vote. Provider pins remove routing
+  variation but trade fallback availability for control; Mistral remains the
+  main availability risk under D016. Finally, the $0.056 spent so far does not
+  prove that $5 covers the whole 3,200-call experiment: Round 2 may use more
+  input/output and difficult questions may approach ceilings. Re-estimate from
+  the 20-question pilot and retain the fixed £15/~$20 maximum in D006.
+- **Next:** Build Round 2 (P10), then run Milestone 2 through both rounds with
+  `agents_v5`. The full 20-question pilot is not runnable yet because Round 2
+  and its orchestration do not exist. If Milestone 2 and the pilot pass,
+  `agents_v5` becomes the final frozen settings version for the 300 questions;
+  if a genuine fault appears, create `agents_v6` and preserve `agents_v5`.
+
 
 ## Entry template
 
