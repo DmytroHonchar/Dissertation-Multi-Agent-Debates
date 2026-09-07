@@ -63,8 +63,9 @@ all five model IDs confirmed with live calls.
 - [x] Select pre-pilot `max_tokens` values (D018): Llama 1024, Qwen 3072,
   Mistral 1024, DeepSeek 2048 and Gemma 1024. Qwen's requested 2048 reasoning
   maximum is best-effort, not a guaranteed partition.
-- [ ] Confirm the same output ceilings in Milestone 2 and the 20-question
-  pilot; freeze them for the 300-question run only after the pilot passes.
+- [ ] Confirm the same output ceilings in the 20-question pilot (Milestone 2 held:
+  every agent `stop` in both rounds); freeze them for the 300-question run only
+  after the pilot passes.
 - [ ] Fix and record the bootstrap seed for the D011 confidence interval
 - [x] Note for P6: Mistral answered `'Yes.'` to a prompt demanding the single word `ready`, twice. Test the parser against loose instruction-format compliance.
 
@@ -77,8 +78,8 @@ the proposal source, not in this repository.
 - [ ] Rewrite Section 5 (Preliminary Work). State accurately that the frozen
   dataset, five-model configuration, OpenRouter client, parsing, storage,
   caching, voting and both debate rounds are implemented and tested offline;
-  Round 1 and the provider pins were verified live; the complete two-round live
-  check, pilot, evaluation and replay interface remain unfinished.
+  Round 1, the provider pins and one complete two-round debate were verified
+  live; the pilot, evaluation and replay interface remain unfinished.
 - [ ] Record **temperature 0** in the proposal's model settings
 - [ ] Record the **retry-once** policy consistently with D012
 - [ ] Record the resolved statistical method from D011: paired question-level bootstrap, 10,000 resamples, 95% percentile interval, McNemar's exact test, four transition counts
@@ -96,7 +97,14 @@ the proposal source, not in this repository.
 - [x] Round 2 with four anonymised peer responses per agent — `debate.py` (P10)
 - [x] Complete one-question debate command — `scripts/run_debate.py`, tested
   offline with both rounds in one database run
-- [ ] **Milestone 2** — one real pilot question through both rounds, peer inputs verified by hand
+- [x] **Milestone 2** — done live 2026-09-07, run `debate_agents_v5_20260907T161401Z`,
+  `mmlu_pro_v1:test:3932`, Round 1 from cache, Round 2 $0.0089, `UNANIMOUS D` both
+  rounds. Peer IDs, rebuilt conversations and identity absence verified from the
+  stored rows. Found DeepSeek's cached Round 1 reply is a repetition loop that still
+  parses `OK` - recorded in the log, rule unchanged.
+- [ ] One more approved live debate on a question where Round 1 split
+  (`mmlu_pro_v1:test:8844` went `NO_CONSENSUS` three times), so Round 2 is
+  seen changing or holding an answer under disagreement
 - [ ] Whole pipeline on deterministic fake responses, then limited real calls
 - [ ] Evaluation script, built before the pilot runs — `evaluation.py` (P12). Add `scipy` or `statsmodels` to `pyproject.toml` when starting it.
 

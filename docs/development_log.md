@@ -862,6 +862,60 @@ responses, compute the group vote, and store an inspectable result.
   the five Round 2 conversations by hand.
 
 
+### 2026-09-07 — Milestone 2: one real question through both rounds
+
+- **Built:** Nothing. This records the one approved live debate run and what
+  was checked in it afterwards.
+- **Why:** Round 2 had only ever run against fixtures. The claim that each
+  agent receives its own reply as its own turn and the other four anonymously
+  had to be checked against a real stored run, not against a test double.
+- **Tested:** Run `debate_agents_v5_20260907T161401Z`, chemistry question
+  `mmlu_pro_v1:test:3932`, `debate_config_v1`, `round1_v1+round2_v1`,
+  `agents_v5`. Round 1 was served entirely from the cache (all five
+  `cache_hit = 1`, $0.00) because the same question had already been paid for
+  under `agents_v5` on 2026-09-02; Round 2 made five fresh calls, all five pins
+  honoured, every agent `finish_reason = stop`, cost $0.008884. Both rounds
+  `UNANIMOUS D`, 5 valid answers each; the answer key says D. Checked
+  afterwards by reading the database: every Round 2 row carries exactly the
+  four other agents' Round 1 `response_id`s in registry order and never its
+  own; each Round 2 conversation, rebuilt from the stored rows with
+  `build_round2_messages()`, hashes to a key that exists in the cache, so what
+  was sent is reconstructible from the database alone; no agent ID, model
+  slug, developer prefix or provider name appears in any rebuilt conversation;
+  all five Round 2 replies say explicitly that they kept their answer. Round 2
+  input was 2,702 to 2,941 prompt tokens per agent against 357 to 413 in
+  Round 1 - about seven times larger - for 14,201 prompt tokens in total.
+  Earlier runs are untouched: 9 runs, 50 responses, 10 outcomes, all prior
+  rows present. The frozen dataset has not changed since commit `d50e2e2`.
+- **Problems:** One finding that was missed on 2026-09-02 and matters for the
+  results chapter. DeepSeek's Round 1 reply (`response_id 44`, 1,166
+  completion tokens, 0 reasoning tokens) is a repetition loop - `PCl_5 ⇌ PCl_5
+  ⇌ PCl_5 ...` then `initialPCl_initialPCl_...` for most of its length - that
+  recovers at the end into a correct derivation and `FINAL ANSWER: D`. The
+  parser is right to mark it `OK`: it finished on `stop` and carries exactly
+  one answer line. It is a real model output and is stored as it arrived. But
+  it was shown to the other four agents as a peer response in Round 2, and
+  all four described the peers' reasoning as identical to their own, so none
+  of them remarked on it. Two things follow. First, "valid" means parseable,
+  not coherent; a degenerate reply that ends with a letter is a vote and a
+  peer. That is the frozen rule and it is not changed here, but the results
+  chapter must say so, and the pilot should count how often it happens. Second,
+  this run was a weak test of Round 2 as a debate: the question is easy, all
+  five agreed before communicating, and nobody had anything to reconsider. A
+  question where Round 1 split is the test that would show whether an agent
+  changes its answer under disagreement. Cost note for the budget: DeepSeek
+  pinned to DigitalOcean was $0.004423 of the $0.008884 Round 2 - half the
+  round for one agent, driven by its input pricing on 2,898 prompt tokens.
+  An uncached question through both rounds is about $0.017 on this evidence;
+  320 questions is roughly $5.50, comfortably inside the budget, before
+  allowing for failed-and-retried calls.
+- **Next:** Build the 20-question pilot runner around `run_debate_question()`,
+  and `evaluation.py` so the three headline numbers come from code rather than
+  from reading the key by hand. Before the pilot, run one more approved live
+  debate on a question where Round 1 did not agree - `mmlu_pro_v1:test:8844`
+  went `NO_CONSENSUS` three times under agents_v2 to v4 - so Round 2 is seen
+  doing its job at least once.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity
