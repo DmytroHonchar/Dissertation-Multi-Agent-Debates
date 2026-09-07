@@ -260,7 +260,8 @@ second round follows.
 API keys stay in the ignored `.env` only — never in configs, the database, git,
 prompts or results.
 
-Built 2026-09-01 as `src/mad/round1.py` plus `scripts/run_milestone1.py`.
+Built 2026-09-01 as `src/mad/round1.py`; its command is now
+`scripts/run_round1.py`.
 `Round1Config` records the question set, Round 1 prompt, selected model settings,
 parser, cache state, timeout, two-attempt retry budget and sequential calling.
 `run_round1_question()` requires an existing unfinished run and processes one
@@ -270,7 +271,7 @@ finishes the run. The outer script starts one run before processing questions
 and finishes it only after every requested stage succeeds, allowing one run to
 contain 1, 20 or 300 questions. A crash deliberately leaves `ended_at` as
 `NULL`. One agent failing is stored as `API_ERROR` and the other four continue.
-The Milestone 1 script defaults to a free dry run on labelled fixture replies in
+The Round 1 command defaults to a free dry run on labelled fixture replies in
 a throwaway database; live mode needs both `--live` and
 `--yes-spend-real-money`, accepts only an ID from the 20-question pilot file,
 refuses experimental IDs by name, and a dry run is refused
@@ -368,7 +369,12 @@ rows shown, in the order shown. Validity is `status == "OK"` only (D019). One
 agent failing is stored as `API_ERROR` and the other four continue. The vote is
 the same three-of-five rule, recorded as a separate `round = 2` outcome row.
 
-`scripts/run_milestone2.py` is not built yet.
+`run_debate_question()` sequences Round 1 and Round 2 for one question and
+checks both stage configurations before the first call. The command
+`scripts/run_debate.py` starts one database run, executes that function, and
+finishes the run only after both rounds succeed. It defaults to free fixture
+replies and `agents_v5`; live mode requires both `--live` and
+`--yes-spend-real-money` because one uncached question can make ten paid calls.
 
 ## P11 — Pilot
 

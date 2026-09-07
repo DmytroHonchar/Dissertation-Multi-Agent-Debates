@@ -21,6 +21,7 @@ from mad.debate import (
     DEBATE_CONFIG_VERSION,
     Round2Config,
     peers_for,
+    run_debate_question,
     run_round2_question,
     valid_round1_responses,
 )
@@ -609,3 +610,68 @@ def test_the_dry_run_fixture_client_completes_both_rounds(question, registry, db
     assert len(report.agents) == 5
     # The fixture's fifth agent refuses in Round 1, so nobody sees four peers.
     assert {agent.peer_count for agent in report.agents} == {3, 4}
+
+
+# 8. One function sequences the complete debate
+
+
+def test_run_debate_question_sequences_both_rounds(question, registry, db):
+    start_debate_run(db)
+    report = run_debate_question(
+        question,
+        registry=registry,
+        client=FixtureClient(question),
+        db=db,
+        run_id=RUN,
+        round1_config=Round1Config(config_version=DEBATE_CONFIG_VERSION),
+        round2_config=Round2Config(),
+    )
+
+    assert report.round1.round == 1
+    assert report.round2.round == 2
+    assert report.total_cost_usd == 0.0
+    assert len(db.read_responses(RUN, round=1)) == 5
+    assert len(db.read_responses(RUN, round=2)) == 5
+    assert len(db.read_outcomes(RUN)) == 2
+
+
+def test_run_debate_question_refuses_inconsistent_rounds_before_a_call(
+    question, registry, db
+):
+    start_debate_run(db)
+    client = ScriptedClient()
+
+    with pytest.raises(RunnerError, match="two-round configuration is inconsistent"):
+        run_debate_question(
+            question,
+            registry=registry,
+            client=client,
+            db=db,
+            run_id=RUN,
+            round1_config=Round1Config(config_version=DEBATE_CONFIG_VERSION),
+            round2_config=Round2Config(settings_version="agents_v2"),
+        )
+
+    assert client.calls == 0
+    assert db.read_responses(RUN) == []
+
+
+def test_run_debate_question_checks_round2_run_labels_before_round1_spends(
+    question, registry, db
+):
+    config = Round2Config(prompt_version="round2_other")
+    start_debate_run(db, config=config)
+    client = ScriptedClient()
+
+    with pytest.raises(RunnerError, match="Round 2 prompt"):
+        run_debate_question(
+            question,
+            registry=registry,
+            client=client,
+            db=db,
+            run_id=RUN,
+            round1_config=Round1Config(config_version=DEBATE_CONFIG_VERSION),
+            round2_config=config,
+        )
+
+    assert client.calls == 0
