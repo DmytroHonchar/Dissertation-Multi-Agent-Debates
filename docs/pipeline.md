@@ -322,11 +322,14 @@ inflate whichever round failed more.
 
 New file `src/mad/debate.py`. This stage did not exist in the old pipeline.
 
-Each agent receives the original question and options plus the anonymised Round
-1 responses of the **other four** agents. It never receives its own Round 1
-response as a peer response, and peer model identities are never disclosed.
-Peer ordering must be deterministic given the run and question, so the run can
-be reconstructed.
+`src/mad/prompts_v1.py` carries `ROUND2_PROMPT_VERSION = "round2_v1"` and
+`build_round2_messages()`. Each agent receives the original question and options,
+its own valid Round 1 response as the preceding assistant turn, and the
+anonymised valid Round 1 responses of the **other four** agents. Its own response
+never enters the peer set, and peer model identities are never disclosed. If the
+agent had no usable Round 1 response, the prompt states that without inventing
+one. Peer ordering must be deterministic given the run and question, so the run
+can be reconstructed.
 
 Each agent answers again in the same `FINAL ANSWER: X` format. Round 2 answers
 are parsed and voted on separately under the same three-of-five rule.
@@ -345,9 +348,10 @@ core configuration or the D009 headline comparison.
 The 20 frozen pilot questions, both rounds, full pipeline.
 
 Confirm by hand: all five agents received identical Round 1 input; no prompt
-ever contained the correct answer; each Round 2 prompt contained exactly the
-four other agents' anonymised responses and never the agent's own; letters were
-extracted correctly; raw responses were preserved; served model, provider,
+ever contained the correct answer; each Round 2 conversation restored that
+agent's own valid response separately and contained the available responses of
+the other four agents anonymously; letters were extracted correctly; raw
+responses were preserved; served model, provider,
 tokens, cost, latency and finish reason were stored; cache hits do not reach the
 API; an induced API error does not end the run; five parallel calls do not
 interfere; every row links to the right run, question, round and agent.

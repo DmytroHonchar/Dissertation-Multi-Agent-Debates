@@ -1,10 +1,11 @@
-"""Builds the Round 1 prompt sent to all five models.
+"""Builds the versioned prompts sent to all five models.
 
-Two rules this file exists to protect:
+Three rules this file exists to protect:
   - Round 1 models must not know a debate follows.
+  - Round 2 peers must stay anonymous and separate from the agent's own reply.
   - The correct answer must never get in here.
 
-Change the prompt text and you change the experiment - bump PROMPT_VERSION.
+Change a prompt and you change the experiment - bump that round's version.
 """
 
 from __future__ import annotations
@@ -15,7 +16,13 @@ from typing import Any
 
 # 1. Settings
 
-PROMPT_VERSION = "round1_v1"
+ROUND1_PROMPT_VERSION = "round1_v1"
+
+# Kept as the Round 1 alias so existing stored runs and imports remain truthful.
+PROMPT_VERSION = ROUND1_PROMPT_VERSION
+
+ROUND2_PROMPT_VERSION = "round2_v1"
+ROUND2_MAX_PEERS = 4
 
 # Questions have 3 to 10 options - never assume 10.
 ANSWER_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -62,6 +69,36 @@ detail - find that detail.
 Then respond in exactly this format:
 
 REASONING: <your reasoning, following the steps above, at most 200 words>
+FINAL ANSWER: <a single letter>
+
+The letter must be one of the options offered. Give exactly one letter, with no \
+brackets or punctuation. You must choose an option even if you are not certain. \
+Write nothing after the answer line."""
+
+
+ROUND2_SYSTEM_PROMPT = """\
+You are revisiting a multiple-choice question from a graduate-level academic \
+exam.
+
+You previously attempted this question independently. When your previous \
+response was valid, it appears earlier in this conversation. You are now being \
+shown anonymous responses produced independently by other solvers.
+
+Reconsider the question using all the available reasoning:
+
+1. Re-examine the reasoning in your previous response, if one is available.
+2. Evaluate each peer response by checking its principles, calculations, \
+evidence and logical steps against the original question.
+3. Compare their reasoning with your own. Do not assume an answer is correct \
+because it is yours or because several responses agree. Do not change your \
+answer only because another response disagrees.
+4. Decide which option is best supported. Keeping your previous answer and \
+changing it are equally acceptable.
+
+Then respond in exactly this format:
+
+REASONING: <briefly explain your conclusion and whether you kept or changed \
+your previous answer, if one was available, at most 200 words>
 FINAL ANSWER: <a single letter>
 
 The letter must be one of the options offered. Give exactly one letter, with no \
@@ -136,6 +173,83 @@ def build_round1_messages(question: Mapping[str, Any]) -> list[dict[str, str]]:
         {"role": "system", "content": ROUND1_SYSTEM_PROMPT},
         {"role": "user", "content": format_question(question)},
     ]
+
+
+def build_round2_messages(
+    question: Mapping[str, Any],
+    own_round1_response: str | None,
+    peer_responses: Sequence[str],
+) -> list[dict[str, str]]:
+    """Continue one agent's conversation with anonymous Round 1 peer replies.
+
+    A valid own response is restored as an ``assistant`` turn, so Round 2 is a
+    reconsideration of that agent's earlier position rather than a fresh answer.
+    ``None`` means the agent had no usable Round 1 response. Peer identities and
+    ordering are owned by the caller; this function preserves the supplied order
+    and adds anonymous labels only.
+    """
+    formatted_question = format_question(question)
+    peers = _validate_peer_responses(peer_responses)
+
+    messages = [
+        {"role": "system", "content": ROUND2_SYSTEM_PROMPT},
+        {"role": "user", "content": formatted_question},
+    ]
+
+    if own_round1_response is not None:
+        if not isinstance(own_round1_response, str) or not own_round1_response.strip():
+            raise PromptConstructionError(
+                "own_round1_response must be non-empty text or None when unavailable"
+            )
+        # Preserve the model's response exactly. It is conversation history, not
+        # an anonymous peer response and not text reconstructed from its letter.
+        messages.append({"role": "assistant", "content": own_round1_response})
+        previous_note = "Your complete previous response appears above."
+        final_instruction = (
+            "Reconsider your previous response and answer the original question again."
+        )
+    else:
+        previous_note = "Your previous attempt did not produce a usable response."
+        final_instruction = "Answer the original question using the available reasoning."
+
+    if peers:
+        peer_blocks = "\n\n".join(
+            f"--- PEER RESPONSE {index} ---\n{text}"
+            for index, text in enumerate(peers, start=1)
+        )
+        peer_section = (
+            "Here are anonymous responses from other independent solvers. "
+            "Their order carries no meaning.\n\n"
+            f"{peer_blocks}"
+        )
+    else:
+        peer_section = "No valid peer responses are available."
+
+    messages.append(
+        {
+            "role": "user",
+            "content": f"{previous_note}\n\n{peer_section}\n\n{final_instruction}",
+        }
+    )
+    return messages
+
+
+def _validate_peer_responses(peer_responses: Sequence[str]) -> list[str]:
+    """Return up to four complete peer replies, rejecting malformed input."""
+    if isinstance(peer_responses, (str, bytes)) or not isinstance(peer_responses, Sequence):
+        raise PromptConstructionError("peer_responses must be a sequence of response texts")
+
+    peers = list(peer_responses)
+    if len(peers) > ROUND2_MAX_PEERS:
+        raise PromptConstructionError(
+            f"Round 2 accepts at most {ROUND2_MAX_PEERS} peer responses, got {len(peers)}"
+        )
+    for index, text in enumerate(peers, start=1):
+        if not isinstance(text, str) or not text.strip():
+            raise PromptConstructionError(
+                f"peer response {index} must be non-empty text"
+            )
+    return peers
 
 
 def _options(question: Mapping[str, Any]) -> list[str]:

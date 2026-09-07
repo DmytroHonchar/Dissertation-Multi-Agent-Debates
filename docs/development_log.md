@@ -721,6 +721,31 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** build `debate.py` (P10, Round 2), then Milestone 2 — one question
   through both rounds with peer inputs checked by hand.
 
+### 2026-09-03 — Round 2 prompt and conversation structure
+
+- **Built:** Added `ROUND2_PROMPT_VERSION = "round2_v1"` and
+  `build_round2_messages()` to `src/mad/prompts_v1.py`. A normal Round 2
+  conversation contains the original question, the target agent's exact valid
+  Round 1 response as its previous assistant turn, and up to four complete peer
+  responses under anonymous numbered labels. An unavailable own response and
+  zero surviving peers are represented honestly rather than fabricated.
+- **Why:** Round 2 is meant to challenge an opinion established in Round 1. If
+  the model received only a new question plus four answers, it would make a new
+  conditioned prediction without the continuity of its own earlier reasoning.
+  The prompt treats keeping and changing equally and warns against privileging
+  either the agent's own answer or a peer majority.
+- **Tested:** Added 14 offline prompt tests covering message roles, exact own
+  response preservation, anonymous and ordered peers, no-answer leakage, zero
+  peers, unavailable own responses, the shared final-answer contract, and
+  malformed inputs. Full suite: 315 tests passed. `git diff --check` clean. No
+  API calls were made.
+- **Problems:** The earlier fixed-protocol wording said the agent never received
+  its own response. D003, P10 and `CLAUDE.md` now distinguish conversation
+  history from the anonymous peer set and record the clarified design.
+- **Next:** Refactor the Round 1 runner so one database run can stay open across
+  both rounds, then implement `src/mad/debate.py` to select peers, call, parse,
+  cache, store and vote on Round 2.
+
 
 ## Entry template
 

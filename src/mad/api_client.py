@@ -231,7 +231,7 @@ class OpenRouterClient:
     ) -> CompletionResult:
         """Send one question to one model. Returns the reply, its cost and timing.
 
-        `messages` is what prompts_v1.build_round1_messages produced.
+        `messages` is what one of the versioned prompt builders produced.
         """
         payload: dict[str, Any] = {
             "model": spec.slug,
