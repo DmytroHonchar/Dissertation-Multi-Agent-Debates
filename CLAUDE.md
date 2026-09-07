@@ -58,9 +58,11 @@ al. did not control.
 independently, returning reasoning plus one letter. No agent sees another's
 answer. No agent is told a second round follows. Then the first majority vote.
 
-**Round 2** — each agent receives the anonymised Round 1 responses of the **other
-four**. Never its own. Never with model identities attached. It answers again.
-Then the second majority vote.
+**Round 2** — each agent continues from its own valid Round 1 response and
+receives the anonymised valid Round 1 responses of the **other four**. Its own
+response stays separate from the peer set, and peer model identities are never
+attached. It consciously keeps or changes its answer. Then the second majority
+vote.
 
 **Settings** — temperature `0`, top-p `1.0`, for every agent in both rounds.
 The pre-pilot candidate is `agents_v5` (D015/D018): Llama 1024, Qwen 3072,

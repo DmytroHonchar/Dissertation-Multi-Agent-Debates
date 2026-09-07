@@ -57,6 +57,8 @@ Provider pinning is addressed in D015.
 - **Status:** Fixed
 - **Decision:** Use two rounds with five agents.
 - **Recorded:** 2026-08-26
+- **Clarified:** 2026-09-03 — Round 2 restores each agent's own valid Round 1
+  response as conversation history, separately from the anonymous peer set.
 
 ### Round 1
 
@@ -67,10 +69,14 @@ calculate the Round 1 group vote.
 
 ### Round 2
 
-Each agent receives the original question and the anonymised Round 1 responses
-of the other four agents. It must not receive its own Round 1 response as a peer
-response, and peer model identities must not be disclosed. Each agent answers
-the question again after considering the four peer responses. Round 2 answers
+Each agent receives the original question, its own valid Round 1 response as its
+previous conversation turn, and the anonymised valid Round 1 responses of the
+other four agents. Its own response is never inserted into the anonymous peer
+set, and peer model identities are never disclosed. Restoring the agent's own
+reasoning makes Round 2 a deliberate reconsideration of its established answer,
+not a fresh response to a larger prompt. If its Round 1 attempt produced no
+usable response, that absence is stated without fabricating one. Each agent
+answers again after considering the available peer responses. Round 2 answers
 are then parsed and voted on separately.
 
 An additional debate round is desirable future work but is not part of the core

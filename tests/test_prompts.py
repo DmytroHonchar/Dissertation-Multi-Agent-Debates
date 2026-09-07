@@ -15,11 +15,15 @@ import pytest
 from mad.prompts_v1 import (
     FINAL_ANSWER_MARKER,
     PROMPT_VERSION,
+    ROUND1_PROMPT_VERSION,
+    ROUND2_PROMPT_VERSION,
     ROUND1_SYSTEM_PROMPT,
+    ROUND2_SYSTEM_PROMPT,
     AnswerLeakageError,
     PromptConstructionError,
     answer_letters,
     build_round1_messages,
+    build_round2_messages,
     format_options,
     format_question,
 )
@@ -118,7 +122,84 @@ def test_round1_never_reveals_that_a_second_round_follows():
 
 
 def test_prompt_version_is_recorded():
-    assert PROMPT_VERSION == "round1_v1"
+    assert PROMPT_VERSION == ROUND1_PROMPT_VERSION == "round1_v1"
+
+
+# --- Round 2 ---------------------------------------------------------------
+
+
+def test_round2_restores_the_agents_complete_previous_response():
+    own = "REASONING: My original argument.\nFINAL ANSWER: B"
+    messages = build_round2_messages(
+        question(), own, ["REASONING: Peer argument.\nFINAL ANSWER: A"]
+    )
+
+    assert [message["role"] for message in messages] == [
+        "system", "user", "assistant", "user"
+    ]
+    assert messages[0]["content"] == ROUND2_SYSTEM_PROMPT
+    assert messages[2]["content"] == own
+    assert ROUND2_PROMPT_VERSION == "round2_v1"
+
+
+def test_round2_labels_peers_anonymously_and_preserves_their_order():
+    first = "REASONING: first peer\nFINAL ANSWER: A"
+    second = "REASONING: second peer\nFINAL ANSWER: C"
+    messages = build_round2_messages(question(), "my reply", [first, second])
+    follow_up = messages[-1]["content"]
+
+    assert "PEER RESPONSE 1" in follow_up
+    assert "PEER RESPONSE 2" in follow_up
+    assert follow_up.index(first) < follow_up.index(second)
+    assert "agent_" not in follow_up
+    assert "model" not in follow_up.lower()
+
+
+def test_round2_includes_the_original_question_and_options():
+    messages = build_round2_messages(question(), "my reply", [])
+    assert messages[1]["content"] == format_question(question())
+
+
+def test_round2_without_a_valid_previous_response_does_not_invent_one():
+    messages = build_round2_messages(question(), None, ["one valid peer response"])
+    assert [message["role"] for message in messages] == ["system", "user", "user"]
+    assert "did not produce a usable response" in messages[-1]["content"]
+
+
+def test_round2_runs_with_no_valid_peers():
+    messages = build_round2_messages(question(), "my reply", [])
+    assert "No valid peer responses are available" in messages[-1]["content"]
+    assert "answer the original question again" in messages[-1]["content"]
+
+
+def test_round2_uses_the_same_final_answer_contract_as_round1():
+    assert FINAL_ANSWER_MARKER in ROUND2_SYSTEM_PROMPT
+    assert "at most 200 words" in ROUND2_SYSTEM_PROMPT
+    assert "Keeping your previous answer" in ROUND2_SYSTEM_PROMPT
+
+
+def test_round2_refuses_more_than_four_peers():
+    with pytest.raises(PromptConstructionError, match="at most 4"):
+        build_round2_messages(question(), "my reply", ["reply"] * 5)
+
+
+@pytest.mark.parametrize("peers", ["one string", [""], ["ok", 42]])
+def test_round2_refuses_malformed_peer_responses(peers):
+    with pytest.raises(PromptConstructionError):
+        build_round2_messages(question(), "my reply", peers)
+
+
+@pytest.mark.parametrize("own", ["", "   ", 42])
+def test_round2_refuses_a_malformed_own_response(own):
+    with pytest.raises(PromptConstructionError):
+        build_round2_messages(question(), own, [])
+
+
+def test_round2_refuses_a_question_carrying_an_answer():
+    with pytest.raises(AnswerLeakageError):
+        build_round2_messages(
+            question(correct_answer="B"), "my reply", ["one valid peer response"]
+        )
 
 
 # --- answer leakage ----------------------------------------------------------
