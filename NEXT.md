@@ -30,10 +30,15 @@ two-round command and is the one to inspect next.
 
 ## Immediate next step
 
-Run `scripts/run_debate.py` in dry mode and read the stored ten responses and
-two outcomes. Then make one explicitly authorised live run on a clean pilot
-question and inspect every Round 2 conversation by hand before building the
-20-question pilot runner.
+Done on 2026-09-07: one dry debate, then one approved live debate
+(`debate_agents_v5_20260907T161401Z`, question 3932, `UNANIMOUS D` in both
+rounds, Round 2 $0.0089). The stored rows were checked by hand; see the
+development log for the DeepSeek repetition-loop finding.
+
+That question was easy and all five agreed before talking. Next: one more
+approved live debate on a question where Round 1 split (`mmlu_pro_v1:test:8844`
+went `NO_CONSENSUS` three times), so Round 2 is seen doing its job. Then build
+the 20-question pilot runner and `evaluation.py`.
 
 Do not run the 300 experimental questions. `load_pilot_question()` refuses them
 for the current commands.
