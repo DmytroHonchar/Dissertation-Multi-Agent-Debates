@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from mad.prompts_v1 import (
+    DEBATE_PROMPT_VERSION,
     FINAL_ANSWER_MARKER,
     PROMPT_VERSION,
     ROUND1_PROMPT_VERSION,
@@ -123,6 +124,10 @@ def test_round1_never_reveals_that_a_second_round_follows():
 
 def test_prompt_version_is_recorded():
     assert PROMPT_VERSION == ROUND1_PROMPT_VERSION == "round1_v1"
+
+
+def test_two_round_run_records_both_prompt_versions():
+    assert DEBATE_PROMPT_VERSION == "round1_v1+round2_v1"
 
 
 # --- Round 2 ---------------------------------------------------------------

@@ -22,6 +22,12 @@ ROUND1_PROMPT_VERSION = "round1_v1"
 PROMPT_VERSION = ROUND1_PROMPT_VERSION
 
 ROUND2_PROMPT_VERSION = "round2_v1"
+
+# A run containing both rounds records both prompt versions in its single
+# run-level prompt_version field. Individual response rows still record only
+# the prompt version that produced that response.
+DEBATE_PROMPT_VERSION = f"{ROUND1_PROMPT_VERSION}+{ROUND2_PROMPT_VERSION}"
+
 ROUND2_MAX_PEERS = 4
 
 # Questions have 3 to 10 options - never assume 10.
