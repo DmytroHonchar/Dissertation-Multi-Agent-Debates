@@ -916,6 +916,83 @@ responses, compute the group vote, and store an inspectable result.
   went `NO_CONSENSUS` three times under agents_v2 to v4 - so Round 2 is seen
   doing its job at least once.
 
+### 2026-09-07 — A split question live: debate reached a unanimous wrong answer
+
+- **Built:** Nothing. This records the second approved live debate, on the one
+  pilot question known to split in Round 1, and what its stored rows show.
+- **Why:** Question 3932 was unanimous before anyone spoke, so it could not show
+  Round 2 changing anything. `mmlu_pro_v1:test:8844` had gone `NO_CONSENSUS`
+  three times under agents_v2 to v4. It is the question on which Round 2 has
+  work to do. It is not malformed - the key, E = [1, 1], is among the ten
+  options and two agents had reached it independently in every earlier run -
+  but its wording is ambiguous, which turned out to matter (see Problems).
+- **Tested:** Dry run first, free, on fixtures: two rounds, both `CONSENSUS A`,
+  the refusing fixture agent shown 4 peers and the others 3, as designed. Then
+  run `debate_agents_v5_20260907T163127Z`, live, cost $0.013728. Round 1 paid
+  fresh for all five (the v5 pins changed every cache key): Llama E, Qwen D,
+  Mistral E, DeepSeek H, Gemma D - `NO_CONSENSUS`, 5 valid, 2 of them the key.
+  Round 2: all five D - `UNANIMOUS D`, 5 valid, 0 of them the key. Every agent
+  finished on `stop`; Qwen used 1,053 then 985 completion tokens of its 3,072.
+  Round 2 input was 1,992 to 2,175 prompt tokens per agent, 10,384 in total.
+  Checked from the database: every Round 2 row names exactly the other four
+  Round 1 rows in registry order and never its own; all five Round 2
+  conversations rebuilt from the stored rows hash to keys present in the cache;
+  no agent ID, slug, developer or provider name in any of them. Earlier data
+  untouched: 10 runs, 60 responses, 12 outcomes. Compared with the v4 run of
+  the same question five days earlier, Mistral moved H to E and DeepSeek E to
+  H in Round 1. Neither change is explained by pinning: DeepSeek was served by
+  DigitalOcean in every run of this question, and Mistral by Mistral. Same
+  provider, same settings, temperature 0, a different answer on a different
+  day. Temperature 0 is not reproducibility on hosted endpoints. Pinning
+  removes one source of variation; the cache is what makes a stored run
+  repeatable, and the pilot's failure and disagreement rates are measured on
+  one pass, not assumed stable.
+- **Problems:** None in the pipeline. Three things the results chapter needs.
+
+  First, what the scoring rules say. Per agent, Round 1 correctness was 2 of
+  5 and Round 2 was 0 of 5: two agents held the label's answer before
+  communicating and both gave it up. For the group, D010 scores an undecided
+  question as incorrect, so Round 1 (`NO_CONSENSUS`) and Round 2
+  (`UNANIMOUS D`) are both incorrect and the group-level change is zero. The
+  accurate statement is: the agents converged from disagreement to a
+  unanimous answer that disagrees with the benchmark label. Individual
+  accuracy fell; group accuracy did not move. This is one pilot question and
+  is consistent with the Choi et al. pattern; it is not a reproduction of
+  their result, which needs the 300-question comparison.
+
+  Second, the argument that won is mathematically sound under the question's
+  literal wording. Every continuous function on [0,1] is bounded, so "the
+  bounded functions in C[0,1]" is all of C[0,1]; f_n = n gives F_n = nx with
+  sup norm n, so the set is not uniformly bounded and cannot be sequentially
+  compact; Arzelà-Ascoli is the tool that says so. That is [0, 1] = D. The
+  key's [1, 1] needs M to be read as a uniformly bounded family, which the
+  question does not say. Qwen's Round 2 reply names this exact ambiguity, calls
+  the E responses' assumed uniform bound false, and gives the counterexample;
+  Mistral and Llama then changed to D on that argument, and DeepSeek moved from
+  H to D on the theorem question. These were reasoned changes, not majority
+  following - Round 1 had no majority to follow, 2-2-1.
+
+  Third, therefore: the label is the standard the project fixed and it stays
+  the standard, nothing subtler is claimed, and the key is not edited. But
+  this question is not clean evidence of anything about factual accuracy. It
+  is not malformed - the key is among the options and was reached - but its
+  wording is ambiguous and its literal reading supports the answer the agents
+  chose. It served its purpose as a stress test of Round 2 under
+  disagreement, and it must not be presented as debate producing a worse
+  factual answer. The dissertation should say that MMLU-Pro labels are not
+  infallible, that a debate can converge on a defensible reading of a
+  question and still be scored wrong, and that this is one documented case.
+  It is pilot data and never enters the final results.
+
+  A pipeline note as well. All five Round 2 replies say in words whether they
+  kept or changed. That is what the prompt asks for and it will make the replay
+  page readable; it is not parsed and not scored.
+- **Next:** The one-question phase is over: an easy unanimous question and a
+  hard split question have both been run live and checked by hand. Build the
+  20-question pilot runner around `run_debate_question()`, and `evaluation.py`
+  so the three numbers, the transitions and the failure rates come from code.
+  Do not run any more single live questions before then.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity
