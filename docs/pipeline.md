@@ -246,7 +246,7 @@ per-call exception isolation so one agent's failure cannot end the run.
 
 ## P8 — Round 1 configuration — DONE
 
-New versioned config, `CONFIG_VERSION = "round1_config_v1"`, recording the
+Versioned config, currently `CONFIG_VERSION = "round1_config_v2"`, recording the
 question-set version, the five model slugs and their `agent_id`s, prompt
 version, settings version, parser version, cache on/off, timeout, retry policy,
 and whether calls run in parallel.
@@ -261,17 +261,20 @@ API keys stay in the ignored `.env` only — never in configs, the database, git
 prompts or results.
 
 Built 2026-09-01 as `src/mad/round1.py` plus `scripts/run_milestone1.py`.
-`Round1Config` records `round1_config_v1`, `mmlu_pro_v1`, `round1_v1`,
-`agents_v1`, `parser_v1`, cache off, the timeout, the two-attempt retry budget
-and sequential calling. `run_round1_question()` runs one question end to end:
-five calls, parse, store with attempts, tally with
-`expected_agents=registry.keys()`, store the outcome, finish the run. One agent
-failing is stored as `API_ERROR` and the other four continue. The script
-defaults to a free dry run on labelled fixture replies in a throwaway database;
-live mode needs both `--live` and `--yes-spend-real-money`, accepts only an ID
-from the 20-question pilot file, refuses experimental IDs by name, and a dry
-run is refused `storage/results.sqlite` so fixture rows can never sit next to
-real results. The live Milestone 1 run itself has not happened yet.
+`Round1Config` records the question set, Round 1 prompt, selected model settings,
+parser, cache state, timeout, two-attempt retry budget and sequential calling.
+`run_round1_question()` requires an existing unfinished run and processes one
+question only: up to five calls, parse, store with attempts, tally with
+`expected_agents=registry.keys()`, and store the outcome. It neither starts nor
+finishes the run. The outer script starts one run before processing questions
+and finishes it only after every requested stage succeeds, allowing one run to
+contain 1, 20 or 300 questions. A crash deliberately leaves `ended_at` as
+`NULL`. One agent failing is stored as `API_ERROR` and the other four continue.
+The Milestone 1 script defaults to a free dry run on labelled fixture replies in
+a throwaway database; live mode needs both `--live` and
+`--yes-spend-real-money`, accepts only an ID from the 20-question pilot file,
+refuses experimental IDs by name, and a dry run is refused
+`storage/results.sqlite` so fixture rows can never sit next to real results.
 
 ## P9 — Voting — DONE
 
@@ -318,7 +321,7 @@ Round 2 comparable when the two rounds decide different numbers of questions.
 Do not silently drop undecided questions from the denominator — that would
 inflate whichever round failed more.
 
-## P10 — Round 2
+## P10 — Round 2 — DONE
 
 New file `src/mad/debate.py`. This stage did not exist in the old pipeline.
 
@@ -331,6 +334,10 @@ agent had no usable Round 1 response, the prompt states that without inventing
 one. Peer ordering must be deterministic given the run and question, so the run
 can be reconstructed.
 
+The run-level prompt version is `round1_v1+round2_v1`, because one two-round run
+uses both prompts. Each stored response keeps its own exact round-specific prompt
+version.
+
 Each agent answers again in the same `FINAL ANSWER: X` format. Round 2 answers
 are parsed and voted on separately under the same three-of-five rule.
 
@@ -342,6 +349,26 @@ A third round is desirable future work, not part of this implementation. If it
 is ever built, D014 restricts it: it is offered only to questions still without a
 majority after Round 2, not to every question, and it must not alter the frozen
 core configuration or the D009 headline comparison.
+
+Built 2026-09-07 as `src/mad/debate.py`, alongside a new `src/mad/runner.py`
+holding what both rounds share: the run guard, the per-agent call-parse-store-
+cache step, the labelled fixture client and the report shape. Writing that step
+twice would let the rounds drift apart in how they retry, store or cache, and
+the results would then measure that difference instead of the debate.
+
+`Round2Config` records `debate_config_v1`, the question set, `round2_v1`, the
+selected model settings, the parser, cache state, timeout, retry budget and
+sequential calling. `run_round2_question()` requires an existing unfinished run
+labelled for a debate and a complete stored Round 1 for that question; it
+refuses before any API call if either is missing. Per agent it reads the stored
+Round 1 rows, restores that agent's own valid response as an assistant turn,
+supplies the other agents' valid responses anonymously in registry order, calls,
+parses, and stores a `round = 2` row carrying `peer_response_ids` for exactly the
+rows shown, in the order shown. Validity is `status == "OK"` only (D019). One
+agent failing is stored as `API_ERROR` and the other four continue. The vote is
+the same three-of-five rule, recorded as a separate `round = 2` outcome row.
+
+`scripts/run_milestone2.py` is not built yet.
 
 ## P11 — Pilot
 

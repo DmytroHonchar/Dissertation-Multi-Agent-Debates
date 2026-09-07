@@ -10,7 +10,8 @@ import requests
 from mad.api_client import ApiRequestError, AttemptRecord, CompletionResult, load_model_registry
 from mad.cache import CacheError, ResponseCache, cache_key
 from mad.database import ResultsDatabase
-from mad.round1 import FixtureClient, Round1Config, RunnerError, load_pilot_question, run_round1_question
+from mad.round1 import Round1Config, run_round1_question
+from mad.runner import FixtureClient, RunnerError, load_pilot_question
 
 REPO = Path(__file__).resolve().parents[1]
 PILOT_ID = "mmlu_pro_v1:test:7296"
@@ -37,6 +38,17 @@ def cache(tmp_path):
 
 
 MESSAGES = [{"role": "system", "content": "answer"}, {"role": "user", "content": "2+2?"}]
+
+
+def start_test_run(db, run_id, config):
+    db.start_run(
+        run_id,
+        config_name=config.config_version,
+        question_set_version=config.question_set_version,
+        prompt_version=config.prompt_version,
+        settings_version=config.settings_version,
+        parser_version=config.parser_version,
+    )
 
 
 def _reply(spec, text="REASONING: sums.\nFINAL ANSWER: B", cost=0.0003):
@@ -191,11 +203,13 @@ def test_a_second_run_is_served_from_the_cache_with_no_client_calls(tmp_path, re
     config = Round1Config(cache_enabled=True)
 
     with ResultsDatabase(tmp_path / "results.sqlite") as db:
+        start_test_run(db, "run_1", config)
         first = CountingFixtureClient(question)
         run_round1_question(question, registry=registry, client=first, db=db,
                             run_id="run_1", config=config, cache=cache)
         assert first.calls == 5
 
+        start_test_run(db, "run_2", config)
         second = CountingFixtureClient(question)
         report = run_round1_question(question, registry=registry, client=second, db=db,
                                      run_id="run_2", config=config, cache=cache)
@@ -224,6 +238,7 @@ def test_a_crash_while_storing_the_response_leaves_nothing_in_the_cache(tmp_path
     config = Round1Config(cache_enabled=True)
 
     with ResultsDatabase(tmp_path / "results.sqlite") as db:
+        start_test_run(db, "run_1", config)
         # Break the database write for exactly one agent's insert.
         original = db.record_response
         def failing_record(record, attempts=()):
@@ -258,6 +273,8 @@ def test_a_failed_call_is_not_cached_so_a_rerun_tries_again(tmp_path, registry, 
             return result
 
     with ResultsDatabase(tmp_path / "results.sqlite") as db:
+        start_test_run(db, "run_1", config)
+        start_test_run(db, "run_2", config)
         client = FailingOnce(question)
         run_round1_question(question, registry=registry, client=client, db=db,
                             run_id="run_1", config=config, cache=cache)

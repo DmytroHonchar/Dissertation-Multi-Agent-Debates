@@ -9,7 +9,7 @@ Live run (five real calls, charges the OpenRouter account):
     .venv/bin/python scripts/run_milestone1.py --question mmlu_pro_v1:test:7296 \
         --live --yes-spend-real-money
 
-There is no cache yet: repeating a live run pays for the same answers again.
+Live mode uses the response cache unless ``--no-cache`` is passed.
 """
 
 from __future__ import annotations
@@ -27,15 +27,14 @@ from mad.api_client import OpenRouterClient, load_env_file, load_model_registry
 from mad.cache import ResponseCache
 from mad.database import ResultsDatabase
 from mad.parser_v1 import STATUS_TRUNCATED
-from mad.round1 import (
+from mad.round1 import Round1Config, run_round1_question
+from mad.runner import (
     FixtureClient,
-    Round1Config,
     RunnerError,
     ensure_safe_database_path,
     load_pilot_question,
     production_database_path,
     require_spend_confirmation,
-    run_round1_question,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -103,10 +102,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     cache = ResponseCache() if use_cache else None
     try:
         with ResultsDatabase(db_path) as db:
+            db.start_run(
+                run_id,
+                config_name=config.config_version,
+                question_set_version=config.question_set_version,
+                prompt_version=config.prompt_version,
+                settings_version=config.settings_version,
+                parser_version=config.parser_version,
+            )
             report = run_round1_question(
                 question, registry=registry, client=client, db=db,
                 run_id=run_id, config=config, cache=cache,
             )
+            # Deliberately not in finally: a crash must leave ended_at NULL so
+            # the database says honestly that the run is incomplete.
+            db.finish_run(run_id)
     finally:
         client.close()
         if cache is not None:

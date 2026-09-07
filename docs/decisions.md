@@ -79,6 +79,10 @@ usable response, that absence is stated without fabricating one. Each agent
 answers again after considering the available peer responses. Round 2 answers
 are then parsed and voted on separately.
 
+The `runs` table has one run-level `prompt_version` field. A run containing both
+rounds records `round1_v1+round2_v1` there. Each response row records only the
+prompt version that produced it: `round1_v1` or `round2_v1`.
+
 An additional debate round is desirable future work but is not part of the core
 implementation, pilot, or main experiment.
 
@@ -148,6 +152,13 @@ references, raw response, parsed answer, status, token usage, cost, latency,
 attempt count, prompt/config version, and timestamps. Cached API responses must
 be stored separately from derived experiment results. Evaluation must operate on
 the stored database and answer key, not make new model calls.
+
+The outer script owns the database run lifecycle. It starts one run before any
+questions are processed and finishes it only after every required question and
+round succeeds. `finish_run()` must not run from a `finally` block: if execution
+crashes, `ended_at` deliberately remains `NULL`, which marks that run as
+incomplete. Clients, caches and database connections are still closed normally;
+only the experimental run remains unfinished.
 
 ## D008 — Implementation milestones
 
@@ -507,3 +518,57 @@ it and the request adds no tokens or cost by itself; the documented 3072 total
 ceiling is the control that can be relied upon. Provider pins and reasoning
 settings are part of the cache key, so incompatible requests cannot share a
 cached response.
+
+## D019 — What counts as a valid Round 1 response in Round 2
+
+- **Status:** Fixed and implemented (2026-09-07)
+- **Decision:** Valid means `status == "OK"` and nothing else.
+- **Recorded:** 2026-09-07
+
+Only a valid Round 1 response may be shown to another agent as a peer, and only
+a valid one is restored as an agent's own preceding turn. `REFUSAL`,
+`TRUNCATED`, `PARSE_FAIL` and `API_ERROR` are all invalid.
+
+The reason is the same one behind D010: a failure is an absence, not a position.
+Showing four models a truncated half-argument, or a refusal, as though it were a
+peer's reasoning would put text in front of them that the parser has already
+judged unusable, and any answer change it caused would be unattributable.
+
+Two consequences follow, and neither is treated as an error:
+
+- An agent whose own Round 1 response was invalid still takes part in Round 2.
+  It receives no assistant turn, and the prompt says its previous attempt
+  produced no usable response rather than inventing one.
+- An agent whose four peers all failed still takes part, is told no valid peer
+  responses are available, and is stored with `peer_count = 0`.
+
+Dropping either agent would change which questions the two rounds are compared
+on, which is exactly the comparison D009 depends on. `peer_count` is stored per
+response because the number of peers actually seen is a confound the results
+chapter must report.
+
+## D020 — Two-round run labels and peer ordering
+
+- **Status:** Fixed and implemented (2026-09-07)
+- **Decision:** A run containing both rounds is named `debate_config_v1`, and
+  peer order is registry order with the agent itself removed.
+- **Recorded:** 2026-09-07
+
+A run that performs both rounds is not a Round 1 run, so it is not labelled
+`round1_config_v2`. Its `runs` row records `config_name = "debate_config_v1"`
+and `prompt_version = "round1_v1+round2_v1"`. Each response row still records
+only the prompt that produced it, `round1_v1` or `round2_v1`. Both rounds refuse
+to process a question whose run row does not carry these exact labels, so a run
+can no longer be labelled with one recipe and executed with another.
+
+Peer order is the configured registry order with the agent itself removed. It is
+deterministic, which is what allows a stored run to be reconstructed exactly.
+
+No identity is disclosed by it: a model sees only `PEER RESPONSE 1` to
+`PEER RESPONSE 4` and is told the order carries no meaning. Positions are not
+fixed per agent, because removing the answering agent shifts everyone after it
+up by one - `agent_qwen` is peer 1 for `agent_llama` and peer 2 for
+`agent_mistral`. A fixed order may still carry a small positional effect on how
+the peers are read. That is accepted as a known property of the design and
+recorded here, not claimed to be harmless. The pilot is where any sign of it
+would first show.

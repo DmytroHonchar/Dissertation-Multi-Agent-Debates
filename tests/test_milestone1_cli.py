@@ -95,9 +95,18 @@ def test_the_client_is_closed_even_when_the_run_blows_up(cli, monkeypatch, tmp_p
     monkeypatch.setattr(cli, "FixtureClient", TrackingFixture)
     monkeypatch.setattr(cli, "run_round1_question", explode)
 
+    db_path = tmp_path / "x.sqlite"
+
     with pytest.raises(RuntimeError, match="boom"):
-        cli.main(["--question", PILOT_ID, "--db", str(tmp_path / "x.sqlite")])
+        cli.main(["--question", PILOT_ID, "--db", str(db_path)])
     assert closed == [True]
+
+    from mad.database import ResultsDatabase
+
+    with ResultsDatabase(db_path) as db:
+        runs = db.read_runs()
+        assert len(runs) == 1
+        assert runs[0]["ended_at"] is None, "a crashed run must remain incomplete"
 
 
 def test_the_selected_registry_becomes_the_stored_settings_version(cli, tmp_path):
@@ -111,6 +120,7 @@ def test_the_selected_registry_becomes_the_stored_settings_version(cli, tmp_path
         run = db.read_runs()[0]
         assert run["settings_version"] == "agents_v2"
         assert run["run_id"].startswith("round1_agents_v2_")
+        assert run["ended_at"] is not None, "the successful command finished its run"
 
 
 def test_agents_v2_actually_raises_the_two_ceilings(cli, tmp_path, capsys):

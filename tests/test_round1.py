@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -10,22 +11,18 @@ import requests
 
 from mad.api_client import ApiRequestError, AttemptRecord, load_model_registry
 from mad.database import ResultsDatabase
-from mad.parser_v1 import PARSER_VERSION, STATUS_API_ERROR, STATUS_OK, STATUS_REFUSAL
-from mad.prompts_v1 import PROMPT_VERSION
-from mad.round1 import (
-    CONFIG_VERSION,
+from mad.parser_v1 import STATUS_API_ERROR, STATUS_OK, STATUS_REFUSAL
+from mad.prompts_v1 import DEBATE_PROMPT_VERSION
+from mad.round1 import Round1Config, run_round1_question
+from mad.runner import (
     PRODUCTION_DATABASE,
-    QUESTION_SET_VERSION,
-    SETTINGS_VERSION,
     FixtureClient,
-    Round1Config,
     RunnerError,
     SpendNotConfirmedError,
     ensure_safe_database_path,
     load_pilot_question,
     production_database_path,
     require_spend_confirmation,
-    run_round1_question,
 )
 
 REGISTRY_PATH = Path(__file__).resolve().parents[1] / "configs" / "models" / "agents_v1.yaml"
@@ -61,6 +58,18 @@ def db(tmp_path):
         yield database
 
 
+def start_test_run(db, run_id, config=Round1Config(), *, run_prompt_version=None):
+    """Tests own the lifecycle just like the real command-line callers."""
+    db.start_run(
+        run_id,
+        config_name=config.config_version,
+        question_set_version=config.question_set_version,
+        prompt_version=run_prompt_version or config.prompt_version,
+        settings_version=config.settings_version,
+        parser_version=config.parser_version,
+    )
+
+
 class FailingClient(FixtureClient):
     """Fixture client where named agents fail both attempts."""
 
@@ -83,10 +92,23 @@ class FailingClient(FixtureClient):
         return result
 
 
+class CountingClient(FixtureClient):
+    """Proves lifecycle mistakes are refused before a model call."""
+
+    def __init__(self, question):
+        super().__init__(question)
+        self.calls = 0
+
+    def complete(self, spec, messages):
+        self.calls += 1
+        return super().complete(spec, messages)
+
+
 # 1. A complete dry run
 
 
 def test_a_full_fixture_round_stores_five_responses_and_one_outcome(question, registry, db):
+    start_test_run(db, "run_a")
     report = run_round1_question(
         question, registry=registry, client=FixtureClient(question), db=db, run_id="run_a"
     )
@@ -102,10 +124,63 @@ def test_a_full_fixture_round_stores_five_responses_and_one_outcome(question, re
     assert outcomes[0]["valid_answer_count"] == 4
 
     assert report.outcome.state == "CONSENSUS"
-    assert db.read_run("run_a")["ended_at"] is not None, "the run was finished"
+    assert db.read_run("run_a")["ended_at"] is None, "the caller has not finished the run"
+
+
+def test_a_missing_run_is_refused_before_any_call(question, registry, db):
+    client = CountingClient(question)
+
+    with pytest.raises(RunnerError, match="has not been started"):
+        run_round1_question(
+            question, registry=registry, client=client, db=db, run_id="missing"
+        )
+
+    assert client.calls == 0
+
+
+def test_a_finished_run_is_refused_before_any_call(question, registry, db):
+    start_test_run(db, "finished")
+    db.finish_run("finished")
+    client = CountingClient(question)
+
+    with pytest.raises(RunnerError, match="already finished"):
+        run_round1_question(
+            question, registry=registry, client=client, db=db, run_id="finished"
+        )
+
+    assert client.calls == 0
+
+
+def test_two_questions_share_one_run_and_the_caller_finishes_it(question, registry, db):
+    second_question = load_pilot_question("mmlu_pro_v1:test:10925")
+    start_test_run(db, "two_questions")
+
+    run_round1_question(
+        question,
+        registry=registry,
+        client=FixtureClient(question),
+        db=db,
+        run_id="two_questions",
+    )
+    run_round1_question(
+        second_question,
+        registry=registry,
+        client=FixtureClient(second_question),
+        db=db,
+        run_id="two_questions",
+    )
+
+    assert len(db.read_runs()) == 1
+    assert len(db.read_responses("two_questions", round=1)) == 10
+    assert len(db.read_outcomes("two_questions", round=1)) == 2
+    assert db.read_run("two_questions")["ended_at"] is None
+
+    db.finish_run("two_questions")
+    assert db.read_run("two_questions")["ended_at"] is not None
 
 
 def test_every_response_has_its_attempts_stored(question, registry, db):
+    start_test_run(db, "run_b")
     run_round1_question(
         question, registry=registry, client=FixtureClient(question), db=db, run_id="run_b"
     )
@@ -117,6 +192,7 @@ def test_every_response_has_its_attempts_stored(question, registry, db):
 
 def test_the_fixture_is_labelled_as_a_fixture_in_every_row(question, registry, db):
     """Fixture data must never be mistakable for a model response."""
+    start_test_run(db, "run_c")
     run_round1_question(
         question, registry=registry, client=FixtureClient(question), db=db, run_id="run_c"
     )
@@ -126,6 +202,7 @@ def test_the_fixture_is_labelled_as_a_fixture_in_every_row(question, registry, d
 
 
 def test_the_refusing_fixture_agent_is_stored_without_a_letter(question, registry, db):
+    start_test_run(db, "run_d")
     run_round1_question(
         question, registry=registry, client=FixtureClient(question), db=db, run_id="run_d"
     )
@@ -137,16 +214,55 @@ def test_the_refusing_fixture_agent_is_stored_without_a_letter(question, registr
 # 2. The stored versions
 
 
-def test_the_run_records_every_version_that_shaped_it(question, registry, db):
-    run_round1_question(
-        question, registry=registry, client=FixtureClient(question), db=db, run_id="run_e"
+@pytest.mark.parametrize(
+    ("config_field", "wrong_value", "reported_field"),
+    [
+        ("config_version", "wrong_config", "config_name"),
+        ("question_set_version", "wrong_questions", "question_set_version"),
+        ("prompt_version", "wrong_prompt", "prompt_version"),
+        ("settings_version", "wrong_agents", "settings_version"),
+        ("parser_version", "wrong_parser", "parser_version"),
+    ],
+)
+def test_run_labels_must_match_the_config_before_any_call(
+    question, registry, db, config_field, wrong_value, reported_field
+):
+    base = Round1Config()
+    start_test_run(db, "run_e", base)
+    mismatched = replace(base, **{config_field: wrong_value})
+    client = CountingClient(question)
+
+    with pytest.raises(RunnerError, match=reported_field):
+        run_round1_question(
+            question,
+            registry=registry,
+            client=client,
+            db=db,
+            run_id="run_e",
+            config=mismatched,
+        )
+
+    assert client.calls == 0
+
+
+def test_round1_prompt_is_accepted_inside_the_combined_debate_prompt_label(
+    question, registry, db
+):
+    config = Round1Config()
+    start_test_run(
+        db, "combined_prompt", config, run_prompt_version=DEBATE_PROMPT_VERSION
     )
-    run = db.read_run("run_e")
-    assert run["config_name"] == CONFIG_VERSION == "round1_config_v2"
-    assert run["question_set_version"] == QUESTION_SET_VERSION == "mmlu_pro_v1"
-    assert run["prompt_version"] == PROMPT_VERSION == "round1_v1"
-    assert run["settings_version"] == SETTINGS_VERSION == "agents_v1"
-    assert run["parser_version"] == PARSER_VERSION == "parser_v1"
+
+    run_round1_question(
+        question,
+        registry=registry,
+        client=FixtureClient(question),
+        db=db,
+        run_id="combined_prompt",
+        config=config,
+    )
+
+    assert len(db.read_responses("combined_prompt", round=1)) == 5
 
 
 # 3. One agent failing must not end the run
@@ -154,6 +270,7 @@ def test_the_run_records_every_version_that_shaped_it(question, registry, db):
 
 def test_one_failed_agent_is_stored_as_api_error_and_the_rest_continue(question, registry, db):
     client = FailingClient(question, failing_agents={"agent_mistral"})
+    start_test_run(db, "run_f")
     report = run_round1_question(
         question, registry=registry, client=client, db=db, run_id="run_f"
     )
@@ -176,6 +293,7 @@ def test_one_failed_agent_is_stored_as_api_error_and_the_rest_continue(question,
 
 def test_all_agents_failing_still_completes_and_records_the_outcome(question, registry, db):
     client = FailingClient(question, failing_agents=set(registry))
+    start_test_run(db, "run_g")
     report = run_round1_question(
         question, registry=registry, client=client, db=db, run_id="run_g"
     )
@@ -202,6 +320,7 @@ def test_the_registry_names_reach_votings_identity_check(question, registry, db)
 
     seen = {}
     original = round1_module.tally
+    start_test_run(db, "run_i")
 
     def spy(responses, *, expected_agents=None):
         seen["expected_agents"] = expected_agents
@@ -289,6 +408,7 @@ def test_a_question_carrying_an_answer_key_stops_the_run(registry, db, question)
 
     poisoned = dict(question)
     poisoned["answer"] = "A"
+    start_test_run(db, "run_j")
     with pytest.raises(AnswerLeakageError):
         run_round1_question(
             poisoned, registry=registry, client=FixtureClient(poisoned), db=db, run_id="run_j"
@@ -323,6 +443,7 @@ class RetriedClient(FixtureClient):
 def test_a_paid_failed_attempt_is_counted_in_the_response_outcome_and_report(question, registry, db):
     """$0.00002 lost on attempt 1 plus $0.00010 on attempt 2 is a $0.00012 call."""
     client = RetriedClient(question, retried_agent="agent_qwen")
+    start_test_run(db, "run_k")
     report = run_round1_question(
         question, registry=registry, client=client, db=db, run_id="run_k"
     )
@@ -369,6 +490,7 @@ def test_a_malformed_body_from_the_real_client_is_stored_and_the_run_continues(
                 return real_client.complete(spec, messages)
             return result
 
+    start_test_run(db, "run_l")
     report = run_round1_question(
         question, registry=registry, client=MostlyFixtureClient(question), db=db, run_id="run_l"
     )

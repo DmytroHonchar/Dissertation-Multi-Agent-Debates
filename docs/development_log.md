@@ -746,6 +746,94 @@ responses, compute the group vote, and store an inspectable result.
   both rounds, then implement `src/mad/debate.py` to select peers, call, parse,
   cache, store and vote on Round 2.
 
+### 2026-09-07 — Combined prompt version for two-round runs
+
+- **Built:** Added `DEBATE_PROMPT_VERSION`, with the fixed value
+  `round1_v1+round2_v1`.
+- **Why:** The `runs` table has one prompt-version field, while a complete debate
+  uses two prompts. The combined label describes the whole run honestly; each
+  response row still stores its own Round 1 or Round 2 version.
+- **Tested:** The exact combined label is pinned by an offline test. No API calls
+  were made.
+- **Problems:** None.
+- **Next:** Move the run lifecycle out of the per-question Round 1 function.
+
+### 2026-09-07 — Run lifecycle moved to the caller
+
+- **Built:** `run_round1_question()` now requires an existing unfinished run and
+  processes one question without opening or finishing the run. The Milestone 1
+  script now starts its run, calls the per-question function, and finishes only
+  after success. Missing and already-finished runs are refused before the first
+  API call. The function also checks that the run's configuration, question set,
+  model settings and parser labels match the supplied configuration. Its Round 1
+  prompt version may be either the whole run-level label or one component of the
+  combined two-round label.
+- **Why:** A 20- or 300-question experiment needs one run containing every
+  question. Previously the per-question function opened and closed a run, so
+  the second question would try to create the same run again. Leaving
+  `ended_at` as `NULL` after a crash also distinguishes incomplete experiments
+  from completed ones.
+- **Tested:** Offline tests cover missing and finished run guards, two questions
+  producing ten responses and two outcomes inside one run, successful CLI
+  completion, incomplete crash records, unchanged cache behaviour, every version
+  mismatch being refused before a call, and acceptance of
+  `round1_v1+round2_v1`. Full suite: 324 tests passed. No API calls were made.
+- **Problems:** Three Round 2 details remain deliberately pending: the future
+  runner must use `DEBATE_PROMPT_VERSION`, its config must be named
+  `debate_config_v1`, and only `status == "OK"` may count as a valid own or peer
+  response.
+- **Next:** Define the Round 2 configuration and validity rule, then implement
+  `src/mad/debate.py` entirely against offline fixtures.
+
+### 2026-09-07 — Round 2 built, and the machinery both rounds share
+
+- **Built:** `src/mad/debate.py` (P10) with `Round2Config`
+  (`debate_config_v1`, `round2_v1`) and `run_round2_question()`. Per agent it
+  reads that question's stored Round 1 rows, restores the agent's own valid
+  response as an assistant turn, supplies the other agents' valid responses
+  anonymously in registry order, calls, parses, and stores a `round = 2` row
+  whose `peer_response_ids` name exactly the rows shown, in the order shown.
+  Then the same three-of-five vote, recorded as its own `round = 2` outcome.
+  Validity is `status == "OK"` only. An agent whose own Round 1 failed still
+  runs, with no assistant turn; an agent with no surviving peers still runs,
+  with `peer_count = 0`. Extracted `src/mad/runner.py` for what both rounds
+  share: the run guard, `run_one_agent()`, `RoundTotals`, the outcome writer,
+  the labelled fixture client, the money guards, pilot-question loading and the
+  report shape. `round1.py` is now only the Round 1 stage and calls the same
+  helpers. Recorded D019 (validity) and D020 (run labels and peer order).
+- **Why:** Round 2 is the only stage where the agents communicate, so the
+  Round 1 to Round 2 difference is the answer to the research question and
+  everything that could contaminate it had to be settled in code, not in
+  intention. Writing the call-parse-store-cache step a second time inside
+  `debate.py` would have let the two rounds drift apart in how they retry, what
+  they store and what they cache, and the headline comparison would then be
+  measuring that drift. `runner.py` also stops Round 2 importing its machinery
+  from a module named `round1`.
+- **Tested:** 27 new offline tests in `tests/test_debate.py`: five `round = 2`
+  rows and one outcome; both rounds sharing one run row; no agent shown its own
+  response as a peer while still receiving it as its own turn; each agent shown
+  exactly the other four; no agent ID, model slug, developer prefix or provider
+  name anywhere in any message; peer order deterministic and in registry order;
+  each of `REFUSAL`, `TRUNCATED`, `PARSE_FAIL` and `API_ERROR` excluded from the
+  peer set with `peer_count` following; an agent with a failed own Round 1 still
+  answering; zero surviving peers still answering; `peer_response_ids` matching
+  the rows shown in order; a missing Round 1 refused; missing, finished and
+  mislabelled runs refused with zero calls; a Round 2 cache hit making no call;
+  a failed call not cached. `tests/test_no_answer_leakage.py` now also covers the
+  Round 2 prompt. Full suite: 356 passed. No API calls, no money spent.
+- **Problems:** None in the code. Two facts worth carrying forward: a Round 2
+  request sends the question, the agent's own reply and up to four peer replies,
+  so its input token count is several times Round 1's, and the pilot is where
+  that cost is first measured; and the extraction moved several names out of
+  `mad.round1` into `mad.runner`, so imports in `scripts/run_milestone1.py`,
+  `tests/test_round1.py` and `tests/test_cache.py` were updated to match. Both
+  round configs still default to `agents_v1`, so `run_milestone2.py` must pass
+  the registry it actually wants; a mismatch with the run row is refused before
+  any call rather than silently mislabelled.
+- **Next:** Build `scripts/run_milestone2.py` — one pilot question through
+  Round 1, its vote, Round 2 and its vote, in one run, dry by default and live
+  only with both spend flags. Then inspect one real Milestone 2 question.
+
 
 ## Entry template
 

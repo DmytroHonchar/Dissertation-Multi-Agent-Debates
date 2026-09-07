@@ -89,7 +89,7 @@ the proposal source, not in this repository.
 - [x] **Milestone 1** — done live 2026-09-01, run `milestone1_20260901T161852Z`, $0.0082. Pipeline correct end to end; found Qwen and DeepSeek truncating at 1024 tokens (D018)
 - [x] Response cache — `cache.py` (P5)
 - [x] Round 1 configuration and version labels (P8)
-- [ ] Round 2 with four anonymised peer responses per agent — `debate.py` (P10)
+- [x] Round 2 with four anonymised peer responses per agent — `debate.py` (P10)
 - [ ] **Milestone 2** — one real pilot question through both rounds, peer inputs verified by hand
 - [ ] Whole pipeline on deterministic fake responses, then limited real calls
 - [ ] Evaluation script, built before the pilot runs — `evaluation.py` (P12). Add `scipy` or `statsmodels` to `pyproject.toml` when starting it.
