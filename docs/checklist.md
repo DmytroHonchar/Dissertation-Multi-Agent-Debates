@@ -102,10 +102,15 @@ the proposal source, not in this repository.
   rounds. Peer IDs, rebuilt conversations and identity absence verified from the
   stored rows. Found DeepSeek's cached Round 1 reply is a repetition loop that still
   parses `OK` - recorded in the log, rule unchanged.
-- [ ] One more approved live debate on a question where Round 1 split
-  (`mmlu_pro_v1:test:8844` went `NO_CONSENSUS` three times), so Round 2 is
-  seen changing or holding an answer under disagreement
-- [ ] Whole pipeline on deterministic fake responses, then limited real calls
+- [x] Live debate on the split question `mmlu_pro_v1:test:8844` — done
+  2026-09-07, run `debate_agents_v5_20260907T163127Z`, $0.0137. Round 1
+  `NO_CONSENSUS` (E, D, E, H, D; key E), Round 2 `UNANIMOUS D`. Per-agent
+  correctness 2/5 to 0/5; group score unchanged (undecided and wrong both score
+  incorrect under D010). The question's wording is ambiguous and its literal
+  reading supports D, so this is a stress test, not evidence about factual
+  accuracy. See the log.
+- [x] Whole pipeline on deterministic fake responses, then limited real calls —
+  dry debate runs on fixtures, then two live debates (3932, 8844), 2026-09-07
 - [ ] Evaluation script, built before the pilot runs — `evaluation.py` (P12). Add `scipy` or `statsmodels` to `pyproject.toml` when starting it.
 
 ## Travel checkpoint — 12 September

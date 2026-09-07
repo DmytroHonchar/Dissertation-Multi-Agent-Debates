@@ -35,10 +35,16 @@ Done on 2026-09-07: one dry debate, then one approved live debate
 rounds, Round 2 $0.0089). The stored rows were checked by hand; see the
 development log for the DeepSeek repetition-loop finding.
 
-That question was easy and all five agreed before talking. Next: one more
-approved live debate on a question where Round 1 split (`mmlu_pro_v1:test:8844`
-went `NO_CONSENSUS` three times), so Round 2 is seen doing its job. Then build
-the 20-question pilot runner and `evaluation.py`.
+Also done: the split question `mmlu_pro_v1:test:8844`
+(`debate_agents_v5_20260907T163127Z`, $0.0137). Round 1 `NO_CONSENSUS` with two
+agents on the key; Round 2 `UNANIMOUS D`, which the key says is wrong. Group
+score unchanged under D010 (undecided and wrong both count incorrect); per-agent
+correctness fell 2/5 to 0/5. The question is ambiguous and its literal wording
+supports D - a stress test, not evidence about accuracy. Read the log entry
+before writing anything about this result.
+
+Single live questions are finished. Next: the 20-question pilot runner around
+`run_debate_question()`, and `evaluation.py`.
 
 Do not run the 300 experimental questions. `load_pilot_question()` refuses them
 for the current commands.
