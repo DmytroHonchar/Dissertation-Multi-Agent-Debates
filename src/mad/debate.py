@@ -7,8 +7,9 @@ Everything here exists to make that difference mean what it claims to mean:
   - an agent is shown its own Round 1 response as its own earlier turn, never
     as an anonymous peer, so Round 2 continues an opinion instead of forming a
     fresh one
-  - the other four arrive anonymously and in a deterministic order, so no model
-    identity, and no accidental ordering signal, can influence the outcome
+  - the other four arrive without identity labels and in a deterministic order,
+    so a stored conversation can be reconstructed exactly; fixed order may still
+    create a positional effect and is reported as a design limitation
   - only a genuinely valid Round 1 response is shown at all (D019), so a
     refusal or a truncated reply cannot be argued with as though it were an
     answer
@@ -32,10 +33,12 @@ from mad.api_client import DEFAULT_MAX_ATTEMPTS, DEFAULT_TIMEOUT_SECONDS, ModelS
 from mad.database import ResultsDatabase
 from mad.parser_v1 import PARSER_VERSION, STATUS_OK, ParsedResponse
 from mad.prompts_v1 import (
+    PROMPT_VERSION,
     ROUND2_PROMPT_VERSION,
     answer_letters,
     build_round2_messages,
 )
+from mad.round1 import Round1Config, run_round1_question
 from mad.runner import (
     QUESTION_SET_VERSION,
     SETTINGS_VERSION,
@@ -74,6 +77,19 @@ class Round2Config:
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     max_attempts: int = DEFAULT_MAX_ATTEMPTS
     parallel_calls: bool = False      # sequential; parallel comes with the pilot
+
+
+@dataclass(frozen=True)
+class DebateReport:
+    """The Round 1 and Round 2 reports for one complete debate question."""
+
+    round1: RoundReport
+    round2: RoundReport
+
+    @property
+    def total_cost_usd(self) -> float:
+        """The total cost of both rounds."""
+        return self.round1.total_cost_usd + self.round2.total_cost_usd
 
 
 # 2. What each agent is shown
@@ -136,11 +152,10 @@ def peers_for(
     Registry order makes the sequence deterministic, which is what lets a stored
     run be reconstructed exactly. A model sees only "PEER RESPONSE 1" to
     "PEER RESPONSE 4" and is told the order carries no meaning, so no identity
-    is disclosed. Positions still shift: an agent is peer 1 for the agents
-    before it in the registry and peer 2 for the ones after, because it is the
-    agents earlier in the order that get removed. A fixed order can therefore
-    still carry a small positional effect. It is a known, recorded property of
-    the design, not a claim that ordering cannot matter.
+    is disclosed. A peer's numerical position can shift by one depending on
+    which answering agent was removed. A fixed order can therefore still carry
+    a small positional effect. It is a known, recorded property of the design,
+    not a claim that ordering cannot matter.
     """
     return tuple(
         peer for other_id, peer in valid_responses.items() if other_id != agent_id
@@ -241,3 +256,96 @@ def run_round2_question(
         outcome=outcome,
         total_cost_usd=totals.cost_usd,
     )
+
+
+# 4. Running both rounds
+
+
+def run_debate_question(
+    question: Mapping[str, Any],
+    *,
+    registry: Mapping[str, ModelSpec],
+    client: CompletionClient,
+    db: ResultsDatabase,
+    run_id: str,
+    round1_config: Round1Config,
+    round2_config: Round2Config,
+    cache: ResponseCacheLike | None = None,
+) -> DebateReport:
+    """Run one question through Round 1 and then Round 2.
+
+    The caller starts and finishes the database run. Both stage configurations
+    are checked before Round 1, so a bad Round 2 setup cannot waste five paid
+    Round 1 calls before being discovered.
+    """
+    mismatches: list[str] = []
+    for field in (
+        "config_version",
+        "question_set_version",
+        "settings_version",
+        "parser_version",
+        "timeout_seconds",
+        "max_attempts",
+    ):
+        round1_value = getattr(round1_config, field)
+        round2_value = getattr(round2_config, field)
+        if round1_value != round2_value:
+            mismatches.append(
+                f"{field}: Round 1 {round1_value!r}, Round 2 {round2_value!r}"
+            )
+
+    if round1_config.prompt_version != PROMPT_VERSION:
+        mismatches.append(
+            f"Round 1 prompt must be {PROMPT_VERSION!r}, "
+            f"got {round1_config.prompt_version!r}"
+        )
+    if round2_config.prompt_version != ROUND2_PROMPT_VERSION:
+        mismatches.append(
+            f"Round 2 prompt must be {ROUND2_PROMPT_VERSION!r}, "
+            f"got {round2_config.prompt_version!r}"
+        )
+
+    cache_enabled = cache is not None
+    if round1_config.cache_enabled != cache_enabled:
+        mismatches.append(
+            f"Round 1 cache_enabled={round1_config.cache_enabled}, "
+            f"cache supplied={cache_enabled}"
+        )
+    if round2_config.cache_enabled != cache_enabled:
+        mismatches.append(
+            f"Round 2 cache_enabled={round2_config.cache_enabled}, "
+            f"cache supplied={cache_enabled}"
+        )
+    if round1_config.parallel_calls or round2_config.parallel_calls:
+        mismatches.append(
+            "both rounds must remain sequential until the pilot adds parallel calls"
+        )
+
+    if mismatches:
+        raise RunnerError(
+            "the two-round configuration is inconsistent: " + "; ".join(mismatches)
+        )
+
+    # Validate both stages before the first potentially paid call.
+    assert_run_is_open(db, run_id, round1_config)
+    assert_run_is_open(db, run_id, round2_config)
+
+    round1_report = run_round1_question(
+        question,
+        registry=registry,
+        client=client,
+        db=db,
+        run_id=run_id,
+        config=round1_config,
+        cache=cache,
+    )
+    round2_report = run_round2_question(
+        question,
+        registry=registry,
+        client=client,
+        db=db,
+        run_id=run_id,
+        config=round2_config,
+        cache=cache,
+    )
+    return DebateReport(round1=round1_report, round2=round2_report)

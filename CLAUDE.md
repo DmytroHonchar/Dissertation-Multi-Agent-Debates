@@ -170,7 +170,8 @@ write its first real line — do not scaffold empty files.**
 ## Commands
 
 ```bash
-.venv/bin/python -m pytest                 # 356 tests, all passing, all offline
+.venv/bin/python -m pytest                 # all tests are offline
 .venv/bin/python scripts/check_models.py   # live OpenRouter check — real calls, costs money
-.venv/bin/python scripts/run_milestone1.py --question <pilot-id>   # dry run, free; --live --yes-spend-real-money for the real thing
+.venv/bin/python scripts/run_round1.py --question <pilot-id>       # one Round 1 question; dry and free by default
+.venv/bin/python scripts/run_debate.py --question <pilot-id>       # both rounds; dry and free by default
 ```

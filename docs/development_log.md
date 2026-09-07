@@ -339,7 +339,7 @@ responses, compute the group vote, and store an inspectable result.
 
 ### 2026-09-01 — Round 1 runner and P8 configuration
 
-- **Built:** `src/mad/round1.py`, `scripts/run_milestone1.py` and
+- **Built:** `src/mad/round1.py`, `scripts/run_round1.py` and
   `tests/test_round1.py` (23 tests). `Round1Config` freezes the P8 recipe:
   `round1_config_v1`, question set `mmlu_pro_v1`, prompt `round1_v1`, settings
   `agents_v1`, parser `parser_v1`, cache off, 120s timeout, two attempts,
@@ -377,7 +377,7 @@ responses, compute the group vote, and store an inspectable result.
   is provisional; the report prints a warning naming any truncated agent, which
   is the signal to watch on the live run.
 - **Next:** set the key's spending limit in the OpenRouter dashboard, then run
-  Milestone 1 live: `scripts/run_milestone1.py --question <pilot-id> --live
+  Milestone 1 live: `scripts/run_round1.py --question <pilot-id> --live
   --yes-spend-real-money`, inspect the five stored replies by hand, and record
   what it cost. Then `cache.py` (P5).
 
@@ -503,7 +503,7 @@ responses, compute the group vote, and store an inspectable result.
   hashing the file before and after, and re-proven against the real database.
   The key's missing spending limit remains the blocker for any live probe.
 - **Next:** user sets the key's spending limit, then the token probe on 2-3
-  pilot questions: `scripts/run_milestone1.py --question <pilot-id> --agents
+  pilot questions: `scripts/run_round1.py --question <pilot-id> --agents
   agents_v2 --live --yes-spend-real-money`. If anything still truncates, step
   to 3072 as agents_v3. Then provider pinning (D015) before the 20-question
   pilot. Round 2 after.
@@ -825,14 +825,41 @@ responses, compute the group vote, and store an inspectable result.
   request sends the question, the agent's own reply and up to four peer replies,
   so its input token count is several times Round 1's, and the pilot is where
   that cost is first measured; and the extraction moved several names out of
-  `mad.round1` into `mad.runner`, so imports in `scripts/run_milestone1.py`,
+  `mad.round1` into `mad.runner`, so imports in `scripts/run_round1.py`,
   `tests/test_round1.py` and `tests/test_cache.py` were updated to match. Both
-  round configs still default to `agents_v1`, so `run_milestone2.py` must pass
+  round configs still default to `agents_v1`, so `run_debate.py` must pass
   the registry it actually wants; a mismatch with the run row is refused before
   any call rather than silently mislabelled.
-- **Next:** Build `scripts/run_milestone2.py` — one pilot question through
+- **Next:** Build `scripts/run_debate.py` — one pilot question through
   Round 1, its vote, Round 2 and its vote, in one run, dry by default and live
   only with both spend flags. Then inspect one real Milestone 2 question.
+
+
+### 2026-09-07 — Commands renamed for their actual jobs; full debate command built
+
+- **Built:** Renamed `scripts/run_milestone1.py` to `scripts/run_round1.py` and
+  its CLI test to `tests/test_round1_cli.py`. Added `run_debate_question()` as
+  the reusable one-question sequence for Round 1 followed by Round 2, plus
+  `scripts/run_debate.py` as its command-line entry point. The complete command
+  opens one run labelled `debate_config_v1` and
+  `round1_v1+round2_v1`, uses `agents_v5` by default, stores both votes, and
+  finishes only after both rounds succeed.
+- **Why:** “Milestone” describes a project checkpoint, not what a program does.
+  The executable names now say exactly what they run. The shared
+  `run_debate_question()` function can later be reused by the 20-question pilot
+  runner without copying the two-round sequence.
+- **Tested:** Added offline tests for the complete CLI, truthful run labels, ten
+  stored responses, two outcomes, spending confirmation, experimental-question
+  refusal, production-database protection, crash handling, and configuration
+  refusal before any call. Full suite: 367 tests passed. Both commands also
+  completed manual fixture dry runs. No API calls and no money spent.
+- **Problems:** None in the executable flow. The peer-order documentation was
+  corrected: registry order is deterministic and adds no identity labels, but
+  peer positions can shift when the answering agent is removed and fixed order
+  may still have a positional effect.
+- **Next:** Inspect one fixture debate, then make one explicitly authorised live
+  call through `scripts/run_debate.py` and verify all ten stored responses and
+  the five Round 2 conversations by hand.
 
 
 ## Entry template

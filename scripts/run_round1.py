@@ -1,12 +1,12 @@
-"""Milestone 1: one pilot question through Round 1.
+"""Run one pilot question through Round 1.
 
 Dry run (free, fixture replies, throwaway database):
 
-    .venv/bin/python scripts/run_milestone1.py --question mmlu_pro_v1:test:7296
+    .venv/bin/python scripts/run_round1.py --question mmlu_pro_v1:test:7296
 
 Live run (five real calls, charges the OpenRouter account):
 
-    .venv/bin/python scripts/run_milestone1.py --question mmlu_pro_v1:test:7296 \
+    .venv/bin/python scripts/run_round1.py --question mmlu_pro_v1:test:7296 \
         --live --yes-spend-real-money
 
 Live mode uses the response cache unless ``--no-cache`` is passed.
@@ -49,7 +49,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="required with --live; confirms the spend")
     parser.add_argument("--db", help="database path (default: temp file for dry runs, "
                         "storage/results.sqlite for live)")
-    parser.add_argument("--agents", choices=KNOWN_REGISTRIES, default="agents_v1",
+    parser.add_argument("--agents", choices=KNOWN_REGISTRIES, default="agents_v5",
                         help="which versioned model settings to run")
     parser.add_argument("--no-cache", action="store_true",
                         help="skip the response cache, e.g. to measure non-determinism")

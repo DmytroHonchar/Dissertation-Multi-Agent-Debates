@@ -1,71 +1,53 @@
-# Where we stopped — 30 August 2026
+# Where we stopped — 7 September 2026
 
-Read this first tomorrow, then delete it or let it be overwritten.
+## Current position
 
-## What just happened
+The complete one-question debate path now exists offline:
 
-Everything is committed. `git log` shows six commits from this session; the last
-two are `Add Round 1 prompt` and `Make the code readable`. 60 tests pass.
+```text
+question
+→ Round 1: five independent responses and a vote
+→ Round 2: own response plus anonymous peer responses, then five new responses
+→ Round 2 vote
+→ both rounds stored in one completed database run
+```
 
-Two things got done today:
+The current provider-pinned candidate is `agents_v5`. The formal 20-question
+pilot and 300-question experiment have not been run.
 
-1. **`src/mad/prompts_v1.py` was written.** It turns one frozen question into the
-   two messages sent to a model.
-2. **Every file got a readability pass.** Plain-English docstrings, numbered
-   sections, short comments. No code was changed — comments and layout only.
+## Commands
 
-## What you wanted to do next
+Both commands are free fixture runs unless both live-spending flags are passed.
 
-**Re-read `src/mad/api_client.py`.** You got tired partway through the
-walkthrough and asked to go over it again. Start there.
+```bash
+.venv/bin/python scripts/run_round1.py --question <pilot-id>
+.venv/bin/python scripts/run_debate.py --question <pilot-id>
+.venv/bin/python -m pytest
+```
 
-The style we agreed on, so you can hold me to it:
+`run_round1.py` is a one-round diagnostic. `run_debate.py` is the complete
+two-round command and is the one to inspect next.
 
-- One line per function, saying what it does
-- A `#` comment only where the code looks arbitrary without one
-- Section headings like `# 1. Settings`, no dashed lines, no ASCII boxes
-- No `(D003)` / `(P2)` references inside function bodies
+## Immediate next step
 
-## The files, most important first
+Run `scripts/run_debate.py` in dry mode and read the stored ten responses and
+two outcomes. Then make one explicitly authorised live run on a clean pilot
+question and inspect every Round 2 conversation by hand before building the
+20-question pilot runner.
 
-| File | Lines | What it is |
-|---|---|---|
-| `src/mad/prompts_v1.py` | 163 | The exact words sent to the models |
-| `src/mad/api_client.py` | 323 | Every paid API call **← you are here** |
-| `tests/test_no_answer_leakage.py` | 36 | Proves answers never reach a model |
-| `src/mad/benchmark.py` | 779 | Built the frozen data. Already run, never runs again |
-| `tests/test_prompts.py` | 165 | Guards the prompt rules |
-| `tests/test_api_client.py` | 110 | Guards retry = 2, temperature 0 |
-| `tests/test_benchmark.py` | 144 | Guards dataset validation |
-| `tests/test_sampling.py` | 138 | Guards seed-42 reproducibility |
-| `tests/test_model_registry.py` | 77 | Guards the five model IDs |
-| `scripts/check_models.py` | 124 | Connection checker |
+Do not run the 300 experimental questions. `load_pilot_question()` refuses them
+for the current commands.
 
-## Still to build — six files, none started
+## Still to build
 
-| File | What it does |
-|---|---|
-| `parser_v1.py` | **Next.** Read the letter out of a reply, classify failures |
-| `database.py` | Store every response |
-| `debate.py` | Round 2 and the three-of-five vote |
-| `cache.py` | Don't pay twice for the same call |
-| `evaluation.py` | Accuracy, McNemar, the tables |
-| `app/viewer.py` | Streamlit replay screen |
+1. The batch runner for all 20 pilot questions.
+2. `src/mad/evaluation.py`, including the fixed bootstrap seed and McNemar test.
+3. The 300-question main experiment command.
+4. `app/viewer.py`, the read-only Streamlit replay interface.
 
-Then: pilot on 20 questions → freeze everything → run the 300.
+## Documentation authority
 
-## Two open things not about code
-
-- **CA1 is 11 September.** The proposal needs its title-page date changed, and
-  Section 5 rewritten — it still says the OpenRouter work is an empty scaffold,
-  which stopped being true a week ago. Full list in `docs/checklist.md` under
-  "Pending proposal corrections".
-- **Mistral hits rate limits** during batch calls. Known, harmless for now,
-  measured during the pilot. See D016.
-
-## Where things are written down
-
-- `docs/decisions.md` — what is decided (highest authority)
-- `docs/pipeline.md` — how to build each stage, P1–P13
-- `docs/checklist.md` — what is done, what is next
-- `docs/development_log.md` — dated history. **The dissertation is written from this.**
+- `docs/decisions.md` — fixed research decisions.
+- `docs/pipeline.md` — how each stage works.
+- `docs/checklist.md` — completed and remaining work.
+- `docs/development_log.md` — dated evidence for the dissertation.

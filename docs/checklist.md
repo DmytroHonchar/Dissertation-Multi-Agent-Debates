@@ -74,7 +74,11 @@ The proposal is not yet submitted. These are documentation-only edits, made in
 the proposal source, not in this repository.
 
 - [ ] Change the title-page submission date from 28 August to **11 September 2026**
-- [ ] Rewrite Section 5 (Preliminary Work). It currently describes model configuration and OpenRouter access as empty scaffolds. Both are implemented and were verified with live calls to all five models. State accurately that: dataset preparation, validation, frozen sampling and tests are working; the five-model configuration and OpenRouter foundation are working; all five model IDs have been checked with live calls; and debate execution, voting, caching, evaluation and the replay interface remain unfinished.
+- [ ] Rewrite Section 5 (Preliminary Work). State accurately that the frozen
+  dataset, five-model configuration, OpenRouter client, parsing, storage,
+  caching, voting and both debate rounds are implemented and tested offline;
+  Round 1 and the provider pins were verified live; the complete two-round live
+  check, pilot, evaluation and replay interface remain unfinished.
 - [ ] Record **temperature 0** in the proposal's model settings
 - [ ] Record the **retry-once** policy consistently with D012
 - [ ] Record the resolved statistical method from D011: paired question-level bootstrap, 10,000 resamples, 95% percentile interval, McNemar's exact test, four transition counts
@@ -90,6 +94,8 @@ the proposal source, not in this repository.
 - [x] Response cache — `cache.py` (P5)
 - [x] Round 1 configuration and version labels (P8)
 - [x] Round 2 with four anonymised peer responses per agent — `debate.py` (P10)
+- [x] Complete one-question debate command — `scripts/run_debate.py`, tested
+  offline with both rounds in one database run
 - [ ] **Milestone 2** — one real pilot question through both rounds, peer inputs verified by hand
 - [ ] Whole pipeline on deterministic fake responses, then limited real calls
 - [ ] Evaluation script, built before the pilot runs — `evaluation.py` (P12). Add `scipy` or `statsmodels` to `pyproject.toml` when starting it.

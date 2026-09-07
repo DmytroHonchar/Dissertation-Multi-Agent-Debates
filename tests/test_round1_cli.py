@@ -1,4 +1,4 @@
-"""Tests for the Milestone 1 command line. Offline: the network is switched off."""
+"""Tests for the one-question Round 1 command. The network is switched off."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def no_network(monkeypatch):
 def cli():
     """The script, imported as a module so main(argv) can be called directly."""
     spec = importlib.util.spec_from_file_location(
-        "run_milestone1", REPO / "scripts" / "run_milestone1.py"
+        "run_round1", REPO / "scripts" / "run_round1.py"
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -68,7 +68,7 @@ def test_an_experimental_question_is_refused_at_the_command_line(cli, capsys):
 
 def test_a_dry_run_aimed_at_the_real_database_is_refused_at_the_command_line(cli, capsys):
     production = REPO / "storage" / "results.sqlite"
-    # The real Milestone 1 run lives in this file now. Its bytes must not move.
+    # Real experiment-development runs live here. A dry run must not touch it.
     before = production.stat() if production.exists() else None
 
     assert cli.main(["--question", PILOT_ID, "--db", str(production)]) == 1
@@ -121,6 +121,18 @@ def test_the_selected_registry_becomes_the_stored_settings_version(cli, tmp_path
         assert run["settings_version"] == "agents_v2"
         assert run["run_id"].startswith("round1_agents_v2_")
         assert run["ended_at"] is not None, "the successful command finished its run"
+
+
+def test_the_provider_pinned_settings_are_the_default(cli, tmp_path):
+    from mad.database import ResultsDatabase
+
+    db_path = tmp_path / "default.sqlite"
+    assert cli.main(["--question", PILOT_ID, "--db", str(db_path)]) == 0
+
+    with ResultsDatabase(db_path) as db:
+        run = db.read_runs()[0]
+        assert run["settings_version"] == "agents_v5"
+        assert run["run_id"].startswith("round1_agents_v5_")
 
 
 def test_agents_v2_actually_raises_the_two_ceilings(cli, tmp_path, capsys):

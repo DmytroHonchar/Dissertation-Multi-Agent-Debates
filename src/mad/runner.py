@@ -63,12 +63,14 @@ class SpendNotConfirmedError(RunnerError):
 # 3. Money guards
 
 
-def require_spend_confirmation(*, live: bool, spend_confirmed: bool) -> None:
-    """Live calls need both flags. One is a request; two is a decision."""
+def require_spend_confirmation(
+    *, live: bool, spend_confirmed: bool, maximum_calls: int = 5
+) -> None:
+    """Live calls need both flags and state the maximum number of paid calls."""
     if live and not spend_confirmed:
         raise SpendNotConfirmedError(
             "--live also needs --yes-spend-real-money. "
-            "Five calls will charge the OpenRouter account."
+            f"Up to {maximum_calls} calls will charge the OpenRouter account."
         )
     if spend_confirmed and not live:
         raise SpendNotConfirmedError(
@@ -174,7 +176,7 @@ def load_pilot_question(stable_id: str) -> dict[str, Any]:
     if not stable_id or "," in stable_id or " " in stable_id:
         raise RunnerError(
             f"one question at a time, got {stable_id!r}. "
-            "A milestone is a single pilot question."
+            "This command runs a single pilot question."
         )
 
     root = _repository_root()
@@ -286,7 +288,7 @@ class AgentResult:
 
 @dataclass(frozen=True)
 class RoundReport:
-    """Everything a milestone needs to be inspected by hand."""
+    """Everything one round needs for terminal output or later orchestration."""
 
     run_id: str
     question_id: str
