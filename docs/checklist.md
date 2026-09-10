@@ -66,7 +66,9 @@ all five model IDs confirmed with live calls.
 - [ ] Confirm the same output ceilings in the 20-question pilot (Milestone 2 held:
   every agent `stop` in both rounds); freeze them for the 300-question run only
   after the pilot passes.
-- [ ] Fix and record the bootstrap seed for the D011 confidence interval
+- [x] Fix and record the bootstrap seed for the D011 confidence interval — `20260828` (D021)
+- [x] Build `evaluation.py` (P12) — 42 offline tests; validated by scoring the two
+  stored live debates, which reproduced the hand analysis of `mmlu_pro_v1:test:8844`
 - [x] Note for P6: Mistral answered `'Yes.'` to a prompt demanding the single word `ready`, twice. Test the parser against loose instruction-format compliance.
 
 ## Pending proposal corrections — do before submitting CA1 on 11 September
@@ -121,7 +123,8 @@ the proposal source, not in this repository.
 
 ## Pilot and main experiment
 
-- [ ] Run the 20-question pilot through both rounds (P11)
+- [ ] Run the 20-question pilot through both rounds (P11), and score it with
+  `evaluate_run(..., expected_questions=20)` — the main run uses 300
 - [ ] Inspect transcripts, parsing, failures, truncation, context use, cost, latency
 - [ ] Validate the evaluation script on pilot results
 - [ ] Fix problems and repeat the pilot if needed

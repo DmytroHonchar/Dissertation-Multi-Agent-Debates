@@ -43,8 +43,12 @@ correctness fell 2/5 to 0/5. The question is ambiguous and its literal wording
 supports D - a stress test, not evidence about accuracy. Read the log entry
 before writing anything about this result.
 
-Single live questions are finished. Next: the 20-question pilot runner around
-`run_debate_question()`, and `evaluation.py`.
+Single live questions are finished. `evaluation.py` is built (P12, D021).
+
+Next: the 20-question pilot runner around `run_debate_question()`. When it
+scores the pilot it **must** pass `expected_questions=20`, and the main run
+`expected_questions=300`. Without it the completeness check is inactive and a
+run that lost questions would be scored over a smaller denominator.
 
 Do not run the 300 experimental questions. `load_pilot_question()` refuses them
 for the current commands.

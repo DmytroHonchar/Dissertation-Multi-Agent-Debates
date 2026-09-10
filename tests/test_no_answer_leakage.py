@@ -5,6 +5,7 @@ result produced afterwards is worthless.
 """
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -71,3 +72,44 @@ def test_no_forbidden_field_name_reaches_a_round2_prompt() -> None:
     assert set(_pilot_question()).isdisjoint(FORBIDDEN_FIELDS)
     for forbidden in {"answer_index", "cot_content", "correct_answer", "answer_key"}:
         assert forbidden not in whole
+
+
+# The answer key has exactly one reader. Every other module on the run path
+# must not even know where it lives.
+
+
+def test_only_evaluation_and_the_freezing_code_touch_the_answer_key_directory() -> None:
+    """benchmark.py wrote the keys once; evaluation.py is the only reader.
+
+    If a new module ever names that directory, this fails and someone has to
+    justify it. That is the point: the rule is worth more than the convenience.
+    """
+    package = REPOSITORY_ROOT / "src" / "mad"
+    allowed = {"benchmark.py", "evaluation.py"}
+
+    offenders = sorted(
+        module.name
+        for module in package.glob("*.py")
+        if module.name not in allowed and "answer_keys" in module.read_text()
+    )
+
+    assert offenders == [], (
+        f"{offenders} reference the answer-key directory. Only evaluation.py may "
+        "read it, and only benchmark.py may write it."
+    )
+
+
+def test_the_run_path_never_imports_the_evaluation_module() -> None:
+    """Prompt-building and model-calling code must not reach the one reader."""
+    package = REPOSITORY_ROOT / "src" / "mad"
+    run_path = ("prompts_v1.py", "parser_v1.py", "api_client.py", "cache.py",
+                "round1.py", "debate.py", "runner.py", "voting.py", "database.py")
+
+    # An import, not a mention: voting.py names the module in a comment
+    # explaining why scoring is not its job, which is the rule being kept.
+    imports = re.compile(r"^\s*(?:from\s+mad\.evaluation\b|import\s+mad\.evaluation\b)", re.M)
+    offenders = sorted(
+        name for name in run_path if imports.search((package / name).read_text())
+    )
+
+    assert offenders == [], f"{offenders} import evaluation, which reads the answer key"
