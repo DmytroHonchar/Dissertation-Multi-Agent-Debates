@@ -4,7 +4,7 @@ Dry run (free, fixture replies, throwaway database):
 
     .venv/bin/python scripts/run_round1.py --question mmlu_pro_v1:test:7296
 
-Live run (five real calls, charges the OpenRouter account):
+Live run (five responses, up to ten paid attempts with retries):
 
     .venv/bin/python scripts/run_round1.py --question mmlu_pro_v1:test:7296 \
         --live --yes-spend-real-money
@@ -67,7 +67,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # Every check that can refuse the command runs before a client exists.
     try:
-        require_spend_confirmation(live=args.live, spend_confirmed=args.yes_spend_real_money)
+        require_spend_confirmation(
+            live=args.live,
+            spend_confirmed=args.yes_spend_real_money,
+            maximum_attempts=10,   # five responses, each retryable once
+        )
         question = load_pilot_question(args.question)
         if args.db:
             db_path = ensure_safe_database_path(args.db, live=args.live)

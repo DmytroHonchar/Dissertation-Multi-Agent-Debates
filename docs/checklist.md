@@ -81,7 +81,8 @@ the proposal source, not in this repository.
   dataset, five-model configuration, OpenRouter client, parsing, storage,
   caching, voting and both debate rounds are implemented and tested offline;
   Round 1, the provider pins and one complete two-round debate were verified
-  live; the pilot, evaluation and replay interface remain unfinished.
+  live; evaluation and the pilot runner are built; the pilot itself, the results
+  reporting and the replay interface remain unfinished.
 - [ ] Record **temperature 0** in the proposal's model settings
 - [ ] Record the **retry-once** policy consistently with D012
 - [ ] Record the resolved statistical method from D011: paired question-level bootstrap, 10,000 resamples, 95% percentile interval, McNemar's exact test, four transition counts
@@ -113,7 +114,8 @@ the proposal source, not in this repository.
   accuracy. See the log.
 - [x] Whole pipeline on deterministic fake responses, then limited real calls —
   dry debate runs on fixtures, then two live debates (3932, 8844), 2026-09-07
-- [ ] Evaluation script, built before the pilot runs — `evaluation.py` (P12). Add `scipy` or `statsmodels` to `pyproject.toml` when starting it.
+- [x] Evaluation script, built before the pilot runs — `evaluation.py` (P12), 48 offline
+  tests. No statistics dependency was needed: exact McNemar comes from `math.comb` (D021).
 
 ## Travel checkpoint — 12 September
 
@@ -123,6 +125,7 @@ the proposal source, not in this repository.
 
 ## Pilot and main experiment
 
+- [x] Build the 20-question pilot runner — `scripts/run_pilot.py`, 9 offline tests
 - [ ] Run the 20-question pilot through both rounds (P11), and score it with
   `evaluate_run(..., expected_questions=20)` — the main run uses 300
 - [ ] Inspect transcripts, parsing, failures, truncation, context use, cost, latency

@@ -1072,6 +1072,49 @@ responses, compute the group vote, and store an inspectable result.
   completeness check is inactive, so it is recorded in `NEXT.md` and the
   checklist rather than left to memory.
 
+### 2026-09-10 — The pilot runner
+
+- **Built:** `scripts/run_pilot.py` (P11) and `load_pilot_questions()` in
+  `runner.py`. One run, all 20 frozen questions in file order through both
+  rounds, finished only after every question succeeded. Live mode needs both
+  spend flags and names its ceiling of 200 calls. The summary prints failures
+  per agent per round by status, truncation against the ceiling that caused it,
+  consensus states for both rounds, how many questions had no Round 1 majority,
+  how many group answers moved, token usage, cost per question and the projected
+  300-question cost.
+- **Why:** Everything it needs already existed - this is the payoff for moving
+  the run lifecycle to the caller, since one run can now hold 20 questions
+  instead of 1. It deliberately does not score: the answer key never enters a
+  process that can reach OpenRouter, so accuracy is computed afterwards from the
+  stored rows. File order rather than a shuffle, because a reordering would
+  change every Round 2 conversation and therefore every cache key. Per-question
+  errors are not caught, so a crash leaves `ended_at` NULL and evaluation
+  refuses the run rather than scoring 14 questions as though they were 20.
+- **Tested:** 9 offline tests: 20 questions stored as 200 responses and 40
+  outcomes in one finished run; truthful run labels; the stored dry run passing
+  `evaluate_run(..., expected_questions=20)` end to end against the real pilot
+  key; both spend flags required, with the message naming 200 calls; a dry run
+  refused the production database, byte-checked; a crash on question 3 leaving
+  the run unfinished and unscorable; and the summary naming each thing P11 asks
+  to be checked. `tests/test_no_answer_leakage.py` now also refuses any script
+  that both constructs an `OpenRouterClient` and touches the key, parsed with
+  `ast` so a docstring may still tell the reader where the key lives. A free
+  fixture pilot completed all 20 questions. Full suite: 431 passed. No API
+  calls, no money spent.
+- **Problems:** Three found in review and fixed before committing, all in the
+  same family - the summary claiming more than it did. The spend guard quoted
+  200 calls when a retry makes the billable ceiling 400 attempts; every command
+  now quotes attempts rather than responses, so `run_round1.py` says 10 and
+  `run_debate.py` says 20. The summary claimed to print token usage and printed
+  only cost and time; it is now read back from the stored rows, which also gives
+  cache hits and is the same data evaluation sees. And the cost projection
+  divided by all 20 questions, including the two already cached under
+  `agents_v5`, which would have made the 300-question estimate read low; it now
+  divides by paid responses.
+- **Next:** Run the pilot live once, by explicit instruction. Then read the
+  stored rows by hand against P11's checklist, score with
+  `expected_questions=20`, and only then freeze.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity

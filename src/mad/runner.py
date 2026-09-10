@@ -64,13 +64,18 @@ class SpendNotConfirmedError(RunnerError):
 
 
 def require_spend_confirmation(
-    *, live: bool, spend_confirmed: bool, maximum_calls: int = 5
+    *, live: bool, spend_confirmed: bool, maximum_attempts: int = 10
 ) -> None:
-    """Live calls need both flags and state the maximum number of paid calls."""
+    """Live calls need both flags and state the worst case that can be charged.
+
+    Attempts, not responses. A temporary failure is retried once (D012) and both
+    attempts are billable, so a command that makes five responses can be charged
+    for ten. Quoting the smaller number would understate what the flag confirms.
+    """
     if live and not spend_confirmed:
         raise SpendNotConfirmedError(
             "--live also needs --yes-spend-real-money. "
-            f"Up to {maximum_calls} calls will charge the OpenRouter account."
+            f"Up to {maximum_attempts} paid attempts will charge the OpenRouter account."
         )
     if spend_confirmed and not live:
         raise SpendNotConfirmedError(
@@ -164,6 +169,29 @@ def assert_run_is_open(db: ResultsDatabase, run_id: str, config: RunConfig) -> N
 
 
 # 5. Loading the one question
+
+
+# The pilot is exactly this many questions. A run that holds fewer is not the
+# pilot, and evaluation refuses to score it as one.
+PILOT_QUESTION_COUNT = 20
+
+
+def load_pilot_questions() -> list[dict[str, Any]]:
+    """All 20 frozen pilot questions, in file order.
+
+    File order, not a fresh shuffle: the pilot is meant to be repeatable, and a
+    reordering would change every Round 2 conversation through the cache keys.
+    """
+    root = _repository_root()
+    with (root / PILOT_QUESTIONS_FILE).open(encoding="utf-8") as pilot_file:
+        questions = [json.loads(line) for line in pilot_file if line.strip()]
+
+    if len(questions) != PILOT_QUESTION_COUNT:
+        raise RunnerError(
+            f"the pilot file holds {len(questions)} questions, not "
+            f"{PILOT_QUESTION_COUNT}. The frozen set must not have changed."
+        )
+    return questions
 
 
 def load_pilot_question(stable_id: str) -> dict[str, Any]:

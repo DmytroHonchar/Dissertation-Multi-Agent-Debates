@@ -67,7 +67,7 @@ def test_live_mode_requires_the_second_spending_confirmation(cli, capsys):
     assert cli.main(["--question", PILOT_ID, "--live"]) == 1
     output = capsys.readouterr().out
     assert "yes-spend-real-money" in output
-    assert "10 calls" in output
+    assert "20 paid attempts" in output, "ten responses, each retryable once"
 
 
 def test_spending_confirmation_without_live_mode_is_refused(cli, capsys):
