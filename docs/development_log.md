@@ -993,6 +993,85 @@ responses, compute the group vote, and store an inspectable result.
   so the three numbers, the transitions and the failure rates come from code.
   Do not run any more single live questions before then.
 
+### 2026-09-10 — evaluation.py: the calculator, and no statistics dependency
+
+- **Built:** `src/mad/evaluation.py` (P12). `evaluate_run(db, run_id, key)`
+  returns one `EvaluationReport` carrying per-agent accuracy and failures for
+  both rounds, group accuracy and consensus states for both rounds, the group
+  transition table and one per agent, the aggregation gain on two baselines, the
+  debate effect, the bootstrap interval, McNemar's exact test, per-round usage
+  and spend against the budget. Recorded D021 first: seed `20260828`, no
+  statistics dependency, and the aggregation gain reported against both the mean
+  and the best agent. `tests/test_no_answer_leakage.py` now also asserts that
+  only `evaluation.py` reads the answer-key directory and that no module on the
+  run path imports it.
+- **Why:** The three headline numbers had to come from code rather than from
+  reading the key by hand. Three things in D011 and P12 were left open and are
+  now closed. The aggregation comparison was genuinely ambiguous - D009 measure
+  1 is five per-agent numbers and measure 2 is one group number - and reporting
+  only the gain over the mean agent would have flattered aggregation, since a
+  group nearly always beats its weakest members. Both baselines are reported.
+- **Tested:** 42 new offline tests. McNemar checked digit-for-digit against the
+  exact binomial values (`p = 0.001953125` at 0/10, `0.021484375` at 1/9,
+  `0.109375` at 2/8, `0.34375` at 3/7, `1.0` at 5/5 and at 0/0). Bootstrap:
+  same seed reproduces, different seeds differ, an unchanged run gives a
+  zero-width interval, a total change gives an interval clear of zero, and the
+  measured difference is never moved by resampling. Scoring rules: an undecided
+  question counts incorrect and stays in the denominator; agent accuracy is over
+  valid answers only, and an agent with no valid answer reports `None`, not
+  zero. Refusals: unknown run, unfinished run, missing round, rounds scoring
+  different questions, and a pilot run paired with the experimental key. Full
+  suite: 417 passed. Then validated against real data by scoring both stored
+  live debates. Question 3932 came back unanimous and correct in both rounds.
+  Question 8844 reproduced the hand analysis exactly: per-agent 2/5 to 0/5,
+  group accuracy 0.00 in both rounds because `NO_CONSENSUS` and a wrong
+  unanimous vote both score incorrect, debate effect 0.0 points, and the
+  group 100 points behind its best member. No API calls, no money spent.
+- **Problems:** P12 was wrong and is corrected. It said the exact McNemar test
+  needs `scipy` or `statsmodels`. At p = 0.5 the test is a symmetric two-sided
+  binomial, exact from `math.comb`, so the project stays dependency-free and
+  every test stays offline. Adding a large compiled dependency to sum binomial
+  coefficients would have been a poor trade.
+- **Next:** Build the 20-question pilot runner, then run the pilot and score it
+  with this module before freezing anything.
+
+### 2026-09-10 — Four accounting fixes in evaluation.py before the pilot
+
+- **Built:** Corrections to `evaluation.py`, all found by review, all mine.
+  Cache hits no longer count as API attempts. The budget reports this run's cost
+  and the database's cumulative cost separately, and measures the remainder from
+  the cumulative figure. Evaluation now refuses a run missing any agent's
+  response on any question, or holding the wrong number of agents, and accepts
+  an optional `expected_questions` so a short formal run is refused instead of
+  being scored over a smaller denominator. `_percentile()` now uses real
+  nearest-rank positions.
+- **Why:** Two were live misreporting. A cache hit keeps `attempt_count = 1`
+  naming the original paid call, so summing it claimed five Round 1 API calls
+  for `debate_agents_v5_20260907T161401Z`, which made none. And subtracting one
+  run's $0.008884 from the whole $20 reported a balance the key does not have:
+  the database records $0.086749 across ten runs. Both would have gone straight
+  into the results chapter. The completeness checks close a gap where a run
+  could be marked finished with rows missing, which would understate the failure
+  rate rather than fail. The percentile was one position out of 10,000 whenever
+  fraction x n was a whole number, which at 10,000 resamples it always is -
+  numerically trivial, but the docstring claimed nearest-rank and it was not.
+- **Tested:** Six new tests covering each fix, including a cached round
+  reporting zero API attempts, a retried response counting both attempts, an
+  earlier run's spend appearing in the remaining budget, a missing agent
+  response refused, a four-agent run refused, a short formal run refused, and
+  the percentile boundaries checked directly, an agent appearing in only one
+  round refused, and a response for a question with no outcome row refused.
+  Full suite: 420 passed. No API calls, no money spent.
+- **Problems:** None outstanding. One wording correction elsewhere: D021 said
+  the seed was fixed "before any results exist", which stopped being true once
+  the ten development runs were made. It now says before the formal pilot and
+  main experiment, and notes that the seed is a date rather than a value chosen
+  from a result - which is the property D011 was protecting.
+- **Next:** Unchanged. The 20-question pilot runner, then the pilot, scored with
+  `expected_questions=20`. That argument is not optional: without it the
+  completeness check is inactive, so it is recorded in `NEXT.md` and the
+  checklist rather than left to memory.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity

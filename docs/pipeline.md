@@ -400,7 +400,7 @@ configuration, and record every final version name in `decisions.md`.
 
 Pilot results are development data. They never appear in the final results.
 
-## P12 — Main run and evaluation
+## P12 — Main run and evaluation — EVALUATION DONE
 
 New file `src/mad/evaluation.py`, built and validated on pilot data *before* the
 main run. It reads the stored database and the separate answer key. It never
@@ -459,8 +459,38 @@ latency.
 **Desirable (D014):** the same breakdown per MMLU-Pro subject category. Build it
 only after the core results exist.
 
-Dependencies: McNemar's exact test needs `scipy` or `statsmodels`. Add it when
-this module is written, not before. The bootstrap itself needs nothing beyond
+Dependencies: none. The earlier note here said the exact McNemar test needs
+`scipy` or `statsmodels`. It does not: at p = 0.5 the test is a symmetric
+two-sided binomial, exact from `math.comb`, and the bootstrap needs only
+`random`. D021 records the correction, and the project stays dependency-free
+with every test offline.
+
+Built 2026-09-10 as `src/mad/evaluation.py`. `evaluate_run()` takes a database,
+a run ID and an answer key and returns one `EvaluationReport` holding every
+number: per-agent accuracy and failures for both rounds, group accuracy and
+consensus states for both rounds, the group transition table and one per agent,
+the aggregation gain against the mean and the best agent, the debate effect, the
+bootstrap interval, the McNemar result, per-round usage and spend against the
+budget. It refuses before computing anything if the run is unknown, unfinished,
+missing a round, scoring different questions in each round, short of a response
+from any agent on any question, or carrying a question the supplied key does not
+cover - the last check is what stops a pilot
+run being scored against the experimental key, since the two frozen sets are
+disjoint. Seed `20260828`, 10,000 resamples (D021). No printing lives here, so
+a later command and the replay page cannot disagree about a number.
+
+Two reporting rules that are easy to get wrong. A cache hit keeps
+`attempt_count = 1` from the original paid call, so it is excluded from
+`api_attempts` and counted as a cache hit instead; the debate run that served
+all five Round 1 responses from cache made zero calls, not five. And the budget
+reports two numbers - this run's cost, and every run recorded in the database -
+because subtracting one run from the whole £15 would report a balance the key
+does not have. The cumulative figure is a floor, not a bank balance: a run in
+another database, or a call whose row never landed, is spending no row can see.
+
+Pass `expected_questions` for a formal run, 20 for the pilot and 300 for the
+main experiment. A run that lost questions is then refused rather than scored
+over a smaller denominator. The bootstrap itself needs nothing beyond
 the standard library.
 
 ## P13 — Replay interface

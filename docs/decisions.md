@@ -572,3 +572,46 @@ up by one - `agent_qwen` is peer 1 for `agent_llama` and peer 2 for
 the peers are read. That is accepted as a known property of the design and
 recorded here, not claimed to be harmless. The pilot is where any sign of it
 would first show.
+
+## D021 — The three evaluation choices left open by D011
+
+- **Status:** Fixed and implemented (2026-09-10)
+- **Decision:** Bootstrap seed `20260828`; exact McNemar from the standard
+  library, not `scipy`; the aggregation gain reported against both the mean and
+  the best agent.
+- **Recorded:** 2026-09-10
+
+**Seed.** `20260828`, the date D011 was recorded. Fixed and recorded before the
+formal pilot and the main experiment, which is what D011's rule protects. Ten
+development runs already exist in `storage/results.sqlite`, and none of them
+influenced this choice: the seed is a date, not a value picked from a result.
+
+**No statistics dependency.** P12 said the exact McNemar test needs `scipy` or
+`statsmodels`. That is not true for this test. McNemar's exact test is a
+two-sided binomial test on the discordant pairs with p = 0.5, and a symmetric
+binomial is exact from `math.comb`:
+
+    p = min(1, 2 * sum(C(n, i) for i in 0..min(b, c)) / 2^n)
+
+This matches `scipy.stats.binomtest(b, b + c, 0.5)` on the same input. Adding
+scipy would put a large compiled dependency into a project whose entire test
+suite runs offline, to compute a sum of binomial coefficients. P12 is corrected.
+
+**The aggregation gain has two baselines, and both are reported.** D009 measure
+1 is per-agent accuracy - five numbers - and measure 2 is one group number, so
+"measure 2 minus measure 1" was ambiguous. It is now:
+
+- **versus the mean agent** - the average gain over picking one agent blindly.
+- **versus the best agent** - whether the group beats its strongest member.
+
+Reporting only the first flatters aggregation, because a group almost always
+beats its weakest members. Li et al. found mixed groups usually failed to beat
+the strongest single model, so the second is the comparison that can actually
+falsify the aggregation claim. All five individual accuracies and failure rates
+are reported alongside both, so neither figure can be read on its own.
+
+**Answer-key pairing.** `question_set_version` is `mmlu_pro_v1` for both the
+pilot and the experimental set, so it cannot tell them apart. Evaluation instead
+requires every question in the run to appear in the supplied answer key, which
+refuses a pilot run paired with the experimental key and the reverse, since the
+two sets do not overlap.
