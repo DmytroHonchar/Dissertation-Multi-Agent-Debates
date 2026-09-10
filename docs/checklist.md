@@ -126,7 +126,14 @@ the proposal source, not in this repository.
 ## Pilot and main experiment
 
 - [x] Build the 20-question pilot runner — `scripts/run_pilot.py`, 9 offline tests
-- [ ] Run the 20-question pilot through both rounds (P11), and score it with
+- [x] Run the 20-question pilot through both rounds (P11) — done 2026-09-10, run
+  `pilot_agents_v5_20260910T161210Z`, $0.196, 52.7 min. R1 group 60%, R2 group 85%,
+  but see the log: the gain is mostly deadlock resolution and partly the retry
+  lottery. NOT yet passed — DeepSeek's provider pin failed 20%.
+- [ ] Decide the DeepSeek provider question before freezing (D015/D016)
+- [ ] Decide parallel calls or an overnight run: 300 questions is ~14.6 hours sequential
+- [ ] Raise the OpenRouter key limit above $1 before the main run (projection $3.27)
+- [ ] (superseded) score the pilot with
   `evaluate_run(..., expected_questions=20)` — the main run uses 300
 - [ ] Inspect transcripts, parsing, failures, truncation, context use, cost, latency
 - [ ] Validate the evaluation script on pilot results

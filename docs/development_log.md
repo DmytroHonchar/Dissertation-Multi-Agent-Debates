@@ -1115,6 +1115,87 @@ responses, compute the group vote, and store an inspectable result.
   stored rows by hand against P11's checklist, score with
   `expected_questions=20`, and only then freeze.
 
+### 2026-09-10 — The 20-question pilot ran. Read the caveat before the headline.
+
+- **Built:** Nothing. This records the first complete pilot,
+  `pilot_agents_v5_20260910T161210Z`, and what it actually shows.
+- **Why:** P11. Twenty frozen questions, both rounds, `agents_v5`, one run,
+  scored afterwards with `expected_questions=20`. Cost $0.196228, 52.7 minutes,
+  200 responses of which 20 came from cache.
+- **Tested:** The three D009 measures.
+
+  | Measure | Result |
+  |---|---|
+  | Per-agent Round 1 accuracy | Llama 55.0%, Mistral 73.7%, DeepSeek 76.5%, Gemma 77.8%, Qwen 83.3% (mean 73.3%) |
+  | Round 1 group vote | 12/20 = **60.0%**, 15 of 20 decided |
+  | Round 2 group vote | 17/20 = **85.0%**, 20 of 20 decided |
+
+  Aggregation gain: **-13.3 points against the mean agent, -23.3 against the
+  best**. Debate effect: **+25.0 points**, 95% CI [+10.0, +45.0], McNemar exact
+  p = 0.0625 on 5 discordant pairs, all five of them repairs. Group transitions:
+  12 stayed correct, 5 became correct, 3 stayed incorrect, **0 became
+  incorrect**.
+
+- **Problems:** The headline is heavily confounded and must not be reported
+  without these three findings.
+
+  **1. The +25 points is mostly deadlock resolution, not correction.** Four of
+  the five questions that became correct were `NO_CONSENSUS` or
+  `INSUFFICIENT_ANSWERS` in Round 1, scored incorrect under D010. Only one
+  (`mmlu_pro_v1:test:1689`, F to A) was a decided wrong answer that debate
+  repaired. Round 2 decided 20 of 20 where Round 1 decided 15. The honest claim
+  is that a second round broke deadlock, and the resolution happened to match
+  the label four times in five - not that communication corrected reasoning.
+
+  **2. Worse: three of those five deadlocks were caused by infrastructure, not
+  disagreement.** `9622` was undecided because Gemma, Mistral and Qwen all
+  truncated; `11875` because Gemma and Qwen truncated; `3839` because DeepSeek
+  returned 502. In Round 2 those same agents mostly succeeded, so the question
+  became decidable. That is the retry lottery, not debate. Round 1 and Round 2
+  had different failure patterns (8 failures against 7, on different questions),
+  and the comparison silently absorbs that difference. This is the most
+  important limitation the results chapter has to state, and the main run must
+  report per-round failure counts beside every accuracy figure.
+
+  **3. Aggregation lost to every single agent.** The Round 1 group vote scored
+  60% while the worst agent scored 55% and the best 83.3%. This is D010 working
+  exactly as designed: five undecided questions count as incorrect, so a strict
+  three-of-five threshold that failures never lower is punished hard by an
+  unreliable provider. It is a real result and worth reporting - it is the
+  opposite of what most MAD papers claim for voting - but it says as much about
+  the failure rate as about aggregation.
+
+  Two infrastructure faults need a decision before the main run.
+
+  **DeepSeek's pinned provider failed 20% of the time.** 8 of 40 responses were
+  `API_ERROR`, every one a provider-side 502 or 429 from DigitalOcean, and both
+  attempts failed each time, so the D012 retry did not help. D015 pinned
+  DeepSeek there on two successful calls. Twenty questions is a better sample
+  and it says the pin is not reliable. Options: a different DeepSeek endpoint, a
+  wider retry policy for 502 specifically, or accepting the rate and reporting
+  it. This is a D015/D016 decision, not a code change.
+
+  **Truncation is 3.5% and concentrated.** 7 of 200 responses, all on two
+  questions: `9622` (the malformed physics item already known from D018) and
+  `11875`. Qwen hit 3072 twice, Gemma hit 1024 three times, Mistral 1024 once.
+  On ordinary questions nothing truncated. D018 said ceiling escalation stops,
+  and this supports that: the ceilings are fine, two questions are simply very
+  long. Worth reporting as a failure mode rather than fixing.
+
+  **The main run takes about 14.6 hours sequential.** 2.93 minutes per uncached
+  question at 300 questions. Not a fault, but it was never planned for, and
+  `parallel_calls` is still refused by both round runners. Decide before the run
+  whether to parallelise or to run it overnight.
+
+  Cost projection from real usage: **$3.27 for 300 uncached questions**, against
+  a £15 budget. The OpenRouter key limit is currently $1 and must be raised.
+
+- **Next:** Decide nothing now. On return: read several complete Round 2
+  conversations by hand, settle the DeepSeek provider question, decide on
+  parallel calls and the key limit, and only then freeze. If the provider pin
+  changes, that is `agents_v6` and the pilot is rerun - which the $3.27
+  projection makes affordable.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity
