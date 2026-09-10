@@ -376,7 +376,7 @@ finishes the run only after both rounds succeed. It defaults to free fixture
 replies and `agents_v5`; live mode requires both `--live` and
 `--yes-spend-real-money` because one uncached question can make ten paid calls.
 
-## P11 — Pilot
+## P11 — Pilot — RUNNER BUILT
 
 The 20 frozen pilot questions, both rounds, full pipeline.
 
@@ -399,6 +399,25 @@ Then **freeze** prompts, model settings, parser rules, retry policy and
 configuration, and record every final version name in `decisions.md`.
 
 Pilot results are development data. They never appear in the final results.
+
+Built 2026-09-10 as `scripts/run_pilot.py`. It opens one run, loops
+`run_debate_question()` over all 20 frozen questions in file order, and finishes
+the run only after every question succeeded. A crash part-way leaves `ended_at`
+NULL, so a half-finished pilot is refused by evaluation rather than scored over
+a smaller denominator. Live mode needs both spend flags and states the
+billable ceiling of 400 attempts: 200 responses, each retryable once under D012.
+Every command now quotes attempts rather than responses for the same reason.
+
+It stores results and does not score them. The answer key never enters a process
+that can reach OpenRouter, so accuracy is computed afterwards from the stored
+rows with `evaluate_run(..., expected_questions=20)`. What the command prints is
+the half of P11's checklist that needs no key: failures per agent per round
+split by status, truncation with the ceiling that caused it, consensus states
+for both rounds, how many questions had no Round 1 majority, how many group
+answers moved, token usage read back from the stored rows, cache hits, and a
+cost projection taken per paid response so the two questions already cached
+under `agents_v5` cannot make the 300-question estimate read low. `tests/test_no_answer_leakage.py` enforces the separation: no
+script that constructs an `OpenRouterClient` may touch the key.
 
 ## P12 — Main run and evaluation — EVALUATION DONE
 

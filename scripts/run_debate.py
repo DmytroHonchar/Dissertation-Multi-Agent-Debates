@@ -4,7 +4,7 @@ Dry run (free, fixture replies, throwaway database):
 
     .venv/bin/python scripts/run_debate.py --question mmlu_pro_v1:test:7296
 
-Live run (ten real calls at most, charges the OpenRouter account):
+Live run (ten responses, up to twenty paid attempts with retries):
 
     .venv/bin/python scripts/run_debate.py --question mmlu_pro_v1:test:7296 \
         --live --yes-spend-real-money
@@ -95,7 +95,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--yes-spend-real-money",
         action="store_true",
-        help="required with --live; confirms up to ten paid calls",
+        help="required with --live; confirms up to twenty paid attempts",
     )
     parser.add_argument(
         "--db",
@@ -133,7 +133,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         require_spend_confirmation(
             live=args.live,
             spend_confirmed=args.yes_spend_real_money,
-            maximum_calls=10,
+            maximum_attempts=20,   # ten responses, each retryable once
         )
         question = load_pilot_question(args.question)
         if args.db:

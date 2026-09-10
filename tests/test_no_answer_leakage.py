@@ -4,6 +4,7 @@ This is the most important test in the project. If it ever fails, every
 result produced afterwards is worthless.
 """
 
+import ast
 import json
 import re
 from pathlib import Path
@@ -113,3 +114,34 @@ def test_the_run_path_never_imports_the_evaluation_module() -> None:
     )
 
     assert offenders == [], f"{offenders} import evaluation, which reads the answer key"
+
+
+def test_no_script_that_calls_models_reads_the_answer_key() -> None:
+    """Scripts are the other place the key could sneak into a calling process.
+
+    A run script stores results; scoring happens afterwards in a separate
+    process. Keeping the key out of anything that can reach OpenRouter is
+    cheaper than proving, later, that it never left.
+    """
+    scripts = REPOSITORY_ROOT / "scripts"
+
+    def code_without_the_docstring(source: str) -> str:
+        """A docstring may name the key file; code may not touch it."""
+        tree = ast.parse(source)
+        if ast.get_docstring(tree) is not None:
+            tree.body = tree.body[1:]
+        return ast.unparse(tree)
+
+    offenders = []
+    for script in sorted(scripts.glob("*.py")):
+        source = script.read_text()
+        if "OpenRouterClient" not in source:
+            continue
+        code = code_without_the_docstring(source)
+        if "answer_keys" in code or "load_answer_key" in code:
+            offenders.append(script.name)
+
+    assert offenders == [], (
+        f"{offenders} both call models and read the answer key. Score a stored "
+        "run in a separate process instead."
+    )

@@ -43,10 +43,17 @@ correctness fell 2/5 to 0/5. The question is ambiguous and its literal wording
 supports D - a stress test, not evidence about accuracy. Read the log entry
 before writing anything about this result.
 
-Single live questions are finished. `evaluation.py` is built (P12, D021).
+Single live questions are finished. `evaluation.py` (P12, D021) and
+`scripts/run_pilot.py` (P11) are both built and tested offline.
 
-Next: the 20-question pilot runner around `run_debate_question()`. When it
-scores the pilot it **must** pass `expected_questions=20`, and the main run
+Next: run the pilot live, once, by explicit instruction:
+
+```bash
+.venv/bin/python scripts/run_pilot.py --live --yes-spend-real-money
+```
+
+Then read the summary against P11's checklist, score the stored run, and only
+then freeze. Scoring **must** pass `expected_questions=20`, and the main run
 `expected_questions=300`. Without it the completeness check is inactive and a
 run that lost questions would be scored over a smaller denominator.
 
@@ -55,10 +62,9 @@ for the current commands.
 
 ## Still to build
 
-1. The batch runner for all 20 pilot questions.
-2. `src/mad/evaluation.py`, including the fixed bootstrap seed and McNemar test.
-3. The 300-question main experiment command.
-4. `app/viewer.py`, the read-only Streamlit replay interface.
+1. A command that prints an `EvaluationReport` and writes the result tables.
+2. The 300-question main experiment command.
+3. `app/viewer.py`, the read-only Streamlit replay interface (P13, needed for CA2).
 
 ## Documentation authority
 
