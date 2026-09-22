@@ -1,0 +1,60 @@
+# POST-PILOT REPLACEMENT CANDIDATE - 2026-09-22 (D024).
+#
+# agents_v5 remains immutable because the formal pilot identifies itself with
+# that version. This candidate changes exactly one model: OpenRouter currently
+# lists no synchronous endpoint for Mistral Large 3 2512, so the Mistral-family
+# agent moves to the live, open-weight Mistral Small 3.2 24B. Everything else
+# remains byte-for-byte equivalent in meaning to agents_v5.
+#
+# The Parasail BF16 endpoint is pinned because it preserves more numerical
+# precision than the available FP8 routes. DeepInfra and Venice are independent
+# healthy hosts for the same model, satisfying the three-host safety rule.
+# Fallbacks stay off so one experiment never mixes providers. The 1024 ceiling
+# is provisional until the repeated 20-question pilot. Do not use this candidate
+# for the main run before that validation and freeze decision.
+
+registry:
+  name: agents_v6
+  provider: openrouter
+  base_url: https://openrouter.ai/api/v1
+
+defaults:
+  temperature: 0
+  top_p: 1.0
+  max_tokens: 1024
+  allow_provider_fallbacks: false
+  require_parameters: true
+
+agents:
+  agent_llama:
+    slug: meta-llama/llama-4-maverick
+    display_name: Llama 4 Maverick
+    developer: Meta
+    pinned_provider: digitalocean
+
+  agent_qwen:
+    slug: qwen/qwen3.8-27b
+    display_name: Qwen3.8 27B
+    developer: Alibaba
+    max_tokens: 3072
+    reasoning_max_tokens: 2048
+    pinned_provider: parasail/fp8
+
+  agent_mistral:
+    slug: mistralai/mistral-small-3.2-24b-instruct
+    display_name: Mistral Small 3.2 24B
+    developer: Mistral AI
+    pinned_provider: parasail/bf16
+
+  agent_deepseek:
+    slug: deepseek/deepseek-v4-pro-0813
+    display_name: DeepSeek V4 Pro
+    developer: DeepSeek
+    max_tokens: 2048
+    pinned_provider: digitalocean
+
+  agent_gemma:
+    slug: google/gemma-4-31b-it
+    display_name: Gemma 4 31B IT
+    developer: Google
+    pinned_provider: deepinfra/fp8

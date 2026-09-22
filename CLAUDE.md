@@ -39,14 +39,14 @@ project is criticising, so **never collapse these into one number.**
 
 ## Fixed design — do not redesign
 
-Five heterogeneous agents, one OpenRouter key. Exact slugs in
-`configs/models/agents_v1.yaml`:
+Five heterogeneous agents, one OpenRouter key. Frozen slugs and provider pins
+are in `configs/models/agents_v7.yaml` (D026):
 
 | `agent_id` | Model |
 |---|---|
 | `agent_llama` | `meta-llama/llama-4-maverick` |
 | `agent_qwen` | `qwen/qwen3.8-27b` |
-| `agent_mistral` | `mistralai/mistral-large-2512` |
+| `agent_mistral` | `mistralai/mistral-small-3.2-24b-instruct` |
 | `agent_deepseek` | `deepseek/deepseek-v4-pro-0813` |
 | `agent_gemma` | `google/gemma-4-31b-it` |
 
@@ -65,16 +65,17 @@ attached. It consciously keeps or changes its answer. Then the second majority
 vote.
 
 **Settings** — temperature `0`, top-p `1.0`, for every agent in both rounds.
-The pre-pilot candidate is `agents_v5` (D015/D018): Llama 1024, Qwen 3072,
+The frozen configuration is `agents_v7` (D026): Llama 1024, Qwen 3072,
 Mistral 1024, DeepSeek 2048 and Gemma 1024 completion tokens. Qwen requests a
 2048 reasoning-token maximum, but a live Parasail response reported 2740, so
 this is best-effort; the total 3072 ceiling is the hard guard. Every agent is
 pinned to one exact endpoint with provider fallbacks off. A temporary failure
-retries the same endpoint once, then becomes `API_ERROR` and no vote. Earlier
-registry versions are immutable because real stored runs identify themselves by
-name. `agents_v5` is used unchanged for Milestone 2 and the 20-question pilot;
-it becomes the final frozen configuration only if the pilot passes. Any repair
-creates `agents_v6` rather than editing a used version.
+retries the same endpoint once, then becomes `API_ERROR` and no vote. Before a
+live run, the free preflight requires the exact pin plus at least three healthy
+independent compatible hosts; it never enables fallback. Earlier registry
+versions are immutable because real stored runs identify themselves by name.
+Any semantic repair now creates `agents_v8` and requires another complete pilot
+rather than editing `agents_v7`.
 
 **Voting** — a group answer needs at least three matching votes out of five. A
 failed or unparseable response contributes no vote, and the threshold stays at

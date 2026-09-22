@@ -31,6 +31,11 @@ class FakeResponse:
             raise ValueError("Expecting value: line 1 column 1 (char 0)")
         return self._body
 
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            import requests
+            raise requests.HTTPError(f"HTTP {self.status_code}")
+
 
 def _client_with(monkeypatch, responses):
     """A client whose session replays the given responses, one per attempt.
@@ -82,6 +87,129 @@ def _spec(**overrides) -> ModelSpec:
 def test_retry_budget_is_one_initial_attempt_plus_one_retry():
     """D012: the proposal promises exactly one retry, so two attempts in total."""
     assert DEFAULT_MAX_ATTEMPTS == 2
+
+
+@pytest.mark.parametrize('body', [None, [], 'invalid', {'usage': [1]},
+                                  {'usage': {'prompt_tokens': 'invalid'}},
+                                  {'usage': {'cost': None}}])
+def test_malformed_json_structure_preserves_raw_body_without_crashing(monkeypatch, body):
+    client, sent = _client_with(monkeypatch, [FakeResponse(body=body, text='raw evidence')])
+    with pytest.raises(ApiRequestError) as caught:
+        client.complete(_spec(), [])
+    assert len(sent) == 1
+    assert caught.value.attempt_log[0].outcome == 'malformed_body'
+    assert caught.value.attempt_log[0].raw_response == 'raw evidence'
+
+
+def test_nontext_content_is_a_recorded_schema_error(monkeypatch):
+    body = _ok_body(content=['not text'])
+    client, _ = _client_with(monkeypatch, [FakeResponse(body=body, text='raw content')])
+    with pytest.raises(ApiRequestError) as caught:
+        client.complete(_spec(), [])
+    assert caught.value.attempt_log[-1].outcome == 'malformed_body'
+
+
+def test_diagnostic_headers_are_allowlisted_and_retry_keeps_both_attempts(monkeypatch):
+    failure = FakeResponse(429, text='upstream throttled')
+    failure.headers = {'Retry-After': '3', 'X-Request-ID': 'request-1',
+                       'Set-Cookie': 'secret', 'Authorization': 'secret'}
+    client, sent = _client_with(monkeypatch, [failure, FakeResponse(body=_ok_body())])
+    result = client.complete(_spec(), [])
+    assert len(sent) == 2
+    assert result.attempt_log[0].response_headers == {'retry-after': '3', 'x-request-id': 'request-1'}
+
+
+def test_transport_exception_type_is_kept(monkeypatch):
+    import requests
+    client, _ = _client_with(monkeypatch, [requests.ReadTimeout('timed out')] * 2)
+    with pytest.raises(ApiRequestError) as caught:
+        client.complete(_spec(), [])
+    assert all(a.transport_exception == 'ReadTimeout' for a in caught.value.attempt_log)
+
+
+def test_route_preflight_checks_the_exact_pinned_tag(monkeypatch):
+    client = OpenRouterClient(api_key="test-key-not-real")
+    seen = []
+    def fake_get(url, timeout):
+        seen.append(url)
+        return FakeResponse(body={"data": {"endpoints": [
+            {"tag": "parasail/bf16", "provider_name": "Parasail", "status": 0,
+             "supported_parameters": ["temperature", "top_p", "max_tokens"]},
+            {"tag": "deepinfra/fp8", "provider_name": "DeepInfra", "status": 0,
+             "supported_parameters": ["temperature", "top_p", "max_tokens"]},
+            {"tag": "venice/fp8", "provider_name": "Venice", "status": 0,
+             "supported_parameters": ["temperature", "top_p", "max_tokens"]},
+        ]}})
+    monkeypatch.setattr(client._session, "get", fake_get)
+    client.assert_registry_routes_available({
+        "agent_mistral": _spec(slug="mistralai/mistral-small-3.2-24b-instruct",
+                               pinned_provider="parasail/bf16")
+    })
+    assert seen == [client._base_url +
+                    "/models/mistralai/mistral-small-3.2-24b-instruct/endpoints"]
+
+
+def test_route_preflight_refuses_a_missing_pin_before_paid_calls(monkeypatch):
+    client = OpenRouterClient(api_key="test-key-not-real")
+    monkeypatch.setattr(client._session, "get", lambda url, timeout:
+                        FakeResponse(body={"data": {"endpoints": []}}))
+    with pytest.raises(api_client.ApiConfigurationError, match="no healthy, compatible"):
+        client.assert_registry_routes_available({
+            "agent_mistral": _spec(slug="mistralai/mistral-large-2512",
+                                   pinned_provider="mistral/eu")
+        })
+
+
+def test_route_preflight_requires_three_independent_healthy_providers(monkeypatch):
+    client = OpenRouterClient(api_key="test-key-not-real")
+    endpoints = [
+        {"tag": "one/a", "provider_name": "One", "status": 0,
+         "supported_parameters": ["temperature", "top_p", "max_tokens"]},
+        # A second route from One is not an independent host.
+        {"tag": "one/b", "provider_name": "One", "status": 0,
+         "supported_parameters": ["temperature", "top_p", "max_tokens"]},
+        {"tag": "two/a", "provider_name": "Two", "status": 0,
+         "supported_parameters": ["temperature", "top_p", "max_tokens"]},
+        # Unhealthy and incompatible routes do not count.
+        {"tag": "three/a", "provider_name": "Three", "status": -2,
+         "supported_parameters": ["temperature", "top_p", "max_tokens"]},
+        {"tag": "four/a", "provider_name": "Four", "status": 0,
+         "supported_parameters": ["temperature"]},
+    ]
+    monkeypatch.setattr(
+        client._session,
+        "get",
+        lambda url, timeout: FakeResponse(body={"data": {"endpoints": endpoints}}),
+    )
+
+    with pytest.raises(api_client.ApiConfigurationError, match="2 independent healthy"):
+        client.assert_registry_routes_available({
+            "agent": _spec(pinned_provider="one/a")
+        })
+
+
+def test_route_preflight_refuses_an_unhealthy_pin_even_with_three_other_hosts(monkeypatch):
+    client = OpenRouterClient(api_key="test-key-not-real")
+    endpoints = [
+        {"tag": f"provider-{number}", "provider_name": f"Provider {number}",
+         "status": 0,
+         "supported_parameters": ["temperature", "top_p", "max_tokens"]}
+        for number in range(3)
+    ]
+    endpoints.append({
+        "tag": "chosen", "provider_name": "Chosen", "status": -2,
+        "supported_parameters": ["temperature", "top_p", "max_tokens"],
+    })
+    monkeypatch.setattr(
+        client._session,
+        "get",
+        lambda url, timeout: FakeResponse(body={"data": {"endpoints": endpoints}}),
+    )
+
+    with pytest.raises(api_client.ApiConfigurationError, match="no healthy, compatible 'chosen'"):
+        client.assert_registry_routes_available({
+            "agent": _spec(pinned_provider="chosen")
+        })
 
 
 def test_request_sends_fixed_generation_settings_and_no_provider_pin(monkeypatch):

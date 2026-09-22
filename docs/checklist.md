@@ -7,7 +7,7 @@ the authority on what is decided (`docs/decisions.md`) or how to build a stage
 Keep one copy. If a checklist also lives in Notion, replace it there with a link
 to this file — two copies means neither is trusted.
 
-Last reconciled against the repository: 2026-08-28.
+Last reconciled against the repository: 2026-09-22.
 
 The core experiment is exactly two rounds. A third round is a desirable future
 extension only (D014) and appears nowhere in this checklist.
@@ -41,9 +41,9 @@ updated, in `docs/pipeline.md`.
 - [x] Build the shared OpenRouter calling layer and call all five models — `src/mad/api_client.py`, `scripts/check_models.py` (P7)
 - [x] Create the five-model registry — `configs/models/agents_v1.yaml`
 
-## Now — before anything else
+## Historical early-build checkpoint
 
-- [ ] Commit the five-model work, the scaffold deletion and the documentation consolidation
+- [x] Commit the five-model work, the scaffold deletion and the documentation consolidation
 - [x] Build P2 prompts and P6 parser toward Milestone 1
 
 Settled on 2026-08-28: temperature `0` and top-p `1.0` (D002), retry once /
@@ -52,20 +52,24 @@ all five model IDs confirmed with live calls.
 
 ## Before the pilot — deferred, not forgotten
 
-- [x] **Provider pinning selection (D015).** `agents_v5` pins exact endpoints
-  for all five agents with fallbacks off; a temporary failure retries the same
-  endpoint once, then becomes a stored `API_ERROR` with no vote.
+- [x] **Provider pinning selection (D015, D024–D026).** `agents_v7` pins exact
+  endpoints for all five agents with fallbacks off; a temporary failure retries
+  the same endpoint once, then becomes a stored `API_ERROR` with no vote.
 - [x] Validate all five `agents_v5` pins — done 2026-09-03, run
   `round1_agents_v5_20260902T233753Z`: every pin honoured, all five agents
   finished, `UNANIMOUS D`, $0.008109.
-- [ ] Measure the pins' failure rate during the 20-question pilot.
-- [ ] **Mistral availability (D016).** Intermittent HTTP 429 from the shared upstream pool. Measure the real rate over the 20 pilot questions and decide how to handle it. Do not change the model.
+- [x] Measure the pins' failure rate during the accepted 20-question pilot:
+  zero terminal API errors; two temporary Mistral 429s recovered on retry.
+- [x] **Mistral availability (D016, D024–D026).** The unavailable Large route
+  was replaced with multi-host Mistral Small 3.2. Parasail was rejected after
+  the `agents_v6` pilot; DeepInfra passed the `agents_v7` pilot with 40/40 valid
+  Mistral responses.
 - [x] Select pre-pilot `max_tokens` values (D018): Llama 1024, Qwen 3072,
   Mistral 1024, DeepSeek 2048 and Gemma 1024. Qwen's requested 2048 reasoning
   maximum is best-effort, not a guaranteed partition.
-- [ ] Confirm the same output ceilings in the 20-question pilot (Milestone 2 held:
-  every agent `stop` in both rounds); freeze them for the 300-question run only
-  after the pilot passes.
+- [x] Confirm and freeze the output ceilings after the `agents_v7` pilot. The
+  remaining Qwen/Gemma truncations are retained as measured failures; a bounded
+  4096-token Qwen check did not reliably solve them (D023, D026).
 - [x] Fix and record the bootstrap seed for the D011 confidence interval — `20260828` (D021)
 - [x] Build `evaluation.py` (P12) — 42 offline tests; validated by scoring the two
   stored live debates, which reproduced the hand analysis of `mmlu_pro_v1:test:8844`
@@ -128,17 +132,40 @@ the proposal source, not in this repository.
 - [x] Build the 20-question pilot runner — `scripts/run_pilot.py`, 9 offline tests
 - [x] Run the 20-question pilot through both rounds (P11) — done 2026-09-10, run
   `pilot_agents_v5_20260910T161210Z`, $0.196, 52.7 min. R1 group 60%, R2 group 85%,
-  but see the log: the gain is mostly deadlock resolution and partly the retry
-  lottery. NOT yet passed — DeepSeek's provider pin failed 20%.
-- [ ] Decide the DeepSeek provider question before freezing (D015/D016)
+  see `docs/pilot_review_20260910.md` for corrected interpretation. Failure-free
+  subset: 9/13 to 11/13. NOT yet passed — DeepSeek has 8/40 recorded API failures.
+- [x] Add per-question diagnostics and supplementary failure-free comparison
+  (D022); preserve the primary all-question result. Offline review, 2026-09-22.
+- [x] Build `agents_v6` replacement candidate for the unavailable Mistral Large
+  route (D024): Mistral Small 3.2 24B on `parasail/bf16`; all other settings
+  unchanged.
+- [x] Add a free preflight before every live runner: the exact pin must be
+  healthy and compatible, and every model must have at least three independent
+  healthy compatible hosts.
+- [x] Rerun the full 20-question pilot under `agents_v6` — completed 2026-09-22;
+  rejected because Parasail rate-limited 20 Mistral attempts and left 4/40
+  responses as API errors.
+- [x] Replay the four exact Mistral failures once through DeepInfra and Venice;
+  both returned 4/4 `OK`, with no answer key used (D025).
+- [x] Create `agents_v7`, changing only Mistral's pin to `deepinfra/fp8`.
+- [x] Rerun the full 20-question pilot under `agents_v7` — accepted run
+  `pilot_agents_v7_20260922T181727Z`: no terminal API errors, Mistral 40/40
+  valid, $0.100227, 29.1 minutes; see the dated provider-repair report.
+- [x] Decide the DeepSeek provider question: retain DigitalOcean after the
+  bounded 3/3 endpoint check and zero DeepSeek API errors in the accepted pilot.
 - [ ] Decide parallel calls or an overnight run: 300 questions is ~14.6 hours sequential
-- [ ] Raise the OpenRouter key limit above $1 before the main run (projection $3.27)
+- [ ] Raise the OpenRouter key limit above the main-run projection of about
+  $2.51 while keeping a finite safety cap.
 - [ ] (superseded) score the pilot with
   `evaluate_run(..., expected_questions=20)` — the main run uses 300
-- [ ] Inspect transcripts, parsing, failures, truncation, context use, cost, latency
-- [ ] Validate the evaluation script on pilot results
-- [ ] Fix problems and repeat the pilot if needed
-- [ ] Freeze prompts, settings, parser, retry rules and configuration; record every version name in `decisions.md`
+- [x] Inspect the stored provider failures, truncations, parsing, cost and
+  latency; findings are in the September pilot, diagnostic and provider-repair
+  reports.
+- [x] Validate the evaluation script on the accepted pilot results.
+- [x] Fix the provider problems and repeat the pilot under a new immutable
+  settings version.
+- [x] Freeze prompts, `agents_v7`, parser, retry rules, cache and voting
+  semantics in D026.
 - [ ] Run the 300-question main experiment with nothing changed (P12)
 - [ ] Verify the run completed and back up the results database
 - [ ] Final evaluation: the three D009 measures, McNemar, transition table, cost and latency

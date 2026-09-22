@@ -615,3 +615,160 @@ pilot and the experimental set, so it cannot tell them apart. Evaluation instead
 requires every question in the run to appear in the supplied answer key, which
 refuses a pilot run paired with the experimental key and the reverse, since the
 two sets do not overlap.
+
+## D022 — Supplementary failure-free comparison (2026-09-22)
+
+Added after inspecting the formal pilot, before the main experiment; this is
+not a pre-pilot decision. The primary group comparison remains over every
+question (20 pilot, 300 main), with undecided outcomes incorrect under D010.
+
+Evaluation also reports the subset where all five agents have status `OK` in
+both rounds. Cached `OK` responses qualify. All four failure statuses exclude
+the question from this subset, but valid disagreement does not. Report included
+and excluded question IDs, both accuracies and transitions; an empty subset has
+undefined accuracies, not zero. Store no new experimental rows for this analysis.
+
+This is a supplementary descriptive check, not a corrected headline or proof
+of a pure communication effect. Selecting successful responses can favour
+easier questions. Neither comparison includes a second independent-answer
+control, so extra inference and communication are not causally separated.
+Per-question diagnostics report the stored votes, correctness and failure
+identities in each round; they do not infer what caused an answer change.
+
+## D023 — Bounded post-pilot diagnostics (2026-09-22)
+
+User approved trying the provider and token tests. Before paid calls: at most
+six single-attempt requests, no automatic retry, with cumulative conservative
+price reservations capped at $0.10 and a verified finite account-key limit.
+This is a separately labelled diagnostic, not a change to experimental D012.
+No answer key is loaded; selection is based on completion and cost only.
+
+Three DeepSeek/DigitalOcean checks replay pilot question 3932 with unchanged
+settings, distributed within this session; this cannot establish multi-day
+reliability. Three Qwen/Parasail requests replay the original truncated prompts
+(9622 Round 1, 11875 both rounds), changing only total tokens from 3072 to 4096.
+The best-effort reasoning request stays 2048. This single bounded comparison
+does not authorize another ceiling increase if 4096 fails. Earlier cached
+outcomes are preserved and bypassed explicitly for these fresh tests.
+
+Current free endpoint metadata lists no Mistral endpoints and marks Gemma's
+DeepInfra/fp8 endpoint inactive. Their token comparisons are deferred rather
+than combining a provider change with a token change. No automatic fallback.
+
+Exact settings, reconstructed messages (verified against original cache keys),
+raw completions and attempts are stored in a separate timestamped diagnostic
+SQLite file under ignored storage/. All production rows and agents_v5 remain
+unchanged. Findings do not select a new frozen configuration by themselves.
+
+## D024 — Mistral replacement candidate after endpoint withdrawal (2026-09-22)
+
+- **Status:** Candidate implemented; the repeated pilot is still required
+  before freeze or main experiment.
+- **Decision:** Preserve `agents_v5` exactly. Create `agents_v6`, changing only
+  `agent_mistral` from unavailable `mistralai/mistral-large-2512` on
+  `mistral/eu` to `mistralai/mistral-small-3.2-24b-instruct` (Mistral Small
+  3.2 24B), pinned to `parasail/bf16`. Keep temperature 0, top-p 1, max_tokens
+  1024, parameter enforcement and provider fallbacks unchanged.
+
+This is a replacement, not a claim that Mistral Large was permanently deleted.
+On 2026-09-22 OpenRouter still displayed its catalogue page, but both the free
+endpoint API and a real replay request showed no callable endpoints. The batch
+variant is not a drop-in repair: it uses the asynchronous Batch API, reported
+0% recent availability, and would change execution and latency semantics.
+
+Mistral Small 3.2 preserves the intended Mistral family and open-weight
+requirement, is a general-purpose instruction model rather than a coding
+specialist, and supports the fixed parameters. At selection time, three
+independent healthy OpenRouter hosts served the exact model: Parasail,
+DeepInfra and Venice. Parasail's BF16 endpoint was selected because it retains
+more numerical precision than the two FP8 alternatives. The model is older
+than Small 4 and has lower expected capability than Large 3; this is the
+explicit trade-off for synchronous multi-host availability.
+
+The runners accept `agents_v6` but retain `agents_v5` as their default until
+the repeated pilot passes. Before every live run, the free endpoint API must
+show the exact pin as healthy and compatible and at least three independent
+healthy compatible providers for every configured model. Multiple routes from
+one company count once. Failure refuses the command before creating a run or
+making a paid completion. This is a replacement-safety rule, not automatic
+fallback: the experiment remains pinned to one provider, and any future change
+requires a new settings version.
+
+Because the agent model changed after the formal pilot, the 20-question pilot
+must be repeated under `agents_v6`. No main result is permitted before this
+candidate passes and is explicitly frozen.
+
+## D025 — Replace the Mistral Parasail pin after the agents_v6 pilot (2026-09-22)
+
+- **Status:** `agents_v6` rejected; `agents_v7` is the new pilot candidate.
+- **Decision:** Preserve `agents_v6` exactly because a completed live pilot is
+  stored under that label. Create `agents_v7`, changing only Mistral Small
+  3.2's provider pin from `parasail/bf16` to `deepinfra/fp8`. The model,
+  prompts, token ceiling, sampling settings and all other agents remain fixed.
+
+The `agents_v6` pilot recorded four Mistral API errors in 40 responses. The
+surface count understates the problem: excluding two cache hits, 16 of 38 paid
+Mistral responses needed a retry. Twenty attempts received HTTP 429 from
+Parasail's upstream shared pool; twelve recovered on attempt two and eight
+exhausted both attempts across four failed responses. Failures were spread from
+17:18 to 17:39 UTC, so this was not one instantaneous outage. The preflight
+correctly proved that the route existed and that alternatives were available;
+it cannot predict capacity in a provider's shared rate-limit pool.
+
+A bounded diagnostic reconstructed the exact four failed prompts and sent each
+once to DeepInfra and once to Venice. Cache and retries were disabled, no answer
+key was loaded, and results were selected only by completion and required
+format. Both providers returned 4/4 `OK`. The eight calls cost $0.000899 and are
+audited separately in `storage/mistral_host_probe_20260922T180857610453Z.sqlite`.
+
+With reachability tied, D015's existing metadata criteria select DeepInfra: in
+the dated endpoint snapshot it had higher one-day availability (99.74% versus
+98.97%), lower median latency, higher throughput and lower price. Both routes
+are FP8, so this choice does not add a quantisation difference between the two
+candidates. Provider fallback remains disabled; the three-host preflight
+remains a replacement-safety check, not permission to mix providers within a
+run. The full 20-question pilot must now be repeated under `agents_v7` before
+the configuration can be frozen.
+
+## D026 — Freeze the core experiment as agents_v7 (2026-09-22)
+
+- **Status:** Accepted after the complete `agents_v7` pilot; applies to the
+  300-question main experiment.
+- **Decision:** Freeze `configs/models/agents_v7.yaml` as the final model and
+  provider registry. Its SHA-256 at freeze is
+  `a4daeca0dc6789a0d981c1f117c730a97ec79bdc63c9ee0e1e8517d6fae8d6a9`.
+  Live runners now default to `agents_v7`. Preserve `agents_v5` and `agents_v6`
+  because completed historical runs identify those versions.
+
+The accepted run is `pilot_agents_v7_20260922T181727Z`: all 20 questions and
+both rounds completed; no response ended as `API_ERROR`; Mistral returned 40/40
+valid responses. Two first-attempt Mistral HTTP 429 responses succeeded on the
+existing second attempt. The remaining output failures were three Qwen
+truncations, two Gemma truncations and one DeepSeek parse failure. They are
+accepted as measured failure modes: they remain stored, cast no vote and never
+lower the three-of-five threshold. The pilot cost $0.100227 and took 29.1
+minutes. Full interpretation and limitations are recorded in
+`provider_repair_and_v7_pilot_20260922.md`.
+
+The freeze covers the five `agents_v7` slugs and pins, temperature 0, top-p 1,
+model-specific output ceilings, Qwen's best-effort reasoning request, provider
+fallback disabled, required-parameter routing, two attempts maximum,
+`round1_v1`, `round2_v1`, `parser_v1`, `debate_config_v1`, cache semantics and
+the fixed three-of-five voting rule. The free live endpoint preflight remains
+mandatory immediately before a run; it checks availability but does not change
+the pin or authorize fallback.
+
+No selection was made from answer correctness. DeepInfra was chosen over
+Venice only after both completed the same four failed requests, using D015's
+pre-existing availability, latency, throughput and price criteria. The earlier
+Parasail BF16 pin was rejected because the full `agents_v6` pilot recorded 20
+rate-limited attempts and four terminal Mistral failures. Automatic fallback,
+the asynchronous Batch API, a direct second vendor account, removing Mistral
+and further token escalation were rejected for the reasons documented in the
+dated provider-repair report.
+
+Any semantic change to these settings requires a new version (`agents_v8` or
+later), a recorded decision and another full 20-question pilot. This is a core
+configuration freeze, not permission to start spending: the main-run command,
+execution schedule, finite key limit and backups must still be completed and
+checked first.

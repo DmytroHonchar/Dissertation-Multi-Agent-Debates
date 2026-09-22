@@ -684,4 +684,62 @@ def test_a_worked_run_produces_every_headline_number(db, tmp_path):
     assert report.mcnemar.p_value == pytest.approx(1.0)
     assert report.bootstrap.includes_zero, "six questions cannot settle anything"
     assert report.bootstrap.seed == BOOTSTRAP_SEED
-    assert report.evaluation_version == "evaluation_v1"
+    assert report.evaluation_version == "evaluation_v2"
+    assert report.complete_cases.question_count == 6
+    assert report.complete_cases.transitions == report.group_transitions
+    assert report.complete_cases.difference_points == pytest.approx(report.debate_effect_points)
+
+
+@pytest.mark.parametrize("status", ["REFUSAL", "TRUNCATED", "PARSE_FAIL", "API_ERROR"])
+@pytest.mark.parametrize("rnd", [1, 2])
+def test_complete_cases_exclude_any_failure_without_changing_primary_score(db, status, rnd):
+    simple_run(db, votes={"q1": ("B", "A"), "q2": ("A", "A")},
+               statuses={("q1", rnd, AGENTS[0]): status})
+    report = evaluate_run(db, RUN, {"q1": "A", "q2": "A"}, resamples=50)
+    assert report.question_count == 2
+    assert report.debate_effect_points == 50
+    assert report.complete_cases.included_question_ids == ("q2",)
+    assert report.complete_cases.excluded_question_ids == ("q1",)
+    assert report.complete_cases.difference_points == 0
+    review = next(item for item in report.question_comparisons if item.question_id == "q1")
+    assert getattr(review, f"round{rnd}").failures == ((AGENTS[0], status),)
+
+
+def test_all_valid_no_consensus_stays_in_complete_cases(db):
+    simple_run(db, votes={"q": (None, "A")}, agent_letters={
+        ("q", 1, agent): letter for agent, letter in zip(AGENTS, "AABBC")
+    })
+    report = evaluate_run(db, RUN, {"q": "A"}, resamples=50)
+    assert report.complete_cases.question_count == 1
+    assert report.complete_cases.round1_accuracy == 0
+    assert report.complete_cases.round2_accuracy == 1
+    assert report.complete_cases.difference_points == 100
+    assert report.question_comparisons[0].round1.consensus_state == "NO_CONSENSUS"
+
+
+def test_empty_complete_subset_reports_unavailable_not_zero_accuracy(db):
+    simple_run(db, votes={"q": (None, "A")}, statuses={
+        ("q", rnd, AGENTS[0]): "API_ERROR" for rnd in (1, 2)
+    })
+    report = evaluate_run(db, RUN, {"q": "A"}, resamples=50)
+    assert report.complete_cases.question_count == 0
+    assert report.complete_cases.round1_accuracy is None
+    assert report.complete_cases.round2_accuracy is None
+    assert report.complete_cases.difference_points is None
+    assert report.complete_cases.transitions.total == 0
+    review = report.question_comparisons[0]
+    assert review.round1.failures == review.round2.failures
+    assert not review.round1.correct and review.round2.correct
+
+
+def test_cached_ok_responses_are_complete_cases(db):
+    for rnd in (1, 2):
+        store_outcome(db, "q", rnd, state="UNANIMOUS", answer="A")
+        for agent in AGENTS:
+            store_response(db, "q", rnd, agent, status=STATUS_OK,
+                           letter="A", cache_hit=True, cost=0)
+    db.finish_run(RUN)
+    report = evaluate_run(db, RUN, {"q": "A"}, resamples=50)
+    assert report.complete_cases.question_count == 1
+    assert report.complete_cases.round1_accuracy == 1
+    assert report.complete_cases.round2_accuracy == 1

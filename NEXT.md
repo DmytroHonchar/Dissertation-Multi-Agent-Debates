@@ -1,6 +1,35 @@
-# Where we stopped — 7 September 2026
+# Where we stopped — 22 September 2026
 
-## Current position
+## Current resume point
+
+The provider repair is complete and the core experiment is frozen as
+`agents_v7` (D026). The accepted run is
+`pilot_agents_v7_20260922T181727Z`: all 20 questions and both rounds completed,
+Mistral returned 40/40 valid responses and no response ended as `API_ERROR`.
+Two first-attempt Mistral 429s were recovered by the existing retry. Remaining
+measured failures were three Qwen truncations, two Gemma truncations and one
+DeepSeek parse failure.
+
+The pilot scored 11/20 in Round 1 and 16/20 in Round 2. These are development
+results, not main-experiment conclusions. Cost was $0.100227 and wall time was
+29.1 minutes; the paid-response projection is about $2.51 for 300 uncached
+questions. Read `docs/provider_repair_and_v7_pilot_20260922.md` for the full
+timeline, rejected alternatives, limitations and freeze record.
+
+Next, build and test the 300-question main-run command. Before any main spend:
+
+1. choose sequential/overnight execution or tested bounded parallelism;
+2. set a finite OpenRouter key limit above the projection;
+3. back up `data/frozen/`, `storage/results.sqlite` and `storage/cache.sqlite`;
+4. run the free endpoint preflight immediately before the experiment.
+
+Do not alter a frozen setting. A semantic change now requires `agents_v8`, a
+new decision and another complete pilot. Main evaluation must pass
+`expected_questions=300`.
+
+The older checkpoint below is historical, not the current instruction to run.
+
+## Historical checkpoint — 7 September
 
 The complete one-question debate path now exists offline:
 
