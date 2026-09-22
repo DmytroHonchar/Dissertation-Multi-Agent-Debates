@@ -62,8 +62,9 @@ Record `PROMPT_VERSION` on every stored response.
 
 ## P3 — Generation settings
 
-Shared defaults live in `configs/models/agents_v1.yaml`: **temperature `0`**,
-**top-p `1.0`**, `max_tokens 1024`, `allow_provider_fallbacks: true`,
+The historical shared defaults began in `configs/models/agents_v1.yaml`. The
+frozen experimental registry is `configs/models/agents_v7.yaml` (D026):
+**temperature `0`**, **top-p `1.0`**, `allow_provider_fallbacks: false` and
 `require_parameters: true`.
 
 Temperature 0 is fixed (D002): the study measures the effect of aggregation and
@@ -72,25 +73,20 @@ Diversity comes from five different model families, not from sampling.
 `require_parameters` keeps routing to providers that actually honour those
 settings, so temperature 0 cannot be silently dropped.
 
-**The `agents_v5` pre-pilot candidate pins one exact endpoint per agent with
-fallbacks off (D015).** The served model and provider are still recorded on
+**The frozen `agents_v7` registry pins one exact endpoint per agent with
+fallbacks off (D015, D024–D026).** The served model and provider are recorded on
 every response. If a pin is unavailable, the existing retry policy tries the
 same endpoint once and the failure is stored as `API_ERROR`; an experimental
 run never silently changes host or quantisation.
 
-Still open before the pilot freeze:
-
-- **Provider pins** (D015) — selected in `agents_v5`; validate their reachability
-  and failure rate in Milestone 2 and the pilot.
-- **Mistral availability** (D016) — measure the real HTTP 429 rate during the
-  pilot and decide how to handle it.
-- **`max_tokens` per round.** The `agents_v5` candidate is Llama 1024, Qwen
-  3072, Mistral 1024, DeepSeek 2048 and Gemma 1024. Qwen also requests a
-  best-effort 2048 reasoning maximum, but a Parasail response exceeded it, so
-  only the total ceiling is treated as hard. Round 2 carries four peer
-  responses in its input; confirm the same output ceilings in Milestone 2 and
-  the pilot rather than tuning again on individual Round 1 questions (D018).
-- **Bootstrap seed** for P12, so the confidence interval is reproducible.
+The final output ceilings are Llama 1024, Qwen 3072, Mistral 1024, DeepSeek
+2048 and Gemma 1024. Qwen also requests a best-effort 2048 reasoning maximum,
+but a Parasail response exceeded it, so only the total ceiling is treated as
+hard. The accepted pilot retained three Qwen and two Gemma truncations as
+measured failures rather than tuning again on development answers. Provider
+selection, the Mistral replacement and the accepted pilot are documented in
+`provider_repair_and_v7_pilot_20260922.md`. The P12 bootstrap seed is fixed as
+`20260828` (D021).
 
 Do not rely on the API `seed` parameter. Support varies and the experiment does
 not depend on it. Record the limitation that identical settings still do not
@@ -373,10 +369,10 @@ the same three-of-five rule, recorded as a separate `round = 2` outcome row.
 checks both stage configurations before the first call. The command
 `scripts/run_debate.py` starts one database run, executes that function, and
 finishes the run only after both rounds succeed. It defaults to free fixture
-replies and `agents_v5`; live mode requires both `--live` and
+replies and `agents_v7`; live mode requires both `--live` and
 `--yes-spend-real-money` because one uncached question can make ten paid calls.
 
-## P11 — Pilot — RUNNER BUILT
+## P11 — Pilot — PASSED AND FROZEN
 
 The 20 frozen pilot questions, both rounds, full pipeline.
 
@@ -400,6 +396,14 @@ configuration, and record every final version name in `decisions.md`.
 
 Pilot results are development data. They never appear in the final results.
 
+The accepted pilot is `pilot_agents_v7_20260922T181727Z` (D026): 20 questions,
+both rounds, zero terminal API errors and 40/40 valid Mistral responses. Two
+temporary Mistral 429s recovered on retry. The run cost $0.100227 and took 29.1
+minutes; the paid-response projection is about $2.51 for 300 uncached
+questions. Remaining output failures—three Qwen truncations, two Gemma
+truncations and one DeepSeek parse failure—are stored and accepted. See the
+dated provider-repair report for the full interpretation and limitations.
+
 Built 2026-09-10 as `scripts/run_pilot.py`. It opens one run, loops
 `run_debate_question()` over all 20 frozen questions in file order, and finishes
 the run only after every question succeeded. A crash part-way leaves `ended_at`
@@ -415,8 +419,8 @@ the half of P11's checklist that needs no key: failures per agent per round
 split by status, truncation with the ceiling that caused it, consensus states
 for both rounds, how many questions had no Round 1 majority, how many group
 answers moved, token usage read back from the stored rows, cache hits, and a
-cost projection taken per paid response so the two questions already cached
-under `agents_v5` cannot make the 300-question estimate read low. `tests/test_no_answer_leakage.py` enforces the separation: no
+cost projection taken per paid response so cached requests cannot make the
+300-question estimate read low. `tests/test_no_answer_leakage.py` enforces the separation: no
 script that constructs an `OpenRouterClient` may touch the key.
 
 ## P12 — Main run and evaluation — EVALUATION DONE
@@ -438,8 +442,20 @@ Computed on the same 300 questions and never collapsed into one figure:
 2. **Round 1 group vote accuracy** — aggregation, no communication.
 3. **Round 2 group vote accuracy** — after one round of communication.
 
-(2) − (1) isolates aggregation. (3) − (2) isolates debate and answers the
-research question.
+(2) − (1) describes the aggregation comparison (mean and best agent, D021;
+individual valid-only denominators differ from the fixed group denominator).
+(3) − (2) describes the change after debate. It is not a pure causal estimate
+of communication: Round 2 also adds inference, and failure patterns may change.
+
+### Supplementary diagnostics (D022)
+
+`EvaluationReport.question_comparisons` contains each stored group vote,
+correctness and `(agent_id, status)` failures for both rounds.
+`complete_cases` compares only questions with all ten responses `OK`, reporting
+included/excluded IDs, both accuracies and transitions. Cached valid responses
+qualify; valid no-consensus outcomes remain included and count incorrect.
+An empty subset reports unavailable accuracies. This selected subset never
+replaces the full-run comparison or its confidence interval and exact test.
 
 ### Statistics (D011)
 

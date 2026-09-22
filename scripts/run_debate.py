@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from mad.api_client import ModelSpec, OpenRouterClient, load_env_file, load_model_registry
+from mad.api_client import ApiConfigurationError, ModelSpec, OpenRouterClient, load_env_file, load_model_registry
 from mad.cache import ResponseCache
 from mad.database import ResultsDatabase
 from mad.debate import (
@@ -46,7 +46,10 @@ from mad.runner import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KNOWN_REGISTRIES = ("agents_v1", "agents_v2", "agents_v3", "agents_v4", "agents_v5")
+KNOWN_REGISTRIES = (
+    "agents_v1", "agents_v2", "agents_v3", "agents_v4", "agents_v5", "agents_v6",
+    "agents_v7",
+)
 
 
 def _print_round(report: RoundReport) -> None:
@@ -107,8 +110,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--agents",
         choices=KNOWN_REGISTRIES,
-        default="agents_v5",
-        help="which versioned model settings to run (default: agents_v5)",
+        default="agents_v7",
+        help="which versioned model settings to run (default: agents_v7)",
     )
     parser.add_argument(
         "--no-cache",
@@ -164,6 +167,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             timeout_seconds=round1_config.timeout_seconds,
             max_attempts=round1_config.max_attempts,
         )
+        try:
+            client.assert_registry_routes_available(registry)
+        except ApiConfigurationError as error:
+            client.close()
+            print(f"refused: {error}")
+            return 1
     else:
         client = FixtureClient(question)
 

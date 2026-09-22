@@ -1,0 +1,57 @@
+# POST-PILOT PROVIDER REPAIR - 2026-09-22 (D025).
+#
+# agents_v6 is immutable because a completed live pilot identifies itself with
+# that version. This candidate changes exactly one setting from agents_v6:
+# Mistral Small 3.2 stays the same model, but its provider pin moves from
+# Parasail to DeepInfra after Parasail repeatedly rate-limited the pilot.
+#
+# DeepInfra and Venice each completed all four exact failed prompts in a bounded
+# one-attempt diagnostic. DeepInfra won the pre-existing D015 metadata tie-break:
+# higher one-day availability, lower latency and lower price in the dated
+# selection snapshot. Fallbacks remain off for experimental consistency.
+
+registry:
+  name: agents_v7
+  provider: openrouter
+  base_url: https://openrouter.ai/api/v1
+
+defaults:
+  temperature: 0
+  top_p: 1.0
+  max_tokens: 1024
+  allow_provider_fallbacks: false
+  require_parameters: true
+
+agents:
+  agent_llama:
+    slug: meta-llama/llama-4-maverick
+    display_name: Llama 4 Maverick
+    developer: Meta
+    pinned_provider: digitalocean
+
+  agent_qwen:
+    slug: qwen/qwen3.8-27b
+    display_name: Qwen3.8 27B
+    developer: Alibaba
+    max_tokens: 3072
+    reasoning_max_tokens: 2048
+    pinned_provider: parasail/fp8
+
+  agent_mistral:
+    slug: mistralai/mistral-small-3.2-24b-instruct
+    display_name: Mistral Small 3.2 24B
+    developer: Mistral AI
+    pinned_provider: deepinfra/fp8
+
+  agent_deepseek:
+    slug: deepseek/deepseek-v4-pro-0813
+    display_name: DeepSeek V4 Pro
+    developer: DeepSeek
+    max_tokens: 2048
+    pinned_provider: digitalocean
+
+  agent_gemma:
+    slug: google/gemma-4-31b-it
+    display_name: Gemma 4 31B IT
+    developer: Google
+    pinned_provider: deepinfra/fp8

@@ -32,6 +32,11 @@ DEFAULT_MAX_ATTEMPTS = 2
 # Anything else (bad key, unknown model) fails immediately - retrying won't help.
 RETRYABLE_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504})
 
+# A model is accepted for a live experiment only while at least three separate
+# companies can serve it. The run stays pinned to one exact provider; this rule
+# ensures that losing one host does not force another model replacement.
+MINIMUM_HEALTHY_PROVIDERS = 3
+
 
 # 2. Errors
 
@@ -102,6 +107,9 @@ class AttemptRecord:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     cost_usd: float = 0.0
+    # Safe response-side diagnostics; never store request/authentication headers.
+    response_headers: dict[str, str] = field(default_factory=dict)
+    transport_exception: str = ""
 
 
 @dataclass(frozen=True)
@@ -273,6 +281,81 @@ class OpenRouterClient:
         response.raise_for_status()
         return {model["id"]: model for model in response.json()["data"]}
 
+    def assert_registry_routes_available(self, registry: dict[str, ModelSpec]) -> None:
+        """Refuse a live run if its pin or multi-host safety margin disappeared.
+
+        OpenRouter may keep a model page after its serving endpoints are gone.
+        Checking the broad model catalogue is therefore insufficient. A usable
+        endpoint must be marked healthy and support the fixed generation
+        parameters. Provider names are deduplicated, so three endpoint variants
+        from one company still count as one independent host.
+
+        The run remains pinned and never silently fails over mid-experiment.
+        Alternative hosts are an escape route for a later, newly versioned
+        configuration if the pin is withdrawn.
+        """
+        missing: list[str] = []
+        for agent_id, spec in registry.items():
+            url = f"{self._base_url}/models/{spec.slug}/endpoints"
+            try:
+                response = self._session.get(url, timeout=self._timeout_seconds)
+                response.raise_for_status()
+                body = response.json()
+                endpoints = body["data"]["endpoints"]
+                if not isinstance(endpoints, list):
+                    raise TypeError("endpoints is not a list")
+            except (requests.RequestException, ValueError, KeyError, TypeError) as error:
+                raise ApiConfigurationError(
+                    f"could not verify the free endpoint list for {agent_id} "
+                    f"({spec.slug}): {error}"
+                ) from error
+            required_parameters = (
+                {"temperature", "top_p", "max_tokens"}
+                if spec.require_parameters
+                else set()
+            )
+            healthy_endpoints = [
+                endpoint
+                for endpoint in endpoints
+                if isinstance(endpoint, dict)
+                and endpoint.get("status") == 0
+                and required_parameters.issubset(
+                    set(endpoint.get("supported_parameters") or [])
+                )
+            ]
+            healthy_providers = {
+                endpoint["provider_name"].strip()
+                for endpoint in healthy_endpoints
+                if isinstance(endpoint.get("provider_name"), str)
+                and endpoint["provider_name"].strip()
+            }
+            if spec.pinned_provider:
+                pinned_endpoint = next(
+                    (
+                        endpoint
+                        for endpoint in healthy_endpoints
+                        if endpoint.get("tag") == spec.pinned_provider
+                    ),
+                    None,
+                )
+                if pinned_endpoint is None:
+                    missing.append(
+                        f"{agent_id}: {spec.slug} has no healthy, compatible "
+                        f"{spec.pinned_provider!r} endpoint"
+                    )
+            if len(healthy_providers) < MINIMUM_HEALTHY_PROVIDERS:
+                names = ", ".join(sorted(healthy_providers)) or "none"
+                missing.append(
+                    f"{agent_id}: {spec.slug} has {len(healthy_providers)} independent "
+                    f"healthy compatible provider(s), minimum is "
+                    f"{MINIMUM_HEALTHY_PROVIDERS} ({names})"
+                )
+        if missing:
+            raise ApiConfigurationError(
+                "configured OpenRouter route unavailable; no paid calls made: "
+                + "; ".join(missing)
+            )
+
     def close(self) -> None:
         self._session.close()
 
@@ -308,6 +391,7 @@ class OpenRouterClient:
                     AttemptRecord(
                         attempt=attempt,
                         outcome="transport_error",
+                        transport_exception=type(error).__name__,
                         latency_seconds=time.monotonic() - started_at,
                         error=last_error[:400],  # no response arrived, so nothing raw to keep
                     )
@@ -328,19 +412,42 @@ class OpenRouterClient:
                                 latency_seconds=elapsed,
                                 status_code=200,
                                 raw_response=response.text,
+                                response_headers=_diagnostic_headers(response),
                                 error=last_error[:400],
                             )
                         )
                     else:
                         # OpenRouter sometimes reports upstream failures as HTTP 200
                         # with an "error" key inside, so 200 alone isn't success.
-                        usage = body.get("usage") or {}
+                        # A JSON array/null or malformed usage used to crash here
+                        # before the paid response could be attached to an error.
+                        try:
+                            if not isinstance(body, dict):
+                                raise TypeError("response must be a JSON object")
+                            usage = body.get("usage") or {}
+                            if not isinstance(usage, dict):
+                                raise TypeError("usage must be a JSON object")
+                            int(usage.get("prompt_tokens", 0))
+                            int(usage.get("completion_tokens", 0))
+                            float(usage.get("cost", 0.0))
+                        except (TypeError, ValueError, OverflowError) as error:
+                            log.append(AttemptRecord(
+                                attempt=attempt, outcome="malformed_body",
+                                latency_seconds=elapsed, status_code=200,
+                                raw_response=response.text, error=str(error),
+                                response_headers=_diagnostic_headers(response),
+                            ))
+                            raise ApiRequestError(
+                                f"Malformed response for {payload['model']}: {error}",
+                                tuple(log),
+                            ) from error
                         record = AttemptRecord(
                             attempt=attempt,
                             outcome="ok" if "error" not in body else "upstream_error",
                             latency_seconds=elapsed,
                             status_code=200,
                             raw_response=response.text,
+                            response_headers=_diagnostic_headers(response),
                             finish_reason=_finish_reason_of(body),
                             error="" if "error" not in body else str(body["error"])[:400],
                             prompt_tokens=int(usage.get("prompt_tokens", 0)),
@@ -360,6 +467,7 @@ class OpenRouterClient:
                             latency_seconds=elapsed,
                             status_code=response.status_code,
                             raw_response=response.text,
+                            response_headers=_diagnostic_headers(response),
                             error=last_error[:400],
                         )
                     )
@@ -372,6 +480,7 @@ class OpenRouterClient:
                             latency_seconds=elapsed,
                             status_code=response.status_code,
                             raw_response=response.text,
+                            response_headers=_diagnostic_headers(response),
                             error=response.text[:400],
                         )
                     )
@@ -393,6 +502,13 @@ class OpenRouterClient:
 
 
 # 6. Helpers
+
+
+def _diagnostic_headers(response: requests.Response) -> dict[str, str]:
+    """Keep correlation/retry hints, not cookies or arbitrary server headers."""
+    allowed = {"retry-after", "x-request-id", "request-id", "cf-ray"}
+    return {key.lower(): str(value) for key, value in
+            getattr(response, "headers", {}).items() if key.lower() in allowed}
 
 
 def _build_headers(api_key: str) -> dict[str, str]:
@@ -422,6 +538,8 @@ def _parse_completion(
         choice = body["choices"][0]
         # content can be null. Keep it as "" and let the parser decide it failed.
         text = choice["message"]["content"] or ""
+        if not isinstance(text, str):
+            raise TypeError("message content must be text or null")
     except (KeyError, IndexError, TypeError) as error:
         # The reply arrived and was paid for, but has no usable choices/message
         # structure. Keep every attempt on the error - including this one, with

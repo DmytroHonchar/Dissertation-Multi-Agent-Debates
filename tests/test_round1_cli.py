@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import importlib.util
 from pathlib import Path
 
@@ -123,7 +124,7 @@ def test_the_selected_registry_becomes_the_stored_settings_version(cli, tmp_path
         assert run["ended_at"] is not None, "the successful command finished its run"
 
 
-def test_the_provider_pinned_settings_are_the_default(cli, tmp_path):
+def test_the_frozen_settings_are_the_default(cli, tmp_path):
     from mad.database import ResultsDatabase
 
     db_path = tmp_path / "default.sqlite"
@@ -131,8 +132,8 @@ def test_the_provider_pinned_settings_are_the_default(cli, tmp_path):
 
     with ResultsDatabase(db_path) as db:
         run = db.read_runs()[0]
-        assert run["settings_version"] == "agents_v5"
-        assert run["run_id"].startswith("round1_agents_v5_")
+        assert run["settings_version"] == "agents_v7"
+        assert run["run_id"].startswith("round1_agents_v7_")
 
 
 def test_agents_v2_actually_raises_the_two_ceilings(cli, tmp_path, capsys):
@@ -195,6 +196,43 @@ def test_agents_v5_is_the_fully_pinned_pre_pilot_candidate(cli, tmp_path):
 
     assert cli.main(["--question", PILOT_ID, "--agents", "agents_v5",
                      "--db", str(tmp_path / "v5.sqlite")]) == 0
+
+
+def test_agents_v6_changes_only_the_unavailable_mistral_model(cli, tmp_path):
+    from mad.api_client import load_model_registry
+
+    v5 = load_model_registry(REPO / "configs" / "models" / "agents_v5.yaml")
+    v6 = load_model_registry(REPO / "configs" / "models" / "agents_v6.yaml")
+    assert set(v6) == set(v5)
+    for agent_id in v5:
+        if agent_id != "agent_mistral":
+            assert v6[agent_id] == v5[agent_id]
+    mistral = v6["agent_mistral"]
+    assert mistral.slug == "mistralai/mistral-small-3.2-24b-instruct"
+    assert mistral.display_name == "Mistral Small 3.2 24B"
+    assert mistral.pinned_provider == "parasail/bf16"
+    assert mistral.max_tokens == 1024
+    assert mistral.allow_provider_fallbacks is False
+
+    assert cli.main(["--question", PILOT_ID, "--agents", "agents_v6",
+                     "--db", str(tmp_path / "v6.sqlite")]) == 0
+
+
+def test_agents_v7_changes_only_the_unreliable_mistral_provider(cli, tmp_path):
+    from mad.api_client import load_model_registry
+
+    v6 = load_model_registry(REPO / "configs" / "models" / "agents_v6.yaml")
+    v7 = load_model_registry(REPO / "configs" / "models" / "agents_v7.yaml")
+    assert set(v7) == set(v6)
+    for agent_id in v6:
+        if agent_id != "agent_mistral":
+            assert v7[agent_id] == v6[agent_id]
+    assert v7["agent_mistral"] == replace(
+        v6["agent_mistral"], pinned_provider="deepinfra/fp8"
+    )
+
+    assert cli.main(["--question", PILOT_ID, "--agents", "agents_v7",
+                     "--db", str(tmp_path / "v7.sqlite")]) == 0
 
 
 def test_a_dry_run_never_creates_or_touches_the_real_cache_file(cli, tmp_path):

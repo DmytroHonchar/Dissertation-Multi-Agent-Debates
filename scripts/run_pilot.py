@@ -38,6 +38,7 @@ from time import monotonic
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from mad.api_client import (
+    ApiConfigurationError,
     DEFAULT_MAX_ATTEMPTS,
     ModelSpec,
     OpenRouterClient,
@@ -72,7 +73,10 @@ from mad.runner import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KNOWN_REGISTRIES = ("agents_v1", "agents_v2", "agents_v3", "agents_v4", "agents_v5")
+KNOWN_REGISTRIES = (
+    "agents_v1", "agents_v2", "agents_v3", "agents_v4", "agents_v5", "agents_v6",
+    "agents_v7",
+)
 
 # Five agents, two rounds, twenty questions: 200 responses. Each may be retried
 # once (D012), so the ceiling on billable attempts is twice that. The money
@@ -117,7 +121,9 @@ def _print_failures(reports: Sequence[DebateReport], registry: Mapping[str, Mode
             print(f"  {agent_id:<16} {round_number}      {cells}  {counts.get(STATUS_OK, 0)}")
 
 
-def _print_truncation(reports: Sequence[DebateReport], registry: Mapping[str, ModelSpec]) -> None:
+def _print_truncation(
+    reports: Sequence[DebateReport], registry: Mapping[str, ModelSpec], settings_version: str
+) -> None:
     """Truncation is the one failure that means a setting is wrong, not a model."""
     truncated = Counter(
         agent.agent_id
@@ -127,7 +133,7 @@ def _print_truncation(reports: Sequence[DebateReport], registry: Mapping[str, Mo
         if agent.status == STATUS_TRUNCATED
     )
     if not truncated:
-        print("\ntruncation: none. The agents_v5 ceilings held for all 20 questions.")
+        print(f"\ntruncation: none. The {settings_version} ceilings held for all 20 questions.")
         return
 
     print("\nWARNING truncation - read these responses before changing a ceiling:")
@@ -251,8 +257,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--agents",
         choices=KNOWN_REGISTRIES,
-        default="agents_v5",
-        help="which versioned model settings to run (default: agents_v5)",
+        default="agents_v7",
+        help="which versioned model settings to run (default: agents_v7)",
     )
     parser.add_argument(
         "--no-cache",
@@ -308,6 +314,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             timeout_seconds=round1_config.timeout_seconds,
             max_attempts=round1_config.max_attempts,
         )
+        try:
+            shared_client.assert_registry_routes_available(registry)
+        except ApiConfigurationError as error:
+            shared_client.close()
+            print(f"refused: {error}")
+            return 1
 
     run_id = f"pilot_{args.agents}_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
     cache = ResponseCache() if use_cache else None
@@ -354,7 +366,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             cache.close()
 
     _print_failures(reports, registry)
-    _print_truncation(reports, registry)
+    _print_truncation(reports, registry, args.agents)
     _print_consensus(reports)
     _print_usage(usage, len(reports), monotonic() - started, args.live)
 

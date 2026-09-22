@@ -45,7 +45,7 @@ def test_a_dry_pilot_stores_all_twenty_questions_in_one_run(cli, tmp_path):
         runs = db.read_runs()
         assert len(runs) == 1, "one run holds the whole pilot"
         run_id = runs[0]["run_id"]
-        assert run_id.startswith("pilot_agents_v5_")
+        assert run_id.startswith("pilot_agents_v7_")
         assert runs[0]["ended_at"] is not None
 
         assert len(db.read_responses(run_id, round=1)) == PILOT_QUESTION_COUNT * 5
@@ -61,7 +61,7 @@ def test_the_run_is_labelled_as_a_two_round_debate(cli, tmp_path):
         run = db.read_runs()[0]
         assert run["config_name"] == DEBATE_CONFIG_VERSION
         assert run["prompt_version"] == DEBATE_PROMPT_VERSION
-        assert run["settings_version"] == "agents_v5"
+        assert run["settings_version"] == "agents_v7"
 
 
 def test_a_stored_dry_pilot_satisfies_the_twenty_question_check(cli, tmp_path):
@@ -163,4 +163,3 @@ def test_token_totals_match_the_stored_outcome_rows(cli, tmp_path, capsys):
     # number: the printed total is whatever the rows hold.
     assert stored == 0
     assert "prompt" in capsys.readouterr().out
-

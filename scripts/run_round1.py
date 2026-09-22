@@ -23,7 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from mad.api_client import OpenRouterClient, load_env_file, load_model_registry
+from mad.api_client import ApiConfigurationError, OpenRouterClient, load_env_file, load_model_registry
 from mad.cache import ResponseCache
 from mad.database import ResultsDatabase
 from mad.parser_v1 import STATUS_TRUNCATED
@@ -38,7 +38,10 @@ from mad.runner import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-KNOWN_REGISTRIES = ("agents_v1", "agents_v2", "agents_v3", "agents_v4", "agents_v5")
+KNOWN_REGISTRIES = (
+    "agents_v1", "agents_v2", "agents_v3", "agents_v4", "agents_v5", "agents_v6",
+    "agents_v7",
+)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -49,8 +52,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="required with --live; confirms the spend")
     parser.add_argument("--db", help="database path (default: temp file for dry runs, "
                         "storage/results.sqlite for live)")
-    parser.add_argument("--agents", choices=KNOWN_REGISTRIES, default="agents_v5",
-                        help="which versioned model settings to run")
+    parser.add_argument("--agents", choices=KNOWN_REGISTRIES, default="agents_v7",
+                        help="which versioned model settings to run (default: agents_v7)")
     parser.add_argument("--no-cache", action="store_true",
                         help="skip the response cache, e.g. to measure non-determinism")
     args = parser.parse_args(argv)
@@ -98,6 +101,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             timeout_seconds=config.timeout_seconds,
             max_attempts=config.max_attempts,
         )
+        try:
+            client.assert_registry_routes_available(registry)
+        except ApiConfigurationError as error:
+            client.close()
+            print(f"refused: {error}")
+            return 1
     else:
         client = FixtureClient(question)
 

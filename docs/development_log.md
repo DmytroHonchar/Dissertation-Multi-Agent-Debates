@@ -1147,6 +1147,10 @@ responses, compute the group vote, and store an inspectable result.
   is that a second round broke deadlock, and the resolution happened to match
   the label four times in five - not that communication corrected reasoning.
 
+  **Correction added 2026-09-22:** the causal interpretation in items 2 and 3
+  below is superseded by the dated review at the end of this log and
+  `pilot_review_20260910.md`. The original wording is retained as history.
+
   **2. Worse: three of those five deadlocks were caused by infrastructure, not
   disagreement.** `9622` was undecided because Gemma, Mistral and Qwen all
   truncated; `11875` because Gemma and Qwen truncated; `3839` because DeepSeek
@@ -1195,6 +1199,149 @@ responses, compute the group vote, and store an inspectable result.
   parallel calls and the key limit, and only then freeze. If the provider pin
   changes, that is `agents_v6` and the pilot is rerun - which the $3.27
   projection makes affordable.
+
+### 2026-09-22 — Corrected pilot interpretation and supplementary analysis
+
+- **Built:** `evaluation_v2` adds per-question stored votes, correctness and
+  failure identities, plus a complete-case comparison requiring all ten
+  responses to be `OK`. Included/excluded IDs are explicit; an empty subset
+  has undefined accuracies. D022 records this post-pilot addition. Detailed
+  evidence is in `pilot_review_20260910.md`; NEXT.md and the checklist now
+  point to the current resume point.
+- **Why:** The previous entry overstated causes. At 11875 and 3839 the same
+  agents failed in both rounds, but the remaining agents reached a correct
+  majority. Calling this a retry lottery was wrong. At 9622 failures did become
+  valid responses, but causation cannot be inferred from that alone. Also,
+  group 60% exceeded Llama 55%, so "lost to every single agent" was false;
+  Qwen had three truncations, not two.
+- **Tested:** 442 tests pass, including 11 new cases; `git diff --check` clean.
+  The stored pilot was scored offline with `expected_questions=20`. Primary
+  score remains 12/20 to 17/20 (+25 points), CI [+10,+45], exact p=0.0625.
+  Supplement: 9/13 to 11/13 (+15.38 points), transitions 9 correct-to-correct,
+  2 incorrect-to-correct, 0 correct-to-incorrect, 2 incorrect-to-incorrect.
+  Seven questions excluded only from the supplement. Results database SHA-256
+  before and after opening/scoring was identical:
+  `276ca22a891af536239dab1adab9d9b6426ee897f1c6787a3fa3ef027f428f4f`.
+- **Problems:** The supplement selects successful cases and does not isolate
+  communication from additional inference. It must not replace the primary
+  result or be presented as a pre-pilot decision. No reliability or token
+  setting issue was fixed by this analysis.
+- **Next:** Agree a bounded paid endpoint probe before making any calls;
+  separately decide token testing and sequential/overnight execution. No
+  provider, retry, token, prompt or cache changes; no paid calls, commit or push
+  in this step. The main experiment is not yet cleared to run.
+
+### 2026-09-22 — Bounded provider and token probes, paid and separately audited
+
+- **Built:** One-off diagnostic under `storage/probe_20260922.py`, exact raw
+  audit in `storage/diagnostic_20260922T150205759313Z.sqlite`, and readable
+  `docs/diagnostic_review_20260922.md`. D023 recorded the stopping rule before
+  paid calls. No production code or configuration changed in this step.
+- **Why:** User approved trying the two practical fixes: check DeepSeek's
+  current availability and test a bounded token increase. Skip unavailable
+  endpoints instead of mixing provider and token changes.
+- **Tested:** Six calls, one attempt each, with $0.10 conservative reservation
+  ceiling and verified finite key limit. Actual reported charge $0.029602848.
+  DeepSeek/DigitalOcean: 3/3 OK. Qwen/Parasail at 4096: 9622 R1 OK (3348 tokens),
+  11875 R1/R2 still TRUNCATED (4096 each). Exact original prompt identity was
+  checked against cache keys, including original Round 1 context for Round 2.
+  All raw responses saved before parsing. No answer key read. 442 offline tests
+  pass; production results/cache/agents_v5 byte hashes unchanged.
+- **Problems:** Three same-session successes are not multi-day reliability
+  evidence. Extra tokens did not reliably solve Qwen's truncation, and reported
+  reasoning still exceeded 2048. Free metadata listed no Mistral endpoints and
+  Gemma's pinned endpoint status -2, so their four planned token comparisons
+  were not attempted. These skipped checks are not recorded API failures.
+- **Next:** Resolve Mistral/Gemma availability with the user before selecting
+  any replacement. No further ceiling escalation, provider switching, full
+  pilot rerun, commit or push performed. Preserve and back up the separate
+  diagnostic audit alongside the original pilot.
+
+### 2026-09-22 — Mistral route repair candidate and live-run preflight
+
+- **Built:** `agents_v6` changes only the Mistral agent to open-weight Mistral
+  Small 3.2 24B (`mistralai/mistral-small-3.2-24b-instruct`) pinned to
+  `parasail/bf16`. Every live runner now uses the free endpoint API before
+  opening a run or making a paid completion: the exact pin must be healthy and
+  compatible, and every model must have at least three independent healthy
+  compatible hosts. Multiple endpoints from one provider count once. D024
+  records the selection and why the batch model is not equivalent.
+- **Why:** The original Mistral Large catalogue entry still existed, but its
+  endpoint list was empty and the exact replay returned HTTP 404. That proves
+  current unavailability, not permanent deletion. The replacement preserves
+  the Mistral and open-weight design rather than silently dropping an agent or
+  enabling fallback.
+- **Tested:** The complete 20-question, two-round fixture pilot finishes under
+  `agents_v6`. Focused tests cover healthy exact-pin acceptance, missing and
+  unhealthy pin refusal, independent-provider deduplication, the minimum of
+  three, and that only Mistral changed. All 479 offline tests pass, and the
+  free live preflight passes all five agents under `agents_v6`. No completion
+  call, cost, production result row or cache write was made.
+- **Problems:** Mistral Small 3.2 24B is a different, smaller model. It changes
+  the experimental configuration and cannot inherit the old pilot's
+  validation. Its 1024 ceiling and output format are not yet proven live.
+- **Next:** With explicit spending approval, rerun the pilot with
+  `--agents agents_v6`. Keep the main experiment blocked until that passes.
+
+### 2026-09-22 — agents_v6 pilot rejected; Mistral host repaired in agents_v7
+
+- **Built:** A bounded diagnostic reconstructed the four exact Mistral requests
+  that failed in `pilot_agents_v6_20260922T171757Z` and tested them once each on
+  DeepInfra and Venice. It bypasses cache, disables retry, reads no answer key,
+  caps eight calls at $0.02 and stores a separate audit. `agents_v7` preserves
+  all `agents_v6` settings except Mistral's pin, now `deepinfra/fp8`.
+- **Why:** Parasail's problem was sustained upstream shared-pool throttling,
+  not the Mistral model or this project's request format. Across 38 paid
+  Mistral responses, 16 retried; 20 attempts returned 429, twelve recovered,
+  and eight attempts formed four final API errors. A route-presence preflight
+  cannot predict shared-pool capacity.
+- **Tested:** DeepInfra returned 4/4 `OK`; Venice returned 4/4 `OK`. The eight
+  one-attempt calls cost $0.000899. No answer correctness was inspected.
+  DeepInfra was selected by the existing D015 metadata criteria after the live
+  completion tie: 99.74% versus 98.97% one-day availability, with lower median
+  latency, higher throughput and lower price. Audit:
+  `storage/mistral_host_probe_20260922T180857610453Z.sqlite`.
+- **Problems:** Four same-session calls cannot prove long-term reliability.
+  DeepInfra also serves Gemma, so a provider-wide outage could affect two
+  agents. Failures remain stored honestly and never lower the voting threshold.
+- **Next:** Run the full pilot under `agents_v7`; inspect every failure before
+  freezing. Do not edit `agents_v6`, whose completed pilot must remain
+  reproducible.
+
+### 2026-09-22 — agents_v7 pilot accepted and core configuration frozen
+
+- **Built:** The full investigation is consolidated in
+  `provider_repair_and_v7_pilot_20260922.md`, covering the unavailable Mistral
+  Large route, rejected Parasail pin, controlled DeepInfra/Venice comparison,
+  final `agents_v7` settings, rejected alternatives and limitations. D026
+  freezes `agents_v7`; all live runner defaults now use it. The evaluation
+  retains the primary all-question result and the D022 complete-case
+  supplement. Documentation, checklist and resume point now agree.
+- **Why:** The earlier evidence was spread across several logs and could be
+  mistaken for one fault. The audit separates endpoint withdrawal, rate
+  limiting, truncation and parsing, and explains why provider reliability—not
+  answer correctness—selected the repair. A dated freeze is required before
+  the main experiment can be reproducible.
+- **Tested:** Accepted live run `pilot_agents_v7_20260922T181727Z`: 200 stored
+  responses, 80 cache hits, 120 paid responses and 122 paid attempts. No final
+  API errors; Mistral 40/40 valid, with two first-attempt 429s recovered by the
+  existing retry. Remaining failures: Qwen 3 truncations, Gemma 2 truncations,
+  DeepSeek 1 parse failure. Group score 11/20 to 16/20; transitions 11 stayed
+  correct, 5 became correct, 0 became incorrect and 4 stayed incorrect.
+  Complete-case score 11/17 to 13/17. Cost $0.100227, wall time 29.1 minutes,
+  projected main cost about $2.51. `agents_v7.yaml` freeze SHA-256:
+  `a4daeca0dc6789a0d981c1f117c730a97ec79bdc63c9ee0e1e8517d6fae8d6a9`.
+- **Problems:** Mistral changed from Large to Small 3.2 and from the original
+  Mistral-hosted route to DeepInfra FP8. The small pilot suggests a possible
+  capability cost but cannot prove one. DeepInfra serves two agents, the
+  preflight cannot guarantee future capacity, and five truncations plus one
+  parse failure remain visible. The pilot's +25 points is development evidence,
+  not a final conclusion or a pure causal communication estimate.
+- **Next:** Build and test the 300-question command; decide sequential overnight
+  versus bounded parallel execution; set a finite key limit above the estimate;
+  back up frozen inputs and SQLite files; run the free preflight immediately
+  before the main experiment. Any settings change requires `agents_v8` and a
+  new pilot.
 
 ## Entry template
 

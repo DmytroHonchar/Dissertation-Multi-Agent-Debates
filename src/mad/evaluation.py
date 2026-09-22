@@ -51,7 +51,7 @@ from mad.voting import (
 
 # 1. Settings
 
-EVALUATION_VERSION = "evaluation_v1"
+EVALUATION_VERSION = "evaluation_v2"
 
 # The date D011 was recorded. Fixed before the formal pilot and the main
 # experiment, which is what D011's rule protects: a seed that is a date was
@@ -250,6 +250,60 @@ class BudgetUse:
 
 
 @dataclass(frozen=True)
+class QuestionRoundReview:
+    """Stored group outcome and the failures that accompanied it, not a retally."""
+
+    consensus_state: str
+    consensus_answer: str | None
+    correct: bool
+    failures: tuple[tuple[str, str], ...]  # (agent_id, parse status)
+
+
+@dataclass(frozen=True)
+class QuestionComparison:
+    question_id: str
+    round1: QuestionRoundReview
+    round2: QuestionRoundReview
+
+    @property
+    def complete_case(self) -> bool:
+        """All five responses in both rounds are OK; cached OK responses count."""
+        return not self.round1.failures and not self.round2.failures
+
+
+@dataclass(frozen=True)
+class CompleteCaseResult:
+    """Supplementary comparison, not a replacement for the full-run score.
+
+    Excluding failures also selects questions/models that completed successfully.
+    This subset does not isolate a causal effect of communication.
+    """
+
+    included_question_ids: tuple[str, ...]
+    excluded_question_ids: tuple[str, ...]
+    transitions: TransitionCounts
+
+    @property
+    def question_count(self) -> int:
+        return len(self.included_question_ids)
+
+    @property
+    def round1_accuracy(self) -> float | None:
+        return ((self.transitions.stayed_correct + self.transitions.became_incorrect)
+                / self.question_count) if self.question_count else None
+
+    @property
+    def round2_accuracy(self) -> float | None:
+        return ((self.transitions.stayed_correct + self.transitions.became_correct)
+                / self.question_count) if self.question_count else None
+
+    @property
+    def difference_points(self) -> float | None:
+        return ((self.transitions.became_correct - self.transitions.became_incorrect)
+                / self.question_count * 100.0) if self.question_count else None
+
+
+@dataclass(frozen=True)
 class EvaluationReport:
     """Every number, computed once, so a printer or a table cannot disagree."""
 
@@ -263,6 +317,8 @@ class EvaluationReport:
 
     group_transitions: TransitionCounts
     agent_transitions: tuple[AgentTransitions, ...]
+    question_comparisons: tuple[QuestionComparison, ...]
+    complete_cases: CompleteCaseResult
 
     aggregation: AggregationGain
     debate_effect_points: float
@@ -379,6 +435,24 @@ def evaluate_run(
 
     debate_effect = (group_results[2].accuracy - group_results[1].accuracy) * 100.0
 
+    # Structural checks above ensure ten responses per question before filtering.
+    comparisons = []
+    for qid in question_ids:
+        reviews = []
+        for rnd in ROUNDS:
+            outcome = next(row for row in outcomes[rnd] if row["question_id"] == qid)
+            failures = tuple(sorted(
+                (row["agent_id"], row["status"])
+                for row in responses[rnd]
+                if row["question_id"] == qid and row["status"] != "OK"
+            ))
+            reviews.append(QuestionRoundReview(
+                outcome["consensus_state"], outcome["consensus_answer"],
+                group_correct[rnd][qid], failures,
+            ))
+        comparisons.append(QuestionComparison(qid, reviews[0], reviews[1]))
+    complete = tuple(item for item in comparisons if item.complete_case)
+
     return EvaluationReport(
         run_id=run_id,
         evaluation_version=EVALUATION_VERSION,
@@ -387,6 +461,16 @@ def evaluate_run(
         agent_results=agent_results,
         group_results=group_results,
         group_transitions=group_transitions,
+        question_comparisons=tuple(comparisons),
+        complete_cases=CompleteCaseResult(
+            included_question_ids=tuple(item.question_id for item in complete),
+            excluded_question_ids=tuple(
+                item.question_id for item in comparisons if not item.complete_case
+            ),
+            transitions=_transitions([
+                (item.round1.correct, item.round2.correct) for item in complete
+            ]),
+        ),
         agent_transitions=tuple(
             _agent_transitions(agent_id, question_ids, responses, answer_key)
             for agent_id in agent_ids

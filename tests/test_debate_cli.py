@@ -56,7 +56,7 @@ def test_dry_run_stores_one_complete_debate_with_truthful_labels(cli, tmp_path):
         assert len(runs) == 1
         assert runs[0]["config_name"] == DEBATE_CONFIG_VERSION
         assert runs[0]["prompt_version"] == DEBATE_PROMPT_VERSION
-        assert runs[0]["settings_version"] == "agents_v5"
+        assert runs[0]["settings_version"] == "agents_v7"
         assert runs[0]["ended_at"] is not None
         assert len(db.read_responses(runs[0]["run_id"], round=1)) == 5
         assert len(db.read_responses(runs[0]["run_id"], round=2)) == 5
