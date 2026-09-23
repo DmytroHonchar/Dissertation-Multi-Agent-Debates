@@ -153,7 +153,11 @@ the proposal source, not in this repository.
   valid, $0.100227, 29.1 minutes; see the dated provider-repair report.
 - [x] Decide the DeepSeek provider question: retain DigitalOcean after the
   bounded 3/3 endpoint check and zero DeepSeek API errors in the accepted pilot.
-- [ ] Decide parallel calls or an overnight run: 300 questions is ~14.6 hours sequential
+- [x] Keep the frozen main runner sequential, matching the accepted pilot;
+  schedule an overnight window of roughly 7–10 hours.
+- [x] Build the protected 300-question runner — `scripts/run_experiment.py`.
+  It is locked to `agents_v7`, refuses duplicate formal runs, supports safe
+  resume after complete question boundaries and never reads the answer key.
 - [ ] Raise the OpenRouter key limit above the main-run projection of about
   $2.51 while keeping a finite safety cap.
 - [ ] (superseded) score the pilot with

@@ -76,7 +76,7 @@ class Round2Config:
     cache_enabled: bool = False       # callers explicitly opt into the cache
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     max_attempts: int = DEFAULT_MAX_ATTEMPTS
-    parallel_calls: bool = False      # sequential; parallel comes with the pilot
+    parallel_calls: bool = False      # frozen runners remain sequential
 
 
 @dataclass(frozen=True)

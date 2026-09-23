@@ -236,9 +236,10 @@ over every attempt (P6); the per-attempt split lives in `response_attempts`. `lo
 `configs/models/agents_v1.yaml`. Verified against all five models by
 `scripts/check_models.py` on 2026-08-26.
 
-Still to add when the orchestrator is built: fixed call order — cache lookup,
-API call on miss, parse, store — five parallel calls per question per round, and
-per-call exception isolation so one agent's failure cannot end the run.
+The orchestrator now uses the fixed order cache lookup → API call on miss →
+parse → store, with per-call exception isolation so one agent's failure does
+not end the run. Calls remain sequential in both rounds; that execution mode
+was used by the accepted pilot and is frozen for the main experiment.
 
 ## P8 — Round 1 configuration — DONE
 
@@ -382,8 +383,8 @@ agent's own valid response separately and contained the available responses of
 the other four agents anonymously; letters were extracted correctly; raw
 responses were preserved; served model, provider,
 tokens, cost, latency and finish reason were stored; cache hits do not reach the
-API; an induced API error does not end the run; five parallel calls do not
-interfere; every row links to the right run, question, round and agent.
+API; an induced API error does not end the run; sequential agent calls remain
+isolated; every row links to the right run, question, round and agent.
 
 Check `TRUNCATED` rates specifically — the smoke test already warned about
 reasoning models. If truncation is common, raise `max_tokens`, bump the settings
@@ -423,7 +424,7 @@ cost projection taken per paid response so cached requests cannot make the
 300-question estimate read low. `tests/test_no_answer_leakage.py` enforces the separation: no
 script that constructs an `OpenRouterClient` may touch the key.
 
-## P12 — Main run and evaluation — EVALUATION DONE
+## P12 — Main run and evaluation — RUNNER AND EVALUATION DONE
 
 New file `src/mad/evaluation.py`, built and validated on pilot data *before* the
 main run. It reads the stored database and the separate answer key. It never
@@ -527,6 +528,23 @@ Pass `expected_questions` for a formal run, 20 for the pilot and 300 for the
 main experiment. A run that lost questions is then refused rather than scored
 over a smaller denominator. The bootstrap itself needs nothing beyond
 the standard library.
+
+Built 2026-09-23 as `scripts/run_experiment.py`. It loads the 300 frozen model
+inputs in their recorded order and verifies them against
+`experimental_ids.json`; it never opens the answer key. The command has no
+model-settings or cache override: the live path is fixed to `agents_v7`, uses
+the cache and remains sequential. Live mode requires both spending flags,
+quotes the worst case of 3,000 responses and 6,000 attempts, and runs the free
+endpoint preflight before creating a run or making a paid completion.
+
+Only one `experiment_*` run is allowed in a database. If the process stops
+between questions, `--resume RUN_ID` continues that same unfinished run and
+skips questions that already have all ten responses and both outcomes. A
+partially written question is refused rather than deleting or overwriting its
+audit rows. Before `finish_run()`, the command verifies exactly 300 complete
+questions, five agents and both rounds. It prints stored failures, truncations,
+consensus, tokens, cost and attempts, but no accuracy. Formal scoring remains a
+separate process with `expected_questions=300`.
 
 ## P13 — Replay interface
 

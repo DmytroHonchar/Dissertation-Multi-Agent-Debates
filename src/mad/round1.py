@@ -12,7 +12,7 @@ client, the report - lives in `runner.py`, so the two rounds cannot drift apart.
 Money protections, because live calls spend real credit:
   - the default is a dry run on labelled fixture replies, costing nothing
   - live mode needs two explicit flags, not one
-  - only questions from the 20-question pilot file are accepted
+  - command entry points load only their explicitly allowed frozen question set
   - at most five API calls per question
   - an optional response cache prevents paying twice for an identical request
 """
@@ -64,7 +64,7 @@ class Round1Config:
     cache_enabled: bool = False       # callers explicitly opt into the cache
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
     max_attempts: int = DEFAULT_MAX_ATTEMPTS
-    parallel_calls: bool = False      # sequential; parallel comes with the pilot
+    parallel_calls: bool = False      # frozen runners remain sequential
 
 
 # 2. Running one question

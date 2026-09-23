@@ -16,12 +16,20 @@ results, not main-experiment conclusions. Cost was $0.100227 and wall time was
 questions. Read `docs/provider_repair_and_v7_pilot_20260922.md` for the full
 timeline, rejected alternatives, limitations and freeze record.
 
-Next, build and test the 300-question main-run command. Before any main spend:
+The protected 300-question command is now built as
+`scripts/run_experiment.py` and tested offline. It is locked to `agents_v7`,
+runs sequentially, loads only the frozen experimental inputs, refuses a second
+formal run and can resume the same unfinished run after complete question
+boundaries. It never reads the answer key.
 
-1. choose sequential/overnight execution or tested bounded parallelism;
-2. set a finite OpenRouter key limit above the projection;
-3. back up `data/frozen/`, `storage/results.sqlite` and `storage/cache.sqlite`;
-4. run the free endpoint preflight immediately before the experiment.
+Before any main spend:
+
+1. set a finite OpenRouter key limit above the projection;
+2. back up `data/frozen/`, `storage/results.sqlite` and `storage/cache.sqlite`;
+3. plan an uninterrupted overnight window of roughly 7–10 hours;
+4. run `.venv/bin/python scripts/run_experiment.py --live
+   --yes-spend-real-money`; its free endpoint preflight runs before storage or
+   paid completions.
 
 Do not alter a frozen setting. A semantic change now requires `agents_v8`, a
 new decision and another complete pilot. Main evaluation must pass
@@ -92,8 +100,7 @@ for the current commands.
 ## Still to build
 
 1. A command that prints an `EvaluationReport` and writes the result tables.
-2. The 300-question main experiment command.
-3. `app/viewer.py`, the read-only Streamlit replay interface (P13, needed for CA2).
+2. `app/viewer.py`, the read-only Streamlit replay interface (P13, needed for CA2).
 
 ## Documentation authority
 

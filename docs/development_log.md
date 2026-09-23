@@ -1343,6 +1343,43 @@ responses, compute the group vote, and store an inspectable result.
   before the main experiment. Any settings change requires `agents_v8` and a
   new pilot.
 
+### 2026-09-23 — Protected 300-question main runner built offline
+
+- **Built:** `scripts/run_experiment.py` runs all 300 frozen experimental model
+  inputs through both rounds in one database run. It is deliberately locked to
+  `agents_v7`, the cache and sequential execution; there is no `--agents` or
+  `--no-cache` override. The frozen loader verifies the 300 model inputs against
+  `experimental_ids.json` without loading answers. The live command requires
+  both spending flags, names the worst case of 3,000 responses/6,000 attempts,
+  and performs the free endpoint preflight before creating a run or spending.
+- **Why:** The pilot commands intentionally refuse experimental questions. A
+  separate entry point makes the one formal run explicit and prevents an old
+  model registry or accidental cache bypass from silently changing the frozen
+  experiment.
+- **Tested:** The complete 300-question fixture run stores 1,500 responses per
+  round and 600 outcomes, finishes once and passes evaluation's
+  `expected_questions=300` completeness guard against the separate experimental
+  key. Tests also prove the spend confirmations, production-database guard,
+  frozen settings, exact input order, duplicate-main refusal, endpoint preflight
+  before database creation, safe resume at question boundaries and refusal of
+  partial-question audit rows. The whole suite remains offline. Before the live
+  run, SQLite-safe backups were created under `storage/backups/` as
+  `results_before_main_20260923T114153Z.sqlite` (SHA-256
+  `34ed801af835675ad4ce523204df36cb0a167eb44d619c0246c03ef5ca0a0f0f`)
+  and `cache_before_main_20260923T114153Z.sqlite` (SHA-256
+  `df5fdda22b8dc06547f6051d8a047972612fb04271b9b9a989bec75738a9d333`).
+  Both passed SQLite integrity checks and matched the source databases' logical
+  row counts; the source files were not changed.
+- **Problems:** SQLite writes each response independently. An interruption
+  between questions is resumable in the same run, but an interruption in the
+  middle of one question leaves partial immutable evidence and is refused
+  rather than deleted. The sequential run is expected to need roughly 7–10
+  hours; no paid call was made while building it.
+- **Next:** Confirm the existing OpenRouter key has at least $3.50 of finite
+  remaining allowance, choose an uninterrupted overnight window, then run the
+  protected live command. After completion, back up again and score separately
+  with `expected_questions=300`.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity
