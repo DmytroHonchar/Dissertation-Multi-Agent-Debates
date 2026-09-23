@@ -45,6 +45,9 @@ SETTINGS_VERSION = "agents_v1"    # the yaml holding temperature 0, top-p 1, 102
 
 FROZEN_ROOT = Path("data") / "frozen" / "mmlu_pro_v1"
 PILOT_QUESTIONS_FILE = FROZEN_ROOT / "model_inputs" / "pilot_questions.jsonl"
+EXPERIMENTAL_QUESTIONS_FILE = (
+    FROZEN_ROOT / "model_inputs" / "experimental_questions.jsonl"
+)
 EXPERIMENTAL_IDS_FILE = FROZEN_ROOT / "metadata" / "experimental_ids.json"
 
 # The real results database. A dry run is refused this path, so fixture rows
@@ -168,12 +171,13 @@ def assert_run_is_open(db: ResultsDatabase, run_id: str, config: RunConfig) -> N
         )
 
 
-# 5. Loading the one question
+# 5. Loading frozen questions
 
 
 # The pilot is exactly this many questions. A run that holds fewer is not the
 # pilot, and evaluation refuses to score it as one.
 PILOT_QUESTION_COUNT = 20
+EXPERIMENTAL_QUESTION_COUNT = 300
 
 
 def load_pilot_questions() -> list[dict[str, Any]]:
@@ -190,6 +194,37 @@ def load_pilot_questions() -> list[dict[str, Any]]:
         raise RunnerError(
             f"the pilot file holds {len(questions)} questions, not "
             f"{PILOT_QUESTION_COUNT}. The frozen set must not have changed."
+        )
+    return questions
+
+
+def load_experimental_questions() -> list[dict[str, Any]]:
+    """All 300 frozen main-experiment questions, in their frozen file order.
+
+    The model-input file is checked against the separately frozen ID manifest.
+    This still loads no answers: both files contain identifiers and safe model
+    inputs only. A changed count, duplicate, reordering or substituted question
+    is refused before an API client is created.
+    """
+    root = _repository_root()
+    with (root / EXPERIMENTAL_QUESTIONS_FILE).open(
+        encoding="utf-8"
+    ) as experimental_file:
+        questions = [json.loads(line) for line in experimental_file if line.strip()]
+
+    expected_ids = json.loads((root / EXPERIMENTAL_IDS_FILE).read_text(encoding="utf-8"))
+    actual_ids = [question.get("stable_id") for question in questions]
+    if len(questions) != EXPERIMENTAL_QUESTION_COUNT:
+        raise RunnerError(
+            f"the experimental file holds {len(questions)} questions, not "
+            f"{EXPERIMENTAL_QUESTION_COUNT}. The frozen set must not have changed."
+        )
+    if len(set(actual_ids)) != EXPERIMENTAL_QUESTION_COUNT:
+        raise RunnerError("the experimental file contains duplicate or missing stable IDs")
+    if actual_ids != expected_ids:
+        raise RunnerError(
+            "the experimental question order does not match experimental_ids.json. "
+            "The frozen set must not have changed."
         )
     return questions
 

@@ -223,14 +223,13 @@ further tuning. Pilot accuracy does not enter the final dissertation results.
 ## What remains
 
 The model, provider, prompt, parser, voting, cache and retry semantics are
-frozen for the main experiment. Before the 300-question run:
+frozen for the main experiment. The sequential main runner is now built and
+tested as `scripts/run_experiment.py`. Before the 300-question run:
 
-1. finish the main-run command and its offline tests;
-2. choose sequential/overnight execution or implement tested bounded
-   parallelism without changing experimental semantics;
-3. set a finite OpenRouter key limit above the projected cost;
-4. back up the frozen data, results database and cache;
-5. run the free live preflight immediately before spending.
+1. set a finite OpenRouter key limit above the projected cost;
+2. back up the frozen data, results database and cache;
+3. schedule an uninterrupted overnight window of roughly 7–10 hours;
+4. use the protected live command; it runs the free preflight before spending.
 
 Any semantic settings change now requires `agents_v8`, a documented decision
 and another 20-question pilot. The existing `agents_v5`, `agents_v6` and
