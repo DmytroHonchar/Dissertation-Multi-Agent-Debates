@@ -1380,6 +1380,38 @@ responses, compute the group vote, and store an inspectable result.
   protected live command. After completion, back up again and score separately
   with `expected_questions=300`.
 
+### 2026-09-23/24 — Main experiment completed, backed up and evaluated
+
+- **Built:** No experimental code changed. The single accepted formal run is
+  `experiment_agents_v7_20260923T114934Z`, executed from commit `d4109d4` under
+  frozen `agents_v7`. It completed all 300 questions, 3,000 responses and 600
+  outcomes in 10.62 hours for $2.920649. The complete audit, tables, provenance,
+  backup hashes and interpretation are in `main_experiment_20260923.md`.
+- **Why:** The dissertation must distinguish the observed result from later
+  interpretation and preserve inconvenient failures rather than rerunning until
+  a provider behaves favourably.
+- **Tested:** Both rounds contained exactly 300 questions and five agents; the
+  run had a completion timestamp; the results and cache databases passed SQLite
+  integrity checks. `evaluation_v2` scored the separate experimental answer key
+  with `expected_questions=300`: group accuracy moved from 245/300 (81.7%) to
+  255/300 (85.0%), +3.33 points; 95% paired-bootstrap interval `[+1.00,+5.67]`,
+  McNemar `p=0.01294`; 12 questions became correct and two became incorrect.
+  The 230 complete cases moved from 83.5% to 84.8% (+1.30 points).
+- **Problems:** Mistral ended 77/600 responses as API errors. Every one was an
+  HTTP 429 from DeepInfra's upstream shared pool; 14 other Mistral requests
+  recovered on retry. Across all agents there were 80 API errors and 37
+  truncations. Failures remained recorded absences and never lowered the voting
+  threshold. Ten of 12 group improvements began without a Round 1 majority;
+  clean questions with an existing majority had zero net change.
+- **Backups:** Post-run files
+  `results_after_main_run_20260924T001055Z.sqlite` and
+  `cache_after_main_run_20260924T001055Z.sqlite` passed integrity checks. Their
+  SHA-256 values are recorded in the main-experiment report. They are local and
+  Git-ignored; an off-machine copy is still required.
+- **Next:** No repeat experiment and no more model spending. Build the offline
+  result-table/export command, inspect representative changes, then build the
+  read-only replay interface and write the dissertation and CA2 material.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity

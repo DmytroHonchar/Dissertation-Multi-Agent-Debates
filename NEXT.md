@@ -1,39 +1,26 @@
-# Where we stopped — 22 September 2026
+# Where we stopped — 24 September 2026
 
 ## Current resume point
 
-The provider repair is complete and the core experiment is frozen as
-`agents_v7` (D026). The accepted run is
-`pilot_agents_v7_20260922T181727Z`: all 20 questions and both rounds completed,
-Mistral returned 40/40 valid responses and no response ended as `API_ERROR`.
-Two first-attempt Mistral 429s were recovered by the existing retry. Remaining
-measured failures were three Qwen truncations, two Gemma truncations and one
-DeepSeek parse failure.
+The one formal main experiment is complete. Accepted run
+`experiment_agents_v7_20260923T114934Z` used commit `d4109d4` and frozen
+`agents_v7`. All 300 questions, 3,000 responses and 600 outcomes were stored;
+the run cost $2.920649 and took 10.62 hours. Post-run results and cache backups
+passed integrity checks.
 
-The pilot scored 11/20 in Round 1 and 16/20 in Round 2. These are development
-results, not main-experiment conclusions. Cost was $0.100227 and wall time was
-29.1 minutes; the paid-response projection is about $2.51 for 300 uncached
-questions. Read `docs/provider_repair_and_v7_pilot_20260922.md` for the full
-timeline, rejected alternatives, limitations and freeze record.
+Group accuracy moved from 245/300 (81.7%) in Round 1 to 255/300 (85.0%) in
+Round 2: +3.33 percentage points, with 12 improvements and two regressions.
+Ten of the 12 improvements began without a Round 1 majority. Mistral had 77
+terminal upstream HTTP 429 errors from DeepInfra; they remain part of the
+observed result and are not repaired by rerunning.
 
-The protected 300-question command is now built as
-`scripts/run_experiment.py` and tested offline. It is locked to `agents_v7`,
-runs sequentially, loads only the frozen experimental inputs, refuses a second
-formal run and can resume the same unfinished run after complete question
-boundaries. It never reads the answer key.
+Read `docs/main_experiment_20260923.md` for the complete provenance, results,
+failure audit, backup hashes and careful interpretation. Do not rerun the main
+experiment or spend more model credit.
 
-Before any main spend:
-
-1. set a finite OpenRouter key limit above the projection;
-2. back up `data/frozen/`, `storage/results.sqlite` and `storage/cache.sqlite`;
-3. plan an uninterrupted overnight window of roughly 7–10 hours;
-4. run `.venv/bin/python scripts/run_experiment.py --live
-   --yes-spend-real-money`; its free endpoint preflight runs before storage or
-   paid completions.
-
-Do not alter a frozen setting. A semantic change now requires `agents_v8`, a
-new decision and another complete pilot. Main evaluation must pass
-`expected_questions=300`.
+Next: build the offline result-table/export command, inspect representative
+changed questions, build `app/viewer.py`, and write the dissertation and CA2
+materials. Copy the Git-ignored post-run backups to separate storage.
 
 The older checkpoint below is historical, not the current instruction to run.
 
