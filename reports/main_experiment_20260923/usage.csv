@@ -1,0 +1,3 @@
+round,responses,prompt_tokens,completion_tokens,cost_usd,latency_seconds,cache_hits,api_attempts,retried_responses
+1,1500,614105,609163,1.22109654,22316.039561251004,0,1549,49
+2,1500,2576773,409889,1.6995529325,15697.763423414202,0,1551,51

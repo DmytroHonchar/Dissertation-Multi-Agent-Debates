@@ -1,0 +1,6 @@
+agent_id,stayed_correct,became_incorrect,became_correct,stayed_incorrect,excluded_questions
+agent_deepseek,245,6,12,36,1
+agent_gemma,240,6,11,34,9
+agent_llama,218,7,35,39,1
+agent_mistral,142,11,62,31,54
+agent_qwen,237,4,4,38,17

@@ -424,7 +424,7 @@ cost projection taken per paid response so cached requests cannot make the
 300-question estimate read low. `tests/test_no_answer_leakage.py` enforces the separation: no
 script that constructs an `OpenRouterClient` may touch the key.
 
-## P12 — Main run and evaluation — MAIN RUN DONE
+## P12 — Main run and evaluation — DONE
 
 New file `src/mad/evaluation.py`, built and validated on pilot data *before* the
 main run. It reads the stored database and the separate answer key. It never
@@ -553,7 +553,16 @@ took 10.62 hours. The separate evaluation measured 245/300 (81.7%) in Round 1
 and 255/300 (85.0%) in Round 2, a +3.33-point change. Full provenance,
 statistics, failures, backup hashes and interpretation are recorded in
 `docs/main_experiment_20260923.md`. The experiment is not rerun; remaining P12
-work is the offline command that exports the already verified evaluation tables.
+reporting is offline.
+
+Built 2026-09-25 as `scripts/evaluate_experiment.py`. It is fixed to the one
+accepted run, requires `expected_questions=300`, verifies `agents_v7`, hashes
+the results database before and after evaluation, and refuses if reading changed
+a byte. It imports no API client. It writes a human-readable Markdown report, a
+complete JSON record and CSV tables for group and agent accuracy, group and
+agent transitions, consensus, usage and per-question comparisons under
+`reports/main_experiment_20260923/`. Existing exports require an explicit
+`--overwrite`, and deterministic regeneration is tested.
 
 ## P13 — Replay interface
 

@@ -165,7 +165,8 @@ storage/    gitignored: results.sqlite, cache.sqlite, logs
 
 Implemented: `benchmark.py`, `api_client.py`, `prompts_v1.py`, `parser_v1.py`,
 `database.py`, `voting.py`, `runner.py`, `round1.py`, `debate.py`, `cache.py`,
-`evaluation.py`, plus the protected `scripts/run_experiment.py` main runner.
+`evaluation.py`, plus the protected `scripts/run_experiment.py` main runner and
+offline `scripts/evaluate_experiment.py` result exporter.
 Still to write: `app/viewer.py` (P13). **Create a module when you
 write its first real line — do not scaffold empty files.**
 
@@ -178,4 +179,5 @@ write its first real line — do not scaffold empty files.**
 .venv/bin/python scripts/run_debate.py --question <pilot-id>       # both rounds; dry and free by default
 .venv/bin/python scripts/run_pilot.py                              # all 20 pilot questions; dry and free by default
 .venv/bin/python scripts/run_experiment.py                         # all 300 questions; dry and free by default
+.venv/bin/python scripts/evaluate_experiment.py                    # accepted main results; offline and read-only
 ```

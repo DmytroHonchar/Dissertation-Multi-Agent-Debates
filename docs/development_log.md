@@ -1412,6 +1412,29 @@ responses, compute the group vote, and store an inspectable result.
   result-table/export command, inspect representative changes, then build the
   read-only replay interface and write the dissertation and CA2 material.
 
+### 2026-09-25 — Formal main-result exports generated offline
+
+- **Built:** `scripts/evaluate_experiment.py` is fixed to the accepted main run
+  and exports one Markdown report, one complete JSON record and seven CSV
+  tables under `reports/main_experiment_20260923/`. Tables cover group and
+  agent accuracy, group and agent transitions, consensus states, usage and all
+  300 question comparisons. No raw reasoning is copied into the exports.
+- **Why:** Dissertation figures and tables must come from one verified
+  `EvaluationReport`, not from numbers copied manually from terminal output.
+  The command preserves the separation between model calling and scoring.
+- **Tested:** The real command reproduced 245/300 (81.7%) to 255/300 (85.0%),
+  +3.33 points, bootstrap interval `[+1.00,+5.67]` and McNemar `p=0.012939`.
+  It hashes the database before and after evaluation and refuses if a byte
+  changes. Four focused tests prove complete exports, exact regeneration,
+  explicit overwrite, missing-database refusal, absence of raw response text
+  and no model-calling dependency. Full suite: 493 offline tests passed.
+- **Problems:** CSV percentages retain full precision so later figures can
+  choose their own display rounding. The JSON contains question IDs and scored
+  outcomes but no prompts or raw model responses. These are result artifacts,
+  not a new experimental run.
+- **Next:** Commit the reporter and generated tables, then inspect the 12
+  improvements and two regressions before building the read-only replay UI.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity
