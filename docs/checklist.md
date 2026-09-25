@@ -182,6 +182,10 @@ the proposal source, not in this repository.
   CSV tables generated under `reports/main_experiment_20260923/`.
 - [x] Consolidate the completed architecture, D001–D029 decisions, alternatives,
   purposes and final interpretation in `docs/project_record.md`.
+- [x] Inspect a balanced set of representative main-run debates: all four clean
+  decided questions whose correctness changed, two successful no-majority
+  resolutions, one wrong convergence and one persistent disagreement. Recorded
+  in `docs/qualitative_review_20260925.md`; no new model calls.
 - [ ] Streamlit replay interface — **needed working by CA2, 6 November** (P13). Add `streamlit` to `pyproject.toml` when starting it.
 
 ## Writing alongside development

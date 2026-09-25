@@ -28,9 +28,10 @@ under `reports/main_experiment_20260923/`: one readable Markdown report, one
 complete JSON record and seven CSV tables. The command rechecks all 300
 questions and proves the results database stayed byte-for-byte unchanged.
 
-Next: inspect representative changed questions, build `app/viewer.py`, and
-write the dissertation and CA2 materials. Copy the Git-ignored post-run backups
-to separate storage.
+The representative-question review is complete in
+`docs/qualitative_review_20260925.md`. Next: build `app/viewer.py`, and write the
+dissertation and CA2 materials. Copy the Git-ignored post-run backups to
+separate storage.
 
 The older checkpoint below is historical, not the current instruction to run.
 
