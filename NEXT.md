@@ -18,9 +18,14 @@ Read `docs/main_experiment_20260923.md` for the complete provenance, results,
 failure audit, backup hashes and careful interpretation. Do not rerun the main
 experiment or spend more model credit.
 
-Next: build the offline result-table/export command, inspect representative
-changed questions, build `app/viewer.py`, and write the dissertation and CA2
-materials. Copy the Git-ignored post-run backups to separate storage.
+The offline result-table/export command is complete. Its accepted outputs are
+under `reports/main_experiment_20260923/`: one readable Markdown report, one
+complete JSON record and seven CSV tables. The command rechecks all 300
+questions and proves the results database stayed byte-for-byte unchanged.
+
+Next: inspect representative changed questions, build `app/viewer.py`, and
+write the dissertation and CA2 materials. Copy the Git-ignored post-run backups
+to separate storage.
 
 The older checkpoint below is historical, not the current instruction to run.
 
@@ -86,8 +91,7 @@ for the current commands.
 
 ## Still to build
 
-1. A command that prints an `EvaluationReport` and writes the result tables.
-2. `app/viewer.py`, the read-only Streamlit replay interface (P13, needed for CA2).
+1. `app/viewer.py`, the read-only Streamlit replay interface (P13, needed for CA2).
 
 ## Documentation authority
 

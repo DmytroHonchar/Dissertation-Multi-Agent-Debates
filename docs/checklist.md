@@ -177,8 +177,9 @@ the proposal source, not in this repository.
   backups with integrity checks and recorded SHA-256 values.
 - [x] Final core evaluation: the three D009 measures, McNemar, transition table,
   complete-case supplement, failures, cost and latency.
-- [ ] Build the offline command that exports the verified evaluation tables for
-  the dissertation.
+- [x] Build the offline command that exports the verified evaluation tables for
+  the dissertation — `scripts/evaluate_experiment.py`; Markdown, JSON and seven
+  CSV tables generated under `reports/main_experiment_20260923/`.
 - [ ] Streamlit replay interface — **needed working by CA2, 6 November** (P13). Add `streamlit` to `pyproject.toml` when starting it.
 
 ## Writing alongside development
