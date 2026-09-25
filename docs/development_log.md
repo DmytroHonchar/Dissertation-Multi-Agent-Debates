@@ -1435,6 +1435,30 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Commit the reporter and generated tables, then inspect the 12
   improvements and two regressions before building the read-only replay UI.
 
+### 2026-09-25 — Completed design and decision record consolidated
+
+- **Built:** Added `project_record.md`, a component-by-component account of the
+  research design, data, models, prompts, API path, token limits, parser,
+  voting, cache, database, orchestration, pilots, main run, evaluation, final
+  result and remaining work. Added D027–D029 to `decisions.md` for the accepted
+  one-run policy, read-only final export and interpretation boundary. Updated
+  D026 with the completed main-run safeguards instead of leaving its pre-run
+  warning as the apparent current state.
+- **Why:** The chronological evidence was complete but difficult to use as a
+  single explanation of the architecture. The consolidated record answers what
+  was built, why it was chosen, what it is used for and which alternatives were
+  rejected, while keeping the dated decision log authoritative.
+- **Tested:** Cross-checked all run IDs, versions, counts, costs, statistics,
+  failure totals, provider conclusions and remaining work against the accepted
+  main-run report and generated evaluation artifacts. Documentation links and
+  Markdown whitespace were checked locally; no code or stored result changed.
+- **Problems:** Early decisions remain intentionally historical. They are not
+  rewritten to pretend the final provider and token choices were known at the
+  beginning; the header now directs readers to the later superseding decisions.
+- **Next:** Use the project record as the methods/implementation writing map,
+  inspect representative question transitions, then build the read-only replay
+  interface.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity

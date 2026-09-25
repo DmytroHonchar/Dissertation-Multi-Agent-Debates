@@ -5,6 +5,14 @@ The old three-model `0.x` pipeline is obsolete and may be consulted only as a
 technical reference. A change to any fixed decision below must be dated and
 recorded before it is used in an experiment.
 
+The entries are chronological. Earlier entries describe the state that was
+true when they were recorded; later entries supersede them where stated. In
+particular, D026 is the authority for the final model/provider configuration,
+D027 is the authority for the accepted main run, D028 is the authority for the
+final export, and D029 is the authority for interpreting the result. A
+component-by-component explanation of the whole project is in
+`docs/project_record.md`.
+
 ## D001 — Research comparison
 
 - **Status:** Fixed
@@ -768,7 +776,108 @@ and further token escalation were rejected for the reasons documented in the
 dated provider-repair report.
 
 Any semantic change to these settings requires a new version (`agents_v8` or
-later), a recorded decision and another full 20-question pilot. This is a core
-configuration freeze, not permission to start spending: the main-run command,
-execution schedule, finite key limit and backups must still be completed and
-checked first.
+later), a recorded decision and another full 20-question pilot.
+
+**Completion addendum — 2026-09-24.** The remaining safeguards named above
+were completed: the protected main runner, execution window, finite account
+credit check, one formal run and SQLite-safe post-run backups. D027 records the
+accepted execution. This addendum updates the status without rewriting the
+pre-run decision that was true on 2026-09-22.
+
+## D027 — Accept one formal main experiment without repair or repetition
+
+- **Status:** Fixed and completed
+- **Recorded:** 2026-09-24
+- **Decision:** Accept
+  `experiment_agents_v7_20260923T114934Z` as the only formal 300-question
+  experiment. Do not rerun it to replace provider failures, improve accuracy or
+  obtain a more favourable provider state.
+
+The protected command was locked to `agents_v7`, the frozen prompts, parser,
+retry policy, cache rules and three-of-five voting. It processed the 300 frozen
+experimental inputs sequentially and never opened the answer key. It permitted
+safe continuation only after a clean question boundary; partially written
+questions were refused rather than deleted or overwritten. Completion required
+exactly 300 questions, five agents, both rounds, 3,000 response rows and 600
+outcome rows before the run could receive an end timestamp.
+
+The accepted run used code commit `d4109d4`, cost `$2.920649` and took 10.62
+hours. It contains 80 terminal API errors and 37 truncations. These are observed
+properties of the frozen system, not rows to repair. In particular, all 77
+terminal Mistral errors were upstream HTTP 429 responses from DeepInfra. Keeping
+them protects the experiment from selective repetition: rerunning until the
+provider cooperated would measure a cleaned system different from the one that
+was actually executed.
+
+Post-run SQLite backups of the results and cache passed integrity checks and
+their hashes are recorded in `docs/main_experiment_20260923.md`. The raw
+databases remain outside Git because they contain full model responses. No
+further model calls are needed for the dissertation result.
+
+Rejected alternatives were: rerun the whole experiment, repair only failed
+rows, enable provider fallback after seeing the result, or silently omit failed
+responses. Each would change the frozen treatment or hide a measured failure
+mode.
+
+## D028 — Produce the final result tables through one read-only exporter
+
+- **Status:** Fixed and implemented
+- **Recorded:** 2026-09-25
+- **Decision:** Use `scripts/evaluate_experiment.py` as the reproducible export
+  command for the accepted main run.
+
+The exporter is fixed to the accepted run, checks `agents_v7`, calls
+`evaluate_run(..., expected_questions=300)`, and joins the results to the
+separate experimental answer key only after model generation has ended. It
+imports no API client and cannot spend money. It hashes `results.sqlite` before
+and after evaluation and refuses success if the read changed a byte.
+
+The accepted outputs are one Markdown report, one complete JSON record and
+seven CSV tables under `reports/main_experiment_20260923/`. They cover group
+and agent accuracy, transitions, consensus, usage and per-question comparisons.
+Existing files require explicit `--overwrite`, preventing an accidental silent
+replacement. Deterministic regeneration is tested.
+
+This exists so the dissertation, CA2 slides and future viewer all use the same
+verified calculations instead of manually copying numbers or implementing
+slightly different formulas. It does not change the database, recompute model
+answers or create a second result.
+
+## D029 — Interpretation boundary for the main result
+
+- **Status:** Fixed for reporting
+- **Recorded:** 2026-09-25
+- **Decision:** Report the primary result exactly as an observed change in the
+  frozen two-round system, and state its limits beside it.
+
+The primary fixed-denominator result is Round 1 group accuracy `245/300`
+(`81.7%`) and Round 2 group accuracy `255/300` (`85.0%`): `+3.33` percentage
+points, with 12 questions becoming correct and two becoming incorrect. The
+paired 95% bootstrap interval is `[+1.00, +5.67]`; exact McNemar gives
+`p = 0.01294`.
+
+The defensible interpretation is narrower than “debate generally makes models
+better.” Ten of the 12 improvements began without a Round 1 majority. On 218
+questions where all responses were valid and Round 1 was already decided, two
+became correct and two became incorrect. Debate therefore helped this fixed
+system mainly by resolving initial disagreement. It increased unanimity much
+more strongly than correctness, so agreement must not be described as evidence
+of truth.
+
+The all-question result remains primary because no-consensus and failures are
+part of the deployed five-agent system. The 230-question complete-case result
+is supplementary and descriptive; selecting only fully successful questions
+can select easier cases. Neither comparison is a pure causal estimate of peer
+communication because Round 2 also gives every agent another inference and the
+project has no independent second-pass control condition.
+
+Individual accuracies use valid-answer denominators, while group accuracy uses
+all 300 questions. Therefore the statement “the group was worse than Qwen” is
+not supported by comparing `81.7%` with `84.9%` alone: Qwen produced 241
+correct answers over 284 valid responses, whereas the Round 1 group produced
+245 correct answers over all 300. Report both accuracy and coverage.
+
+Mistral's 77 upstream terminal 429 errors and lower individual accuracy are
+prominent limitations. They do not invalidate the stored run, and they did not
+cause most initial undecided cases: only five of the 22 questions without a
+Round 1 majority had a failed Mistral Round 1 response.
