@@ -180,6 +180,8 @@ the proposal source, not in this repository.
 - [x] Build the offline command that exports the verified evaluation tables for
   the dissertation — `scripts/evaluate_experiment.py`; Markdown, JSON and seven
   CSV tables generated under `reports/main_experiment_20260923/`.
+- [x] Consolidate the completed architecture, D001–D029 decisions, alternatives,
+  purposes and final interpretation in `docs/project_record.md`.
 - [ ] Streamlit replay interface — **needed working by CA2, 6 November** (P13). Add `streamlit` to `pyproject.toml` when starting it.
 
 ## Writing alongside development

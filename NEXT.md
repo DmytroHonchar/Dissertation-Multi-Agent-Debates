@@ -18,6 +18,11 @@ Read `docs/main_experiment_20260923.md` for the complete provenance, results,
 failure audit, backup hashes and careful interpretation. Do not rerun the main
 experiment or spend more model credit.
 
+Read `docs/project_record.md` for the consolidated explanation of what every
+part of the system does, why each decision was made, what alternatives were
+rejected and how the final result may be interpreted. Detailed chronological
+authority remains in `docs/decisions.md` (D001–D029).
+
 The offline result-table/export command is complete. Its accepted outputs are
 under `reports/main_experiment_20260923/`: one readable Markdown report, one
 complete JSON record and seven CSV tables. The command rechecks all 300
@@ -96,6 +101,7 @@ for the current commands.
 ## Documentation authority
 
 - `docs/decisions.md` — fixed research decisions.
+- `docs/project_record.md` — readable whole-project design and rationale.
 - `docs/pipeline.md` — how each stage works.
 - `docs/checklist.md` — completed and remaining work.
 - `docs/development_log.md` — dated evidence for the dissertation.
