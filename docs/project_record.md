@@ -384,12 +384,15 @@ Authority: D029 and `docs/main_experiment_20260923.md`.
 The model experiment and numerical evaluation are complete. Remaining work is
 offline:
 
-1. inspect representative improved, worsened and unresolved questions;
-2. build `app/viewer.py`, a read-only Streamlit replay interface for CA2;
-3. create dissertation figures and tables from the accepted exports;
-4. write methods, results, discussion, limitations and conclusion;
-5. create and practise the CA2 demonstration; and
-6. copy the ignored database backups to separate off-machine storage.
+1. build `app/viewer.py`, a read-only Streamlit replay interface for CA2;
+2. create dissertation figures and tables from the accepted exports;
+3. write methods, results, discussion, limitations and conclusion;
+4. create and practise the CA2 demonstration; and
+5. copy the ignored database backups to separate off-machine storage.
+
+The representative-question inspection is complete in
+`docs/qualitative_review_20260925.md`. It is descriptive evidence for the
+discussion chapter, not a new quantitative outcome.
 
 No third debate round, subject-level extension, new model configuration or
 repeat main run is authorised as part of the completed core experiment.

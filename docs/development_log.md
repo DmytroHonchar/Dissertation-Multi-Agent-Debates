@@ -1459,6 +1459,30 @@ responses, compute the group vote, and store an inspectable result.
   inspect representative question transitions, then build the read-only replay
   interface.
 
+### 2026-09-25 — Representative debate reasoning inspected offline
+
+- **Built:** Added `qualitative_review_20260925.md`. The review covers all four
+  complete-case questions where an existing Round 1 majority changed
+  correctness, two complete-case improvements from no consensus, one wrong
+  convergence and one persistent disagreement. It records the question-level
+  vote changes and paraphrases the relevant stored reasoning.
+- **Why:** Aggregate accuracy shows that the result changed but not how. The
+  balanced cases distinguish correction from factual imitation, confident
+  fabrication, ambiguous benchmark interpretation and unresolved disagreement.
+  Including regressions and a wrong unanimous result avoids selecting only
+  favourable examples.
+- **Tested:** Question text and keys came from the separate frozen experimental
+  files; votes, statuses and raw responses came from the accepted run
+  `experiment_agents_v7_20260923T114934Z`. The four clean already-decided cases
+  match the main report's two improvements and two regressions. No API client
+  ran and no database row changed.
+- **Problems:** This is a post-result descriptive analysis, not a pre-registered
+  causal analysis. Stored reasoning can show what an agent said influenced it,
+  but cannot prove an internal causal mechanism. The tax and lease examples
+  also expose plausible wording/key ambiguity.
+- **Next:** Build the read-only Streamlit viewer, then use the verified exports
+  and qualitative review for dissertation and CA2 materials.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity
