@@ -158,8 +158,8 @@ the proposal source, not in this repository.
 - [x] Build the protected 300-question runner — `scripts/run_experiment.py`.
   It is locked to `agents_v7`, refuses duplicate formal runs, supports safe
   resume after complete question boundaries and never reads the answer key.
-- [ ] Raise the OpenRouter key limit above the main-run projection of about
-  $2.51 while keeping a finite safety cap.
+- [x] Confirm sufficient OpenRouter credit for the protected run; final main-run
+  cost was $2.920649.
 - [ ] (superseded) score the pilot with
   `evaluate_run(..., expected_questions=20)` — the main run uses 300
 - [x] Inspect the stored provider failures, truncations, parsing, cost and
@@ -170,9 +170,15 @@ the proposal source, not in this repository.
   settings version.
 - [x] Freeze prompts, `agents_v7`, parser, retry rules, cache and voting
   semantics in D026.
-- [ ] Run the 300-question main experiment with nothing changed (P12)
-- [ ] Verify the run completed and back up the results database
-- [ ] Final evaluation: the three D009 measures, McNemar, transition table, cost and latency
+- [x] Run the 300-question main experiment with nothing changed (P12) — accepted
+  run `experiment_agents_v7_20260923T114934Z`, commit `d4109d4`; see
+  `docs/main_experiment_20260923.md`.
+- [x] Verify the run completed and create SQLite-safe post-run results/cache
+  backups with integrity checks and recorded SHA-256 values.
+- [x] Final core evaluation: the three D009 measures, McNemar, transition table,
+  complete-case supplement, failures, cost and latency.
+- [ ] Build the offline command that exports the verified evaluation tables for
+  the dissertation.
 - [ ] Streamlit replay interface — **needed working by CA2, 6 November** (P13). Add `streamlit` to `pyproject.toml` when starting it.
 
 ## Writing alongside development
