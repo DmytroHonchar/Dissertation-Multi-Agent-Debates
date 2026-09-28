@@ -616,6 +616,7 @@
   "questions": [
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:10059",
       "round1_answer": "A",
       "round1_correct": true,
@@ -628,6 +629,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:10139",
       "round1_answer": "I",
       "round1_correct": true,
@@ -640,6 +642,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:10242",
       "round1_answer": "G",
       "round1_correct": true,
@@ -652,6 +655,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:10284",
       "round1_answer": "C",
       "round1_correct": true,
@@ -664,6 +668,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:10285",
       "round1_answer": "E",
       "round1_correct": true,
@@ -676,6 +681,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:1032",
       "round1_answer": "B",
       "round1_correct": false,
@@ -688,6 +694,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:10356",
       "round1_answer": "B",
       "round1_correct": true,
@@ -700,6 +707,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:1038",
       "round1_answer": "B",
       "round1_correct": true,
@@ -712,6 +720,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:10433",
       "round1_answer": "D",
       "round1_correct": true,
@@ -724,6 +733,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:10447",
       "round1_answer": "H",
       "round1_correct": true,
@@ -736,6 +746,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:10457",
       "round1_answer": "A",
       "round1_correct": true,
@@ -748,6 +759,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:10468",
       "round1_answer": "D",
       "round1_correct": true,
@@ -760,6 +772,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:1049",
       "round1_answer": "B",
       "round1_correct": true,
@@ -772,6 +785,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:10522",
       "round1_answer": "F",
       "round1_correct": true,
@@ -784,6 +798,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:10539",
       "round1_answer": "E",
       "round1_correct": true,
@@ -796,6 +811,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:10568",
       "round1_answer": null,
       "round1_correct": false,
@@ -808,6 +824,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:10570",
       "round1_answer": "G",
       "round1_correct": true,
@@ -820,6 +837,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:10581",
       "round1_answer": "H",
       "round1_correct": true,
@@ -832,6 +850,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:10587",
       "round1_answer": "D",
       "round1_correct": true,
@@ -844,6 +863,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:10600",
       "round1_answer": "A",
       "round1_correct": true,
@@ -856,6 +876,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:10614",
       "round1_answer": "E",
       "round1_correct": false,
@@ -868,6 +889,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:10618",
       "round1_answer": "D",
       "round1_correct": true,
@@ -880,6 +902,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:10662",
       "round1_answer": "E",
       "round1_correct": true,
@@ -892,6 +915,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:10703",
       "round1_answer": "E",
       "round1_correct": true,
@@ -904,6 +928,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:10710",
       "round1_answer": "J",
       "round1_correct": true,
@@ -916,6 +941,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:10733",
       "round1_answer": "F",
       "round1_correct": true,
@@ -928,6 +954,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:10749",
       "round1_answer": "B",
       "round1_correct": true,
@@ -940,6 +967,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:10757",
       "round1_answer": "I",
       "round1_correct": true,
@@ -952,6 +980,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:10764",
       "round1_answer": "E",
       "round1_correct": true,
@@ -964,6 +993,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:10767",
       "round1_answer": "H",
       "round1_correct": true,
@@ -976,6 +1006,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:10810",
       "round1_answer": "A",
       "round1_correct": true,
@@ -988,6 +1019,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:10853",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1000,6 +1032,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:10887",
       "round1_answer": "C",
       "round1_correct": true,
@@ -1012,6 +1045,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:10888",
       "round1_answer": "G",
       "round1_correct": true,
@@ -1024,6 +1058,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:10916",
       "round1_answer": "B",
       "round1_correct": true,
@@ -1036,6 +1071,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:10942",
       "round1_answer": "F",
       "round1_correct": true,
@@ -1048,6 +1084,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:10947",
       "round1_answer": "C",
       "round1_correct": true,
@@ -1060,6 +1097,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:11017",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1072,6 +1110,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:11018",
       "round1_answer": "H",
       "round1_correct": true,
@@ -1084,6 +1123,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:11023",
       "round1_answer": "B",
       "round1_correct": false,
@@ -1096,6 +1136,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:11048",
       "round1_answer": "F",
       "round1_correct": true,
@@ -1108,6 +1149,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:11072",
       "round1_answer": "J",
       "round1_correct": true,
@@ -1120,6 +1162,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:11080",
       "round1_answer": "G",
       "round1_correct": true,
@@ -1132,6 +1175,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:11081",
       "round1_answer": null,
       "round1_correct": false,
@@ -1144,6 +1188,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:11082",
       "round1_answer": "I",
       "round1_correct": false,
@@ -1156,6 +1201,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:11123",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1168,6 +1214,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:11143",
       "round1_answer": "D",
       "round1_correct": true,
@@ -1180,6 +1227,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:11183",
       "round1_answer": "I",
       "round1_correct": true,
@@ -1192,6 +1240,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:11205",
       "round1_answer": "H",
       "round1_correct": true,
@@ -1204,6 +1253,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:11244",
       "round1_answer": "G",
       "round1_correct": true,
@@ -1216,6 +1266,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:11259",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1228,6 +1279,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:11293",
       "round1_answer": "F",
       "round1_correct": true,
@@ -1240,6 +1292,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:1133",
       "round1_answer": "G",
       "round1_correct": false,
@@ -1252,6 +1305,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:11370",
       "round1_answer": null,
       "round1_correct": false,
@@ -1264,6 +1318,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:11398",
       "round1_answer": "H",
       "round1_correct": true,
@@ -1276,6 +1331,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:11459",
       "round1_answer": "J",
       "round1_correct": true,
@@ -1288,6 +1344,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:11508",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1300,6 +1357,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:11526",
       "round1_answer": "J",
       "round1_correct": true,
@@ -1312,6 +1370,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:11547",
       "round1_answer": "D",
       "round1_correct": true,
@@ -1324,6 +1383,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:11581",
       "round1_answer": "H",
       "round1_correct": true,
@@ -1336,6 +1396,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:11600",
       "round1_answer": "F",
       "round1_correct": true,
@@ -1348,6 +1409,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:11662",
       "round1_answer": "B",
       "round1_correct": true,
@@ -1360,6 +1422,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:11726",
       "round1_answer": "F",
       "round1_correct": true,
@@ -1372,6 +1435,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:11758",
       "round1_answer": null,
       "round1_correct": false,
@@ -1384,6 +1448,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:11813",
       "round1_answer": "B",
       "round1_correct": true,
@@ -1396,6 +1461,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:11824",
       "round1_answer": null,
       "round1_correct": false,
@@ -1408,6 +1474,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:11905",
       "round1_answer": null,
       "round1_correct": false,
@@ -1420,6 +1487,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:11967",
       "round1_answer": "B",
       "round1_correct": true,
@@ -1432,6 +1500,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:11986",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1444,6 +1513,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:11994",
       "round1_answer": null,
       "round1_correct": false,
@@ -1456,6 +1526,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:12001",
       "round1_answer": null,
       "round1_correct": false,
@@ -1468,6 +1539,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:12014",
       "round1_answer": "C",
       "round1_correct": false,
@@ -1480,6 +1552,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:1203",
       "round1_answer": null,
       "round1_correct": false,
@@ -1492,6 +1565,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:12030",
       "round1_answer": "B",
       "round1_correct": true,
@@ -1504,6 +1578,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:12224",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1516,6 +1591,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:1292",
       "round1_answer": "H",
       "round1_correct": true,
@@ -1528,6 +1604,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:1432",
       "round1_answer": "C",
       "round1_correct": false,
@@ -1540,6 +1617,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:144",
       "round1_answer": "C",
       "round1_correct": true,
@@ -1552,6 +1630,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:1478",
       "round1_answer": "D",
       "round1_correct": false,
@@ -1564,6 +1643,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:1533",
       "round1_answer": "J",
       "round1_correct": true,
@@ -1576,6 +1656,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:1605",
       "round1_answer": "D",
       "round1_correct": true,
@@ -1588,6 +1669,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:1619",
       "round1_answer": null,
       "round1_correct": false,
@@ -1600,6 +1682,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:1635",
       "round1_answer": null,
       "round1_correct": false,
@@ -1612,6 +1695,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:164",
       "round1_answer": "B",
       "round1_correct": true,
@@ -1624,6 +1708,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:169",
       "round1_answer": "G",
       "round1_correct": true,
@@ -1636,6 +1721,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:1712",
       "round1_answer": "B",
       "round1_correct": false,
@@ -1648,6 +1734,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:1750",
       "round1_answer": "G",
       "round1_correct": true,
@@ -1660,6 +1747,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:1849",
       "round1_answer": "E",
       "round1_correct": true,
@@ -1672,6 +1760,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:1889",
       "round1_answer": "F",
       "round1_correct": true,
@@ -1684,6 +1773,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:1971",
       "round1_answer": null,
       "round1_correct": false,
@@ -1696,6 +1786,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:2018",
       "round1_answer": "J",
       "round1_correct": true,
@@ -1708,6 +1799,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:2030",
       "round1_answer": "J",
       "round1_correct": false,
@@ -1720,6 +1812,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:204",
       "round1_answer": "G",
       "round1_correct": true,
@@ -1732,6 +1825,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:2041",
       "round1_answer": "H",
       "round1_correct": true,
@@ -1744,6 +1838,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:2055",
       "round1_answer": "G",
       "round1_correct": true,
@@ -1756,6 +1851,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:2095",
       "round1_answer": "F",
       "round1_correct": true,
@@ -1768,6 +1864,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:2098",
       "round1_answer": "E",
       "round1_correct": true,
@@ -1780,6 +1877,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:2129",
       "round1_answer": "B",
       "round1_correct": false,
@@ -1792,6 +1890,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:2144",
       "round1_answer": "G",
       "round1_correct": false,
@@ -1804,6 +1903,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:215",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1816,6 +1916,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:2188",
       "round1_answer": "J",
       "round1_correct": true,
@@ -1828,6 +1929,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:2193",
       "round1_answer": "B",
       "round1_correct": true,
@@ -1840,6 +1942,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:2199",
       "round1_answer": "H",
       "round1_correct": false,
@@ -1852,6 +1955,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:233",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1864,6 +1968,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:2373",
       "round1_answer": "J",
       "round1_correct": true,
@@ -1876,6 +1981,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:2428",
       "round1_answer": "C",
       "round1_correct": true,
@@ -1888,6 +1994,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:2443",
       "round1_answer": "H",
       "round1_correct": true,
@@ -1900,6 +2007,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:2485",
       "round1_answer": "A",
       "round1_correct": true,
@@ -1912,6 +2020,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:250",
       "round1_answer": "B",
       "round1_correct": true,
@@ -1924,6 +2033,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:2519",
       "round1_answer": "J",
       "round1_correct": true,
@@ -1936,6 +2046,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:2560",
       "round1_answer": "G",
       "round1_correct": false,
@@ -1948,6 +2059,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:2620",
       "round1_answer": "H",
       "round1_correct": true,
@@ -1960,6 +2072,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:2678",
       "round1_answer": null,
       "round1_correct": false,
@@ -1972,6 +2085,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:2697",
       "round1_answer": null,
       "round1_correct": false,
@@ -1984,6 +2098,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:277",
       "round1_answer": "D",
       "round1_correct": true,
@@ -1996,6 +2111,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:2787",
       "round1_answer": "G",
       "round1_correct": true,
@@ -2008,6 +2124,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:2817",
       "round1_answer": "E",
       "round1_correct": true,
@@ -2020,6 +2137,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:2819",
       "round1_answer": "C",
       "round1_correct": true,
@@ -2032,6 +2150,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:2820",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2044,6 +2163,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:2833",
       "round1_answer": "H",
       "round1_correct": true,
@@ -2056,6 +2176,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:284",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2068,6 +2189,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:2864",
       "round1_answer": "C",
       "round1_correct": true,
@@ -2080,6 +2202,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:2880",
       "round1_answer": "G",
       "round1_correct": true,
@@ -2092,6 +2215,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:2921",
       "round1_answer": "D",
       "round1_correct": true,
@@ -2104,6 +2228,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:3033",
       "round1_answer": "H",
       "round1_correct": true,
@@ -2116,6 +2241,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:3053",
       "round1_answer": "D",
       "round1_correct": true,
@@ -2128,6 +2254,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:3102",
       "round1_answer": "C",
       "round1_correct": true,
@@ -2140,6 +2267,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:3115",
       "round1_answer": "E",
       "round1_correct": true,
@@ -2152,6 +2280,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:3119",
       "round1_answer": "J",
       "round1_correct": false,
@@ -2164,6 +2293,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:3129",
       "round1_answer": "F",
       "round1_correct": true,
@@ -2176,6 +2306,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:3161",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2188,6 +2319,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:3173",
       "round1_answer": null,
       "round1_correct": false,
@@ -2200,6 +2332,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:3229",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2212,6 +2345,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:3236",
       "round1_answer": "F",
       "round1_correct": true,
@@ -2224,6 +2358,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:3334",
       "round1_answer": "F",
       "round1_correct": true,
@@ -2236,6 +2371,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:3344",
       "round1_answer": "I",
       "round1_correct": true,
@@ -2248,6 +2384,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:3385",
       "round1_answer": "E",
       "round1_correct": true,
@@ -2260,6 +2397,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:3392",
       "round1_answer": "E",
       "round1_correct": true,
@@ -2272,6 +2410,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:3435",
       "round1_answer": "C",
       "round1_correct": true,
@@ -2284,6 +2423,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:3532",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2296,6 +2436,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:3576",
       "round1_answer": "C",
       "round1_correct": false,
@@ -2308,6 +2449,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:3628",
       "round1_answer": "D",
       "round1_correct": true,
@@ -2320,6 +2462,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:3635",
       "round1_answer": "C",
       "round1_correct": true,
@@ -2332,6 +2475,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:3777",
       "round1_answer": "G",
       "round1_correct": true,
@@ -2344,6 +2488,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:3805",
       "round1_answer": "D",
       "round1_correct": true,
@@ -2356,6 +2501,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:3814",
       "round1_answer": "C",
       "round1_correct": false,
@@ -2368,6 +2514,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:3884",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2380,6 +2527,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:3894",
       "round1_answer": "A",
       "round1_correct": false,
@@ -2392,6 +2540,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:3925",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2404,6 +2553,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:396",
       "round1_answer": "J",
       "round1_correct": true,
@@ -2416,6 +2566,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:400",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2428,6 +2579,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:4003",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2440,6 +2592,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:4005",
       "round1_answer": "I",
       "round1_correct": true,
@@ -2452,6 +2605,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:4096",
       "round1_answer": "I",
       "round1_correct": true,
@@ -2464,6 +2618,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:4104",
       "round1_answer": "C",
       "round1_correct": true,
@@ -2476,6 +2631,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:4110",
       "round1_answer": "E",
       "round1_correct": true,
@@ -2488,6 +2644,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:4141",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2500,6 +2657,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:4152",
       "round1_answer": "C",
       "round1_correct": false,
@@ -2512,6 +2670,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:420",
       "round1_answer": "E",
       "round1_correct": true,
@@ -2524,6 +2683,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:429",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2536,6 +2696,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:4358",
       "round1_answer": "F",
       "round1_correct": true,
@@ -2548,6 +2709,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:4386",
       "round1_answer": "C",
       "round1_correct": true,
@@ -2560,6 +2722,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:4398",
       "round1_answer": null,
       "round1_correct": false,
@@ -2572,6 +2735,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:4480",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2584,6 +2748,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:4605",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2596,6 +2761,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:4670",
       "round1_answer": "D",
       "round1_correct": true,
@@ -2608,6 +2774,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:4697",
       "round1_answer": "D",
       "round1_correct": true,
@@ -2620,6 +2787,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:4744",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2632,6 +2800,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:4802",
       "round1_answer": "G",
       "round1_correct": true,
@@ -2644,6 +2813,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:4814",
       "round1_answer": "C",
       "round1_correct": true,
@@ -2656,6 +2826,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:4828",
       "round1_answer": "F",
       "round1_correct": true,
@@ -2668,6 +2839,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:4830",
       "round1_answer": "F",
       "round1_correct": false,
@@ -2680,6 +2852,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:4867",
       "round1_answer": "E",
       "round1_correct": true,
@@ -2692,6 +2865,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:4873",
       "round1_answer": "I",
       "round1_correct": true,
@@ -2704,6 +2878,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:4876",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2716,6 +2891,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:4885",
       "round1_answer": "J",
       "round1_correct": true,
@@ -2728,6 +2904,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:4888",
       "round1_answer": "H",
       "round1_correct": true,
@@ -2740,6 +2917,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:4889",
       "round1_answer": "E",
       "round1_correct": false,
@@ -2752,6 +2930,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:4893",
       "round1_answer": "C",
       "round1_correct": false,
@@ -2764,6 +2943,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:4932",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2776,6 +2956,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:4949",
       "round1_answer": null,
       "round1_correct": false,
@@ -2788,6 +2969,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:4963",
       "round1_answer": "G",
       "round1_correct": true,
@@ -2800,6 +2982,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:4982",
       "round1_answer": "D",
       "round1_correct": true,
@@ -2812,6 +2995,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:4983",
       "round1_answer": "D",
       "round1_correct": true,
@@ -2824,6 +3008,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:4994",
       "round1_answer": "H",
       "round1_correct": false,
@@ -2836,6 +3021,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:5033",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2848,6 +3034,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:5069",
       "round1_answer": "B",
       "round1_correct": true,
@@ -2860,6 +3047,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:5104",
       "round1_answer": "I",
       "round1_correct": true,
@@ -2872,6 +3060,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:5130",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2884,6 +3073,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:5141",
       "round1_answer": "H",
       "round1_correct": true,
@@ -2896,6 +3086,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:5258",
       "round1_answer": "I",
       "round1_correct": true,
@@ -2908,6 +3099,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:5328",
       "round1_answer": "F",
       "round1_correct": true,
@@ -2920,6 +3112,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:5355",
       "round1_answer": "C",
       "round1_correct": true,
@@ -2932,6 +3125,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:5471",
       "round1_answer": "H",
       "round1_correct": true,
@@ -2944,6 +3138,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:5499",
       "round1_answer": "A",
       "round1_correct": true,
@@ -2956,6 +3151,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:5503",
       "round1_answer": "C",
       "round1_correct": false,
@@ -2968,6 +3164,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:5605",
       "round1_answer": null,
       "round1_correct": false,
@@ -2980,6 +3177,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:5625",
       "round1_answer": "I",
       "round1_correct": true,
@@ -2992,6 +3190,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:5632",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3004,6 +3203,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:568",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3016,6 +3216,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:5693",
       "round1_answer": null,
       "round1_correct": false,
@@ -3028,6 +3229,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:5737",
       "round1_answer": "E",
       "round1_correct": true,
@@ -3040,6 +3242,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:5738",
       "round1_answer": "F",
       "round1_correct": true,
@@ -3052,6 +3255,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:5784",
       "round1_answer": "H",
       "round1_correct": true,
@@ -3064,6 +3268,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:5789",
       "round1_answer": "H",
       "round1_correct": true,
@@ -3076,6 +3281,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:5818",
       "round1_answer": "I",
       "round1_correct": true,
@@ -3088,6 +3294,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:5855",
       "round1_answer": "D",
       "round1_correct": true,
@@ -3100,6 +3307,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:5971",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3112,6 +3320,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:6079",
       "round1_answer": "I",
       "round1_correct": true,
@@ -3124,6 +3333,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:6081",
       "round1_answer": "B",
       "round1_correct": true,
@@ -3136,6 +3346,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:615",
       "round1_answer": null,
       "round1_correct": false,
@@ -3148,6 +3359,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:6150",
       "round1_answer": null,
       "round1_correct": false,
@@ -3160,6 +3372,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:6200",
       "round1_answer": "I",
       "round1_correct": true,
@@ -3172,6 +3385,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:6210",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3184,6 +3398,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:6259",
       "round1_answer": "C",
       "round1_correct": false,
@@ -3196,6 +3411,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:6276",
       "round1_answer": "B",
       "round1_correct": true,
@@ -3208,6 +3424,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:6331",
       "round1_answer": "I",
       "round1_correct": true,
@@ -3220,6 +3437,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:6364",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3232,6 +3450,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:6371",
       "round1_answer": "J",
       "round1_correct": true,
@@ -3244,6 +3463,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:6376",
       "round1_answer": "E",
       "round1_correct": true,
@@ -3256,6 +3476,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:6391",
       "round1_answer": "B",
       "round1_correct": false,
@@ -3268,6 +3489,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:6466",
       "round1_answer": "D",
       "round1_correct": true,
@@ -3280,6 +3502,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:6486",
       "round1_answer": "D",
       "round1_correct": false,
@@ -3292,6 +3515,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:6511",
       "round1_answer": "I",
       "round1_correct": true,
@@ -3304,6 +3528,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:6514",
       "round1_answer": "G",
       "round1_correct": true,
@@ -3316,6 +3541,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:655",
       "round1_answer": "F",
       "round1_correct": true,
@@ -3328,6 +3554,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:6587",
       "round1_answer": "F",
       "round1_correct": true,
@@ -3340,6 +3567,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:6697",
       "round1_answer": "F",
       "round1_correct": true,
@@ -3352,6 +3580,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:6749",
       "round1_answer": "D",
       "round1_correct": true,
@@ -3364,6 +3593,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:6788",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3376,6 +3606,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:6811",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3388,6 +3619,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:6842",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3400,6 +3632,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:6876",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3412,6 +3645,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:6952",
       "round1_answer": "F",
       "round1_correct": true,
@@ -3424,6 +3658,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:70",
       "round1_answer": "I",
       "round1_correct": true,
@@ -3436,6 +3671,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:7008",
       "round1_answer": "E",
       "round1_correct": true,
@@ -3448,6 +3684,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:7057",
       "round1_answer": "G",
       "round1_correct": true,
@@ -3460,6 +3697,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:706",
       "round1_answer": "E",
       "round1_correct": true,
@@ -3472,6 +3710,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:7075",
       "round1_answer": "F",
       "round1_correct": true,
@@ -3484,6 +3723,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:7076",
       "round1_answer": "J",
       "round1_correct": true,
@@ -3496,6 +3736,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:7124",
       "round1_answer": "B",
       "round1_correct": true,
@@ -3508,6 +3749,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:7140",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3520,6 +3762,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:7165",
       "round1_answer": "F",
       "round1_correct": true,
@@ -3532,6 +3775,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:7237",
       "round1_answer": "C",
       "round1_correct": false,
@@ -3544,6 +3788,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:7287",
       "round1_answer": "I",
       "round1_correct": true,
@@ -3556,6 +3801,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:7418",
       "round1_answer": "D",
       "round1_correct": true,
@@ -3568,6 +3814,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:7441",
       "round1_answer": "E",
       "round1_correct": true,
@@ -3580,6 +3827,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:7462",
       "round1_answer": "E",
       "round1_correct": true,
@@ -3592,6 +3840,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:7473",
       "round1_answer": "H",
       "round1_correct": true,
@@ -3604,6 +3853,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:7501",
       "round1_answer": "G",
       "round1_correct": true,
@@ -3616,6 +3866,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:7514",
       "round1_answer": "A",
       "round1_correct": false,
@@ -3628,6 +3879,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:7545",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3640,6 +3892,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:7570",
       "round1_answer": "C",
       "round1_correct": false,
@@ -3652,6 +3905,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:7590",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3664,6 +3918,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:7670",
       "round1_answer": "I",
       "round1_correct": false,
@@ -3676,6 +3931,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:7696",
       "round1_answer": "G",
       "round1_correct": true,
@@ -3688,6 +3944,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:779",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3700,6 +3957,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:785",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3712,6 +3970,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:7878",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3724,6 +3983,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:8007",
       "round1_answer": "G",
       "round1_correct": true,
@@ -3736,6 +3996,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:8054",
       "round1_answer": "H",
       "round1_correct": true,
@@ -3748,6 +4009,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "F",
       "question_id": "mmlu_pro_v1:test:8074",
       "round1_answer": "F",
       "round1_correct": true,
@@ -3760,6 +4022,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:8197",
       "round1_answer": "E",
       "round1_correct": true,
@@ -3772,6 +4035,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:825",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3784,6 +4048,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:8273",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3796,6 +4061,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:8310",
       "round1_answer": null,
       "round1_correct": false,
@@ -3808,6 +4074,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:838",
       "round1_answer": "E",
       "round1_correct": true,
@@ -3820,6 +4087,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:8402",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3832,6 +4100,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:8499",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3844,6 +4113,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:8550",
       "round1_answer": "J",
       "round1_correct": true,
@@ -3856,6 +4126,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:8598",
       "round1_answer": "J",
       "round1_correct": true,
@@ -3868,6 +4139,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:8696",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3880,6 +4152,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:8744",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3892,6 +4165,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:8750",
       "round1_answer": "A",
       "round1_correct": true,
@@ -3904,6 +4178,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:877",
       "round1_answer": "I",
       "round1_correct": true,
@@ -3916,6 +4191,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:8794",
       "round1_answer": "E",
       "round1_correct": true,
@@ -3928,6 +4204,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:881",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3940,6 +4217,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:8810",
       "round1_answer": "H",
       "round1_correct": true,
@@ -3952,6 +4230,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:884",
       "round1_answer": "B",
       "round1_correct": true,
@@ -3964,6 +4243,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:8853",
       "round1_answer": "C",
       "round1_correct": true,
@@ -3976,6 +4256,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:8937",
       "round1_answer": "I",
       "round1_correct": false,
@@ -3988,6 +4269,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:8973",
       "round1_answer": "G",
       "round1_correct": true,
@@ -4000,6 +4282,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:8996",
       "round1_answer": "A",
       "round1_correct": true,
@@ -4012,6 +4295,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "H",
       "question_id": "mmlu_pro_v1:test:9143",
       "round1_answer": "H",
       "round1_correct": true,
@@ -4024,6 +4308,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:9186",
       "round1_answer": "B",
       "round1_correct": true,
@@ -4036,6 +4321,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "J",
       "question_id": "mmlu_pro_v1:test:9249",
       "round1_answer": "J",
       "round1_correct": true,
@@ -4048,6 +4334,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:9288",
       "round1_answer": "E",
       "round1_correct": true,
@@ -4060,6 +4347,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:9307",
       "round1_answer": "A",
       "round1_correct": true,
@@ -4072,6 +4360,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "D",
       "question_id": "mmlu_pro_v1:test:9341",
       "round1_answer": "D",
       "round1_correct": true,
@@ -4084,6 +4373,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "A",
       "question_id": "mmlu_pro_v1:test:9385",
       "round1_answer": "A",
       "round1_correct": true,
@@ -4096,6 +4386,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:9441",
       "round1_answer": "I",
       "round1_correct": true,
@@ -4108,6 +4399,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "G",
       "question_id": "mmlu_pro_v1:test:9490",
       "round1_answer": "G",
       "round1_correct": true,
@@ -4120,6 +4412,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:9538",
       "round1_answer": "B",
       "round1_correct": true,
@@ -4132,6 +4425,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "E",
       "question_id": "mmlu_pro_v1:test:9557",
       "round1_answer": "E",
       "round1_correct": true,
@@ -4144,6 +4438,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:9674",
       "round1_answer": "C",
       "round1_correct": true,
@@ -4156,6 +4451,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "C",
       "question_id": "mmlu_pro_v1:test:9798",
       "round1_answer": "C",
       "round1_correct": true,
@@ -4168,6 +4464,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:9807",
       "round1_answer": "I",
       "round1_correct": true,
@@ -4180,6 +4477,7 @@
     },
     {
       "complete_case": false,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:9831",
       "round1_answer": "I",
       "round1_correct": true,
@@ -4192,6 +4490,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "B",
       "question_id": "mmlu_pro_v1:test:984",
       "round1_answer": "F",
       "round1_correct": false,
@@ -4204,6 +4503,7 @@
     },
     {
       "complete_case": true,
+      "correct_answer": "I",
       "question_id": "mmlu_pro_v1:test:9862",
       "round1_answer": "I",
       "round1_correct": true,

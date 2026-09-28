@@ -262,6 +262,7 @@ class QuestionRoundReview:
 @dataclass(frozen=True)
 class QuestionComparison:
     question_id: str
+    correct_answer: str
     round1: QuestionRoundReview
     round2: QuestionRoundReview
 
@@ -450,7 +451,9 @@ def evaluate_run(
                 outcome["consensus_state"], outcome["consensus_answer"],
                 group_correct[rnd][qid], failures,
             ))
-        comparisons.append(QuestionComparison(qid, reviews[0], reviews[1]))
+        comparisons.append(
+            QuestionComparison(qid, answer_key[qid], reviews[0], reviews[1])
+        )
     complete = tuple(item for item in comparisons if item.complete_case)
 
     return EvaluationReport(

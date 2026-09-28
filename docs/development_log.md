@@ -1483,6 +1483,26 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Build the read-only Streamlit viewer, then use the verified exports
   and qualitative review for dissertation and CA2 materials.
 
+### 2026-09-28 — Safe viewer result export prepared
+
+- **Built:** Added `correct_answer` to each evaluated question comparison and
+  regenerated `evaluation_summary.json` and `question_comparisons.csv` for the
+  accepted main run. The future viewer can now reveal the key from a verified
+  result artifact instead of opening an answer-key file.
+- **Why:** The replay needs to show whether a stored vote was correct, but the
+  project rule permits only `evaluation.py` to read the separate answer key.
+  Keeping that join in evaluation preserves the separation between model
+  calling, scoring and display.
+- **Tested:** Focused evaluation, exporter and answer-leakage tests passed. All
+  300 exported question records contain a correct answer. Regeneration made no
+  API call and the results database SHA-256 remained
+  `1aa7ad77c398a5d7140457198afbcb04bcc3b25eb451be46f654b239e9f39604`.
+- **Problems:** The generated result artifact intentionally contains answer
+  labels and therefore must never be used as model input. It contains no raw
+  reasoning and does not change the accepted experiment.
+- **Next:** Build and test the read-only viewer data layer, reusing the real
+  prompt builders and verifying reconstructed conversations against cache keys.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity

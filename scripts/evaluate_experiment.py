@@ -227,6 +227,7 @@ def _question_rows(report: EvaluationReport) -> list[dict[str, Any]]:
         rows.append(
             {
                 "question_id": comparison.question_id,
+                "correct_answer": comparison.correct_answer,
                 "complete_case": comparison.complete_case,
                 "round1_state": comparison.round1.consensus_state,
                 "round1_answer": comparison.round1.consensus_answer,
