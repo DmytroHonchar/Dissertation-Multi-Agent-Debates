@@ -234,14 +234,9 @@ def _inject_styles() -> None:
             gap: .35rem;
             background: var(--surface);
             border: 1px solid var(--rule);
-            border-top: 2px solid var(--rule-2);
             border-radius: var(--r-md);
             padding: .95rem 1rem 1rem;
         }
-        .metric-accent-blue    { border-top-color: var(--accent); }
-        .metric-accent-violet  { border-top-color: #4E7BA6; }
-        .metric-accent-green   { border-top-color: var(--correct); }
-        .metric-accent-amber   { border-top-color: var(--flag); }
         .metric-label {
             color: var(--muted);
             font-size: .68rem;
@@ -269,17 +264,17 @@ def _inject_styles() -> None:
         /* ---- finding block (replaces the gradient card) ---- */
         .finding {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-            gap: .2rem 2.2rem;
-            align-items: start;
+            grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+            gap: 2.6rem;
+            /* Both halves centre on each other, so a short statement does not
+               sit stranded at the top beside a four-line paragraph. */
+            align-items: center;
             background: var(--surface);
             border: 1px solid var(--rule);
-            border-left: 3px solid var(--accent);
             border-radius: var(--r-sm);
-            padding: 1.05rem 1.35rem 1.15rem;
+            padding: 1.35rem 1.5rem;
         }
         .finding-kicker {
-            grid-column: 1 / -1;
             font-family: var(--mono);
             color: var(--accent);
             font-size: .68rem;
@@ -289,18 +284,17 @@ def _inject_styles() -> None:
         }
         .finding-title {
             color: var(--ink);
-            font-size: 1.08rem;
+            font-size: 1.12rem;
             font-weight: 600;
-            line-height: 1.38;
-            margin: .45rem 0 0;
+            line-height: 1.45;
+            margin: .5rem 0 0;
             text-wrap: balance;
         }
         .finding-copy {
             color: var(--ink-2);
-            line-height: 1.62;
+            line-height: 1.68;
             font-size: .88rem;
-            margin-top: .5rem;
-            max-width: 62ch;
+            max-width: 54ch;
         }
 
         /* ---- panel heading ---- */
@@ -335,6 +329,8 @@ def _inject_styles() -> None:
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: .75rem;
+            /* Without this the three cards touch the panel's bottom border. */
+            margin-bottom: .55rem;
         }
         .integrity-item {
             background: var(--sunk);
@@ -537,7 +533,7 @@ def _inject_styles() -> None:
         @media (max-width: 900px) {
             .integrity-strip { grid-template-columns: 1fr; }
             .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .finding { grid-template-columns: 1fr; }
+            .finding { grid-template-columns: 1fr; gap: 1rem; }
             .page-title { font-size: 1.6rem; }
         }
         </style>
@@ -570,7 +566,7 @@ def _page_header(eyebrow: str, title: str, copy: str) -> None:
     )
 
 
-def _metric_row(cards: Sequence[tuple[str, str, str, str]]) -> None:
+def _metric_row(cards: Sequence[tuple[str, str, str]]) -> None:
     """Render metric cards as one CSS grid so every card shares a height.
 
     Streamlit columns do not equalise the height of their children, so five
@@ -578,12 +574,12 @@ def _metric_row(cards: Sequence[tuple[str, str, str, str]]) -> None:
     Grid rows stretch to the tallest cell by definition.
     """
     cells = "".join(
-        f'<div class="metric-card metric-accent-{accent}">'
+        f'<div class="metric-card">'
         f'<div class="metric-label">{html.escape(label)}</div>'
         f'<div class="metric-value">{html.escape(value)}</div>'
         f'<div class="metric-note">{html.escape(note)}</div>'
         "</div>"
-        for label, value, note, accent in cards
+        for label, value, note in cards
     )
     st.markdown(
         f'<div class="metric-grid" style="--cards:{len(cards)}">{cells}</div>',
@@ -680,7 +676,7 @@ def _render_transition_chart(overview: ExperimentOverview) -> None:
     ]
     chart = (
         alt.Chart(alt.Data(values=rows))
-        .mark_arc(innerRadius=62, outerRadius=104, cornerRadius=5, padAngle=0.02)
+        .mark_arc(innerRadius=52, outerRadius=88, cornerRadius=4, padAngle=0.02)
         .encode(
             theta=alt.Theta("Questions:Q"),
             color=alt.Color(
@@ -745,7 +741,7 @@ def _render_consensus_chart(overview: ExperimentOverview) -> None:
     ]
     chart = (
         alt.Chart(alt.Data(values=rows))
-        .mark_bar(cornerRadius=5, size=58)
+        .mark_bar(cornerRadius=4, size=40)
         .encode(
             y=alt.Y("Round:N", title=None, sort=["Round 1", "Round 2"]),
             x=alt.X("Questions:Q", title="Questions"),
@@ -775,15 +771,15 @@ def _render_overview(overview: ExperimentOverview) -> None:
     round1, round2 = sorted(overview.group_accuracy, key=lambda item: item.round)
     _metric_row((
         ("Round 1 accuracy", f"{round1.accuracy_percent:.1f}%",
-         f"{round1.correct} of {round1.questions} correct", "blue"),
+         f"{round1.correct} of {round1.questions} correct"),
         ("Round 2 accuracy", f"{round2.accuracy_percent:.1f}%",
-         f"{round2.correct} of {round2.questions} correct", "violet"),
+         f"{round2.correct} of {round2.questions} correct"),
         ("Debate effect", f"+{overview.effect_points:.2f} pts",
-         f"95% CI {overview.confidence_low_points:+.2f} to {overview.confidence_high_points:+.2f}", "green"),
+         f"95% CI {overview.confidence_low_points:+.2f} to {overview.confidence_high_points:+.2f}"),
         ("Experiment cost", f"${overview.total_cost_usd:.2f}",
-         f"{overview.total_tokens / 1_000_000:.2f}M stored tokens", "amber"),
+         f"{overview.total_tokens / 1_000_000:.2f}M stored tokens"),
         ("Runtime", f"{overview.wall_clock_hours:.1f} h",
-         f"{overview.total_failures} failures recorded", "blue"),
+         f"{overview.total_failures} failures recorded"),
     ))
 
     # The finding runs full width and the two charts pair off beneath it.
@@ -792,8 +788,10 @@ def _render_overview(overview: ExperimentOverview) -> None:
     st.markdown(
         f"""
         <div class="finding">
-            <div class="finding-kicker">Central finding</div>
-            <div class="finding-title">Debate helped, mainly when the group was initially undecided.</div>
+            <div class="finding-statement">
+                <div class="finding-kicker">Central finding</div>
+                <div class="finding-title">Debate helped, mainly when the group was initially undecided.</div>
+            </div>
             <div class="finding-copy">
                 {overview.corrected_from_undecided} of {overview.became_correct} corrections began without a Round 1
                 majority. Debate was more useful for resolving disagreement than for repairing an
@@ -1259,16 +1257,20 @@ def _render_replay(replay: QuestionReplay, example_label: str) -> None:
     first, second = replay.round1.outcome, replay.round2.outcome
     final_correct = second.consensus_answer == replay.correct_answer
     _metric_row((
-        ("Question", replay.question_id.split(":")[-1], example_label, "blue"),
-        ("Round 1", first.consensus_answer or "No answer", first.consensus_state.replace("_", " ").title(), "amber"),
-        ("Round 2", second.consensus_answer or "No answer", second.consensus_state.replace("_", " ").title(), "violet"),
+        ("Question", replay.question_id.split(":")[-1], example_label),
+        ("Round 1", first.consensus_answer or "No answer", first.consensus_state.replace("_", " ").title()),
+        ("Round 2", second.consensus_answer or "No answer", second.consensus_state.replace("_", " ").title()),
         ("Final outcome", "Correct" if final_correct else "Not correct",
-         f"Benchmark answer {replay.correct_answer}", "green" if final_correct else "amber"),
+         f"Benchmark answer {replay.correct_answer}"),
     ))
 
-    if "replay_step" not in st.session_state:
+    # Switching case starts its replay at step 1. Carrying the previous
+    # case's step over lands the viewer mid-debate on a question they have
+    # not seen the beginning of.
+    if st.session_state.get("replay_question") != replay.question_id:
+        st.session_state.replay_question = replay.question_id
         st.session_state.replay_step = 0
-    step_index = min(max(int(st.session_state.replay_step), 0), len(STEPS) - 1)
+    step_index = min(max(int(st.session_state.get("replay_step", 0)), 0), len(STEPS) - 1)
     step_name, step_title = STEPS[step_index]
 
     st.write("")
