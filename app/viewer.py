@@ -264,13 +264,18 @@ def _inject_styles() -> None:
 
         /* ---- finding block (replaces the gradient card) ---- */
         .finding {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+            gap: .2rem 2.2rem;
+            align-items: start;
             background: var(--surface);
             border: 1px solid var(--rule);
             border-left: 3px solid var(--accent);
             border-radius: var(--r-sm);
-            padding: 1.05rem 1.2rem;
+            padding: 1.05rem 1.35rem 1.15rem;
         }
         .finding-kicker {
+            grid-column: 1 / -1;
             font-family: var(--mono);
             color: var(--accent);
             font-size: .68rem;
@@ -283,10 +288,16 @@ def _inject_styles() -> None:
             font-size: 1.08rem;
             font-weight: 600;
             line-height: 1.38;
-            margin: .5rem 0 .55rem;
+            margin: .45rem 0 0;
             text-wrap: balance;
         }
-        .finding-copy { color: var(--ink-2); line-height: 1.6; font-size: .87rem; }
+        .finding-copy {
+            color: var(--ink-2);
+            line-height: 1.62;
+            font-size: .88rem;
+            margin-top: .5rem;
+            max-width: 62ch;
+        }
 
         /* ---- panel heading ---- */
         .section-kicker {
@@ -519,6 +530,7 @@ def _inject_styles() -> None:
         @media (max-width: 900px) {
             .integrity-strip { grid-template-columns: 1fr; }
             .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .finding { grid-template-columns: 1fr; }
             .page-title { font-size: 1.6rem; }
         }
         </style>
@@ -649,7 +661,7 @@ def _render_accuracy_chart(overview: ExperimentOverview) -> None:
     labels = chart.mark_text(dy=-12, color="#111827", fontWeight=800, fontSize=14).encode(
         text=alt.Text("Accuracy:Q", format=".1f")
     )
-    st.altair_chart(_base_chart((chart + labels).properties(height=290)), width="stretch")
+    st.altair_chart(_base_chart((chart + labels).properties(height=300)), width="stretch")
 
 
 def _render_transition_chart(overview: ExperimentOverview) -> None:
@@ -708,7 +720,7 @@ def _render_agent_chart(overview: ExperimentOverview) -> None:
             ),
             tooltip=["Model:N", "Round:N", alt.Tooltip("Accuracy:Q", format=".1f"), "Failures:Q"],
         )
-        .properties(height=320)
+        .properties(height=300)
     )
     st.altair_chart(_base_chart(chart), width="stretch")
 
@@ -741,7 +753,7 @@ def _render_consensus_chart(overview: ExperimentOverview) -> None:
             order=alt.Order("RawState:N", sort="ascending"),
             tooltip=["Round:N", "State:N", "Questions:Q"],
         )
-        .properties(height=240)
+        .properties(height=286)
     )
     st.altair_chart(_base_chart(chart), width="stretch")
 
@@ -767,27 +779,31 @@ def _render_overview(overview: ExperimentOverview) -> None:
          f"{overview.total_failures} failures recorded", "blue"),
     ))
 
+    # The finding runs full width and the two charts pair off beneath it.
+    # Stacking the finding above one chart made the right column far taller
+    # than the left, leaving a long empty gap under the accuracy card.
+    st.markdown(
+        f"""
+        <div class="finding">
+            <div class="finding-kicker">Central finding</div>
+            <div class="finding-title">Debate helped, mainly when the group was initially undecided.</div>
+            <div class="finding-copy">
+                {overview.corrected_from_undecided} of {overview.became_correct} corrections began without a Round 1
+                majority. Debate was more useful for resolving disagreement than for repairing an
+                already-decided answer.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     st.write("")
-    left, right = st.columns([1.65, 1], gap="large")
+    left, right = st.columns(2, gap="large")
     with left:
         with st.container(border=True):
             _panel_heading("Headline result", "Group accuracy by round", "The same 300 questions were scored before and after communication.")
             _render_accuracy_chart(overview)
     with right:
-        st.markdown(
-            f"""
-            <div class="finding">
-                <div class="finding-kicker">Central finding</div>
-                <div class="finding-title">Debate helped, mainly when the group was initially undecided.</div>
-                <div class="finding-copy">
-                    {overview.corrected_from_undecided} of {overview.became_correct} corrections began without a Round 1 majority.
-                    Debate was more useful for resolving disagreement than for repairing an already-decided answer.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        st.write("")
         with st.container(border=True):
             _panel_heading("Question movement", "What changed between rounds?", "Every question appears once in the four transition groups.")
             _render_transition_chart(overview)
