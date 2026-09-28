@@ -6,6 +6,7 @@ dependencies = [
     "pyarrow>=15.0",
     "PyYAML>=6.0",
     "requests>=2.32",
+    "streamlit>=1.39",
 ]
 
 [project.optional-dependencies]

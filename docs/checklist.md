@@ -186,7 +186,15 @@ the proposal source, not in this repository.
   decided questions whose correctness changed, two successful no-majority
   resolutions, one wrong convergence and one persistent disagreement. Recorded
   in `docs/qualitative_review_20260925.md`; no new model calls.
-- [ ] Streamlit replay interface — **needed working by CA2, 6 November** (P13). Add `streamlit` to `pyproject.toml` when starting it.
+- [x] Build and test the read-only viewer data layer. It reconstructs the real
+  prompts, checks peer response IDs and cache keys, and reads correctness only
+  from the verified evaluation export.
+- [x] Build the first Streamlit replay: nine-step Previous/Next walkthrough of
+  real question `5503`, from prompt to wrong Round 1 vote to correct unanimous
+  Round 2 vote. No model calls or writes.
+- [x] Complete the Streamlit replay interface — **needed working by CA2,
+  6 November** (P13): modern overview, verified charts, six curated examples,
+  nine-step replay and presentation styling.
 
 ## Writing alongside development
 

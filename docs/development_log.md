@@ -1503,6 +1503,75 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Build and test the read-only viewer data layer, reusing the real
   prompt builders and verifying reconstructed conversations against cache keys.
 
+### 2026-09-28 — Read-only viewer data layer built
+
+- **Built:** Added `src/mad/viewer_data.py`. It loads one accepted debate's
+  question, five responses in both rounds, attempts, votes, usage and exported
+  correct answer into typed replay objects. It reconstructs Round 1 and Round 2
+  with the existing prompt and peer-selection functions, verifies the exact
+  stored peer IDs, and checks each reconstructed request against the cache.
+- **Why:** Streamlit needs one trustworthy source of display data. Keeping this
+  logic outside the page prevents the UI from inventing prompts, retallying
+  votes or gaining access to model-calling and answer-key code.
+- **Tested:** The results and cache databases are opened with SQLite `mode=ro`
+  and `query_only`. Offline tests prove source files remain byte-identical,
+  stale exports are refused, no answer-key or API client is used, and all ten
+  fixture requests match their cache keys. Real replays were checked for `5503`
+  and failure case `11994`; all genuine returned responses matched cache keys,
+  while the uncached Mistral API failure was correctly reported as a miss.
+- **Problems:** An API error has no cached model reply by design, so its request
+  key cannot receive the same cache-backed verification badge. Its failed
+  attempts remain available from the results database.
+- **Next:** Build `app/viewer.py` with Previous/Next navigation for the `5503`
+  replay before adding alternative examples or animation.
+
+### 2026-09-28 — First Streamlit debate replay built
+
+- **Built:** Added `app/viewer.py` and the Streamlit dependency. The initial
+  page walks through real question `5503` in nine Previous/Next steps: question,
+  Round 1 request, responses, parsing, first vote, exact Round 2 input, revised
+  responses, final vote and question summary. It shows raw stored reasoning,
+  answers, statuses, provider, tokens, cost, latency and answer changes.
+- **Why:** `5503` is the clearest successful debate example: the five agents
+  formed a wrong `C` consensus in Round 1, three reconsidered after anonymous
+  peer exchange, and all five selected correct answer `A` in Round 2. A focused
+  replay is the minimum useful CA2 demonstration.
+- **Tested:** Streamlit's AppTest traversed all nine steps without a page
+  exception. A real localhost server passed its health check. Static guards
+  prove the page imports the read-only viewer layer rather than database,
+  evaluation, cache or API-writing modules. The full offline suite passes.
+- **Problems:** This first increment intentionally fixes the question to
+  `5503`; it is not yet the question explorer or aggregate results dashboard.
+  Animation is also deferred until the essential views work.
+- **Next:** Add curated replay selection, especially `11994` for the fixed
+  three-of-five failure rule, then build one concise overview of the main
+  experiment result.
+
+### 2026-09-28 — Results dashboard and curated replay completed
+
+- **Built:** Redesigned `app/viewer.py` as a modern two-view research product.
+  The overview has compact experiment metrics and verified charts for group
+  accuracy, question transitions, individual-agent accuracy and consensus
+  states. The replay now offers six real cases covering correction, regression,
+  wrong convergence, persistent disagreement and failure recovery. A visual
+  six-stage pipeline and per-agent answer-flow charts make the experiment easy
+  to demonstrate without simplifying its rules.
+- **Why:** The interface must communicate both the headline research result and
+  the evidence behind it. The overview supports a quick CA2 explanation, while
+  the replay proves how prompts, parsing, fixed-threshold voting and anonymous
+  peer exchange produced an individual result.
+- **Tested:** Focused data and page tests pass. Streamlit AppTest loaded the
+  overview, traversed all nine replay steps and loaded failure case `11994`
+  without an exception. A real localhost session was visually inspected at
+  desktop width. The interface remains read-only and the results database hash
+  is unchanged.
+- **Problems:** The interface is optimized for a desktop presentation. It is
+  responsive enough for smaller screens, but the CA2 demo should still be
+  rehearsed on the actual display. Automatic animation remains unnecessary;
+  Previous/Next navigation gives the presenter better control.
+- **Next:** Run the full offline test suite, capture final screenshots and
+  rehearse the CA2 explanation.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity
