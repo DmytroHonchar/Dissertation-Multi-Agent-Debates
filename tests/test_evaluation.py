@@ -702,6 +702,7 @@ def test_complete_cases_exclude_any_failure_without_changing_primary_score(db, s
     assert report.complete_cases.excluded_question_ids == ("q1",)
     assert report.complete_cases.difference_points == 0
     review = next(item for item in report.question_comparisons if item.question_id == "q1")
+    assert review.correct_answer == "A"
     assert getattr(review, f"round{rnd}").failures == ((AGENTS[0], status),)
 
 

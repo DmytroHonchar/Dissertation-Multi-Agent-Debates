@@ -564,10 +564,18 @@ agent transitions, consensus, usage and per-question comparisons under
 `reports/main_experiment_20260923/`. Existing exports require an explicit
 `--overwrite`, and deterministic regeneration is tested.
 
+The per-question CSV and JSON records include the evaluated correct answer.
+Only `evaluation.py` reads the separate answer-key file; the replay interface
+will read this generated result artifact instead. This lets the interface
+reveal correctness without giving a model-calling component access to an
+answer key.
+
 ## P13 — Replay interface
 
 New file `app/viewer.py`. Streamlit. **Read-only**: it opens the results
 database, never calls a model, never writes, never changes a stored result.
+It reads correctness from the verified evaluation export and must not open an
+answer-key file directly.
 
 Required by CA2 on 2026-11-06 — the demonstration uses a real stored debate, so
 this cannot be left to the end.

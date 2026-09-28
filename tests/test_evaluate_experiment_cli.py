@@ -223,6 +223,10 @@ def test_export_is_offline_complete_and_does_not_change_database(
     assert summary["group_accuracy"][1]["correct"] == 2
     assert summary["group_transitions"]["became_correct"] == 1
     assert summary["complete_cases"]["question_count"] == 1
+    assert [question["correct_answer"] for question in summary["questions"]] == [
+        "A",
+        "B",
+    ]
 
     markdown = (output / "evaluation_report.md").read_text()
     assert "Round 1 group vote | 1/2 | 50.0%" in markdown
@@ -232,6 +236,8 @@ def test_export_is_offline_complete_and_does_not_change_database(
     with (output / "question_comparisons.csv").open(newline="") as source:
         questions = list(csv.DictReader(source))
     assert len(questions) == 2
+    assert questions[0]["correct_answer"] == "A"
+    assert questions[1]["correct_answer"] == "B"
     assert questions[1]["round1_failures"] == "agent_e:API_ERROR"
     assert "private fixture" not in (output / "evaluation_summary.json").read_text()
 
