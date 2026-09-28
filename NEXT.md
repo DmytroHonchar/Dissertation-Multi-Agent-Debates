@@ -97,7 +97,13 @@ for the current commands.
 
 ## Still to build
 
-1. `app/viewer.py`, the read-only Streamlit replay interface (P13, needed for CA2).
+The read-only Streamlit interface is complete: a main-results overview, four
+verified charts, six curated real debate cases and the nine-step replay are
+implemented and tested.
+
+1. Capture final screenshots and rehearse the CA2 demonstration on the display
+   that will be used for the presentation.
+2. Continue dissertation, video and Q&A preparation from the verified reports.
 
 ## Documentation authority
 

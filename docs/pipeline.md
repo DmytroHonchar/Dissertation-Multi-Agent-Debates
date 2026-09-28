@@ -572,10 +572,22 @@ answer key.
 
 ## P13 — Replay interface
 
-New file `app/viewer.py`. Streamlit. **Read-only**: it opens the results
-database, never calls a model, never writes, never changes a stored result.
-It reads correctness from the verified evaluation export and must not open an
-answer-key file directly.
+The read-only data layer is built as `src/mad/viewer_data.py`. It opens the
+results and cache databases in SQLite read-only mode, loads correctness from
+the verified evaluation export, reconstructs conversations with the real
+prompt builders, checks the stored peer response IDs and tests each request
+against its cache key. It never opens an answer-key file or calls a model.
+
+The UI is `app/viewer.py`. Streamlit. **Read-only**: it uses this data layer,
+never calls a model, never writes and never changes a stored result.
+
+The completed interface has two views. The overview presents the verified main
+result, question transitions, per-agent accuracy and consensus movement using
+four charts and compact experiment metrics. The replay provides six curated
+real cases and nine Previous/Next steps showing the question, reconstructed
+Round 1 request, stored responses, parsing, first vote, one agent's exact
+anonymous Round 2 input, revised responses, final vote and question-level
+usage. The answer stays hidden until the first vote can be evaluated.
 
 Required by CA2 on 2026-11-06 — the demonstration uses a real stored debate, so
 this cannot be left to the end.
