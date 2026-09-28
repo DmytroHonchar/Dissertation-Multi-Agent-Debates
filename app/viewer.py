@@ -76,6 +76,10 @@ MODEL_LABELS = {
     "agent_gemma": "Gemma",
 }
 
+# Every overview panel is this tall, so the two left cards match each other
+# and the two right cards match each other.
+PANEL_HEIGHT = 452
+
 BLUE = "#1F4E79"
 INK_2 = "#45423C"
 MUTED = "#6E6B65"
@@ -321,6 +325,9 @@ def _inject_styles() -> None:
             line-height: 1.5;
             margin-bottom: .9rem;
             max-width: 62ch;
+            /* Room for two lines either way, so a one-line and a two-line
+               panel still start their chart at the same height. */
+            min-height: 2.46rem;
         }
 
         /* ---- integrity strip ---- */
@@ -691,7 +698,7 @@ def _render_transition_chart(overview: ExperimentOverview) -> None:
             ),
             tooltip=["Outcome:N", "Questions:Q"],
         )
-        .properties(height=290)
+        .properties(height=252)
     )
     st.altair_chart(_base_chart(chart), width="stretch")
 
@@ -753,7 +760,7 @@ def _render_consensus_chart(overview: ExperimentOverview) -> None:
             order=alt.Order("RawState:N", sort="ascending"),
             tooltip=["Round:N", "State:N", "Questions:Q"],
         )
-        .properties(height=286)
+        .properties(height=252)
     )
     st.altair_chart(_base_chart(chart), width="stretch")
 
@@ -800,23 +807,27 @@ def _render_overview(overview: ExperimentOverview) -> None:
     st.write("")
     left, right = st.columns(2, gap="large")
     with left:
-        with st.container(border=True):
-            _panel_heading("Headline result", "Group accuracy by round", "The same 300 questions were scored before and after communication.")
+        with st.container(border=True, height=PANEL_HEIGHT):
+            _panel_heading("Headline result", "Group accuracy by round",
+                           "The same 300 questions were scored before and after communication.")
             _render_accuracy_chart(overview)
     with right:
-        with st.container(border=True):
-            _panel_heading("Question movement", "What changed between rounds?", "Every question appears once in the four transition groups.")
+        with st.container(border=True, height=PANEL_HEIGHT):
+            _panel_heading("Question movement", "What changed between rounds?",
+                           "Every question appears once in the four transition groups.")
             _render_transition_chart(overview)
 
     st.write("")
-    left, right = st.columns([1.35, 1], gap="large")
+    left, right = st.columns(2, gap="large")
     with left:
-        with st.container(border=True):
-            _panel_heading("Model behaviour", "Individual accuracy", "Accuracy is calculated over each agent's valid parsed answers; failures are reported separately.")
+        with st.container(border=True, height=PANEL_HEIGHT):
+            _panel_heading("Model behaviour", "Individual accuracy",
+                           "Accuracy is calculated over each agent's valid parsed answers; failures are reported separately.")
             _render_agent_chart(overview)
     with right:
-        with st.container(border=True):
-            _panel_heading("Collective behaviour", "Consensus changed", "A group answer always required three matching votes out of five.")
+        with st.container(border=True, height=PANEL_HEIGHT):
+            _panel_heading("Collective behaviour", "Consensus changed",
+                           "A group answer always required three matching votes out of five.")
             _render_consensus_chart(overview)
 
     st.write("")
