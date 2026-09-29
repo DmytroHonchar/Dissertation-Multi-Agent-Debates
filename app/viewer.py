@@ -76,6 +76,35 @@ MODEL_LABELS = {
     "agent_gemma": "Gemma",
 }
 
+# The stored vote states, in sentence case. The wording stays exactly the
+# wording used in the report; only the capitalisation is for reading.
+STATE_LABELS = {
+    "UNANIMOUS": "Unanimous",
+    "CONSENSUS": "Consensus",
+    "NO_CONSENSUS": "No consensus",
+    "INSUFFICIENT_ANSWERS": "Insufficient answers",
+}
+
+
+def _state_label(state: str) -> str:
+    return STATE_LABELS.get(state, state.replace("_", " ").capitalize())
+
+
+# The stored response statuses. Same wording as the report, without the
+# underscore, so the pill fits a fifth of the row.
+STATUS_LABELS = {
+    "OK": "OK",
+    "TRUNCATED": "Truncated",
+    "API_ERROR": "API error",
+    "PARSE_FAILURE": "Parse failure",
+    "REFUSAL": "Refusal",
+}
+
+
+def _status_label(status: str) -> str:
+    return STATUS_LABELS.get(status, status.replace("_", " ").capitalize())
+
+
 # Every overview panel is this tall, so the two left cards match each other
 # and the two right cards match each other.
 PANEL_HEIGHT = 452
@@ -431,7 +460,7 @@ def _inject_styles() -> None:
             background: var(--surface);
             border: 1px solid var(--rule);
             border-radius: var(--r-md);
-            padding: .8rem .6rem .85rem;
+            padding: .8rem .45rem .85rem;
             text-align: center;
         }
         .vote-agent {
@@ -449,6 +478,118 @@ def _inject_styles() -> None:
             letter-spacing: -0.02em;
         }
         .vote-letter.is-missing { color: var(--rule-2); }
+        /* Five cards to a row leaves about 5rem of usable width, so the
+           status pill is tuned to fit "Parse failure" rather than clip. */
+        .vote-card .badge {
+            max-width: 100%;
+            font-size: .56rem;
+            padding: .12rem .36rem;
+            letter-spacing: .02em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ---- round comparison ---- */
+        .comparison { display: flex; flex-direction: column; gap: .4rem; }
+        .comparison-head, .comparison-row {
+            display: grid;
+            grid-template-columns: 4.4rem minmax(0, 1fr) 5.4rem 5.4rem;
+            align-items: center;
+            gap: .7rem;
+        }
+        /* Never break a word: "Consensus" was wrapping one letter per line. */
+        .comparison-head span,
+        .comparison-round, .comparison-state,
+        .comparison-votes, .comparison-tag { white-space: nowrap; }
+        .comparison-head {
+            padding: 0 .85rem .1rem;
+            font-family: var(--mono);
+            font-size: .62rem;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+        .comparison-head span:last-child,
+        .comparison-row .comparison-tag { text-align: right; }
+        .comparison-row {
+            background: var(--surface);
+            border: 1px solid var(--rule);
+            border-radius: var(--r-sm);
+            padding: .5rem .85rem;
+        }
+        .comparison-round { font-size: .84rem; font-weight: 500; color: var(--ink-2); }
+        .comparison-state { font-size: .8rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+        .comparison-answer { display: flex; align-items: center; gap: .45rem; }
+        .comparison-letter {
+            font-family: var(--mono);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--ink);
+            background: var(--sunk);
+            border-radius: var(--r-sm);
+            padding: .1rem .35rem;
+            text-align: center;
+        }
+        .comparison-votes {
+            font-family: var(--mono);
+            font-size: .7rem;
+            color: var(--muted);
+        }
+        .comparison-tag { font-family: var(--mono); font-size: .68rem; letter-spacing: .04em; }
+        .comparison-row.is-correct .comparison-tag { color: var(--correct); }
+        .comparison-row.is-wrong   .comparison-tag { color: var(--muted); }
+        .comparison-row.is-correct .comparison-letter {
+            background: #E4EFE8;
+            color: var(--correct);
+        }
+
+        /* ---- answer movement ---- */
+        .movement { display: flex; flex-direction: column; gap: .4rem; }
+        .movement-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto auto 5.2rem;
+            align-items: center;
+            gap: .8rem;
+            background: var(--surface);
+            border: 1px solid var(--rule);
+            border-radius: var(--r-sm);
+            padding: .5rem .85rem;
+        }
+        .movement-agent {
+            font-size: .84rem;
+            font-weight: 500;
+            color: var(--ink-2);
+        }
+        .movement-letter {
+            font-family: var(--mono);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--ink);
+            background: var(--sunk);
+            border-radius: var(--r-sm);
+            min-width: 1.85rem;
+            padding: .1rem .3rem;
+            text-align: center;
+        }
+        .movement-arrow { color: var(--rule-2); font-size: .9rem; }
+        .movement-tag {
+            font-family: var(--mono);
+            font-size: .68rem;
+            letter-spacing: .04em;
+            color: var(--muted);
+            text-align: right;
+        }
+        /* Only a change is coloured, so the movers are the thing you see. */
+        .movement-row.is-changed { border-color: var(--rule-2); }
+        .movement-row.is-changed .movement-arrow { color: var(--accent); }
+        .movement-row.is-changed .movement-letter.is-after {
+            background: var(--accent-w);
+            color: var(--accent);
+        }
+        .movement-row.is-changed .movement-tag { color: var(--accent); }
+        .movement-row.is-missing .movement-letter { color: var(--rule-2); }
+        .movement-row.is-missing .movement-tag { color: var(--flag); }
 
         /* ---- status chips ---- */
         .badge {
@@ -865,7 +1006,7 @@ def _answer_change_rows(replay: QuestionReplay) -> list[dict[str, object]]:
                 "Round 1": initial.extracted_letter or "No vote",
                 "Round 2": revised.extracted_letter or "No vote",
                 "Changed": "Yes" if changed else "No",
-                "Status": revised.status,
+                "Status": _status_label(revised.status),
             }
         )
     return rows
@@ -957,7 +1098,7 @@ def _render_response(response: AgentResponseView, *, show_change: str | None = N
     top = st.columns([2, 1, 1, 1] if show_change is not None else [2, 1, 1])
     top[0].markdown(f"### {response.display_name}")
     top[1].metric("Answer", response.extracted_letter or "—")
-    top[2].metric("Status", response.status)
+    top[2].metric("Status", _status_label(response.status))
     if show_change is not None:
         top[3].metric("Changed", show_change)
 
@@ -986,7 +1127,7 @@ def _render_vote_cards(responses: tuple[AgentResponseView, ...]) -> None:
                 f'<div class="vote-card">'
                 f'<div class="vote-agent">{html.escape(MODEL_LABELS[response.agent_id])}</div>'
                 f'<div class="vote-letter{missing}">{html.escape(letter or "\u2014")}</div>'
-                f'<span class="badge {badge}">{html.escape(response.status)}</span>'
+                f'<span class="badge {badge}">{html.escape(_status_label(response.status))}</span>'
                 f"</div>",
                 unsafe_allow_html=True,
             )
@@ -1015,40 +1156,80 @@ def _render_vote_distribution(responses: tuple[AgentResponseView, ...]) -> None:
     st.caption("The dashed line is the fixed majority threshold: 3 of the 5 configured agents.")
 
 
+def _render_round_comparison(replay: QuestionReplay) -> None:
+    """The two group votes side by side, in the same row language as the
+    answer movement strip beside it.
+
+    This replaced a Streamlit dataframe. The widget arrived with its own
+    rounded frame and a fixed scroll box that clipped the last two columns,
+    so a five-field comparison needed scrolling to read.
+    """
+    header = (
+        '<div class="comparison-head">'
+        "<span>Round</span><span>State</span>"
+        "<span>Group answer</span><span>Outcome</span>"
+        "</div>"
+    )
+    rows = []
+    for outcome in (replay.round1.outcome, replay.round2.outcome):
+        correct = outcome.consensus_answer == replay.correct_answer
+        letter = outcome.consensus_answer
+        state = "is-correct" if correct else "is-wrong"
+        rows.append(
+            f'<div class="comparison-row {state}">'
+            f'<span class="comparison-round">Round {outcome.round}</span>'
+            f'<span class="comparison-state">{html.escape(_state_label(outcome.consensus_state))}</span>'
+            f'<span class="comparison-answer">'
+            f'<b class="comparison-letter">{html.escape(letter or "\u2014")}</b>'
+            f'<span class="comparison-votes">{outcome.valid_answer_count} of 5</span>'
+            f"</span>"
+            f'<span class="comparison-tag">{"correct" if correct else "not correct"}</span>'
+            "</div>"
+        )
+    st.markdown(
+        f'<div class="comparison">{header}{"".join(rows)}</div>', unsafe_allow_html=True
+    )
+    st.caption("A group answer always needed three matching votes out of five.")
+
+
 def _render_answer_flow(replay: QuestionReplay) -> None:
+    """One row per agent: the answer it gave, then the answer it settled on.
+
+    This replaced a slope chart. With five agents and only a few distinct
+    letters the lines landed on top of one another, so three agents moving
+    C to A drew as a single line and the reader could not tell who moved.
+    """
     first = _response_map(replay, 1)
     second = _response_map(replay, 2)
+
     rows = []
-    for agent_id, response in first.items():
-        model = MODEL_LABELS[agent_id]
-        for round_label, answer in (
-            ("Round 1", response.extracted_letter),
-            ("Round 2", second[agent_id].extracted_letter),
-        ):
-            rows.append(
-                {
-                    "Model": model,
-                    "Round": round_label,
-                    "Answer": answer or "No vote",
-                }
-            )
-    chart = (
-        alt.Chart(alt.Data(values=rows))
-        .mark_line(point=alt.OverlayMarkDef(size=95), strokeWidth=2.5)
-        .encode(
-            x=alt.X("Round:N", title=None, sort=["Round 1", "Round 2"]),
-            y=alt.Y("Answer:N", title="Extracted answer", sort="descending"),
-            color=alt.Color(
-                "Model:N",
-                scale=alt.Scale(range=[BLUE, VIOLET, AMBER, GREEN, RED]),
-                title=None,
-            ),
-            detail="Model:N",
-            tooltip=["Model:N", "Round:N", "Answer:N"],
+    for agent_id in first:
+        before, after = first[agent_id], second[agent_id]
+        start, end = before.extracted_letter, after.extracted_letter
+        if start is None or end is None:
+            state, tag = "is-missing", "no vote"
+        elif start == end:
+            state, tag = "is-held", "held"
+        else:
+            state, tag = "is-changed", "changed"
+        rows.append(
+            f'<div class="movement-row {state}">'
+            f'<span class="movement-agent">{html.escape(MODEL_LABELS[agent_id])}</span>'
+            f'<span class="movement-letter">{html.escape(start or "\u2014")}</span>'
+            f'<span class="movement-arrow">&rarr;</span>'
+            f'<span class="movement-letter is-after">{html.escape(end or "\u2014")}</span>'
+            f'<span class="movement-tag">{tag}</span>'
+            "</div>"
         )
-        .properties(height=300)
+
+    changed = sum(1 for agent_id in first
+                  if first[agent_id].extracted_letter is not None
+                  and second[agent_id].extracted_letter is not None
+                  and first[agent_id].extracted_letter != second[agent_id].extracted_letter)
+    st.markdown(f'<div class="movement">{"".join(rows)}</div>', unsafe_allow_html=True)
+    st.caption(
+        f"{changed} of {len(first)} agents changed their answer after reading the peer responses."
     )
-    st.altair_chart(_base_chart(chart), width="stretch")
 
 
 def _render_round1_request(replay: QuestionReplay) -> None:
@@ -1101,7 +1282,7 @@ def _render_parsing(replay: QuestionReplay) -> None:
             {
                 "Agent": response.display_name,
                 "Response ending": response.raw_response[-80:],
-                "Parser status": response.status,
+                "Parser status": _status_label(response.status),
                 "Extracted vote": response.extracted_letter or "No vote",
             }
             for response in replay.round1.responses
@@ -1118,7 +1299,7 @@ def _render_round1_vote(replay: QuestionReplay) -> None:
         _render_vote_cards(replay.round1.responses)
         outcome = replay.round1.outcome
         st.markdown(
-            f"### Stored vote: {outcome.consensus_state.replace('_', ' ').title()} → {outcome.consensus_answer or 'no group answer'}"
+            f"### Stored vote: {_state_label(outcome.consensus_state)} → {outcome.consensus_answer or 'no group answer'}"
         )
         st.write(
             f"{outcome.valid_answer_count} valid answers were counted. The threshold remained three votes out of five."
@@ -1154,11 +1335,9 @@ def _render_round2_input(replay: QuestionReplay) -> None:
 
 
 def _render_round2_responses(replay: QuestionReplay) -> None:
-    left, right = st.columns([1, 1.2], gap="large")
-    with left:
-        st.dataframe(_answer_change_rows(replay), hide_index=True, width="stretch")
-    with right:
-        _render_answer_flow(replay)
+    st.markdown("#### Answer movement")
+    _render_answer_flow(replay)
+    st.write("")
     _render_round_responses(replay, 2)
 
 
@@ -1168,7 +1347,7 @@ def _render_round2_vote(replay: QuestionReplay) -> None:
         _render_vote_cards(replay.round2.responses)
         outcome = replay.round2.outcome
         st.markdown(
-            f"### Stored vote: {outcome.consensus_state.replace('_', ' ').title()} → {outcome.consensus_answer or 'no group answer'}"
+            f"### Stored vote: {_state_label(outcome.consensus_state)} → {outcome.consensus_answer or 'no group answer'}"
         )
         if outcome.consensus_answer == replay.correct_answer:
             st.success(f"Correct answer: {replay.correct_answer}. The final group answer was correct.")
@@ -1184,8 +1363,8 @@ def _render_round2_vote(replay: QuestionReplay) -> None:
 def _render_summary(replay: QuestionReplay) -> None:
     first, second = replay.round1.outcome, replay.round2.outcome
     st.markdown(
-        f"## {first.consensus_state.replace('_', ' ').title()} {first.consensus_answer or '—'} → "
-        f"{second.consensus_state.replace('_', ' ').title()} {second.consensus_answer or '—'}"
+        f"## {_state_label(first.consensus_state)} {first.consensus_answer or '—'} → "
+        f"{_state_label(second.consensus_state)} {second.consensus_answer or '—'}"
     )
     if first.consensus_answer != replay.correct_answer and second.consensus_answer == replay.correct_answer:
         st.success("This question changed from a wrong or missing group answer to a correct one.")
@@ -1199,31 +1378,10 @@ def _render_summary(replay: QuestionReplay) -> None:
     columns[2].metric("Total cost", f"${totals['cost_usd']:.6f}")
     columns[3].metric("Stored latency", f"{totals['latency_seconds']:.1f}s")
 
-    left, right = st.columns([1, 1.2], gap="large")
+    left, right = st.columns([1.15, 1], gap="large")
     with left:
         st.markdown("#### Round comparison")
-        st.dataframe(
-            [
-                {
-                    "Round": 1,
-                    "State": first.consensus_state,
-                    "Group answer": first.consensus_answer or "No answer",
-                    "Correct": first.consensus_answer == replay.correct_answer,
-                    "Valid votes": first.valid_answer_count,
-                    "Cost": f"${first.total_cost_usd:.6f}",
-                },
-                {
-                    "Round": 2,
-                    "State": second.consensus_state,
-                    "Group answer": second.consensus_answer or "No answer",
-                    "Correct": second.consensus_answer == replay.correct_answer,
-                    "Valid votes": second.valid_answer_count,
-                    "Cost": f"${second.total_cost_usd:.6f}",
-                },
-            ],
-            hide_index=True,
-            width="stretch",
-        )
+        _render_round_comparison(replay)
     with right:
         st.markdown("#### Answer movement")
         _render_answer_flow(replay)
@@ -1258,8 +1416,8 @@ def _render_replay(replay: QuestionReplay, example_label: str) -> None:
     final_correct = second.consensus_answer == replay.correct_answer
     _metric_row((
         ("Question", replay.question_id.split(":")[-1], example_label),
-        ("Round 1", first.consensus_answer or "No answer", first.consensus_state.replace("_", " ").title()),
-        ("Round 2", second.consensus_answer or "No answer", second.consensus_state.replace("_", " ").title()),
+        ("Round 1", first.consensus_answer or "No answer", _state_label(first.consensus_state)),
+        ("Round 2", second.consensus_answer or "No answer", _state_label(second.consensus_state)),
         ("Final outcome", "Correct" if final_correct else "Not correct",
          f"Benchmark answer {replay.correct_answer}"),
     ))
@@ -1297,7 +1455,7 @@ def main() -> None:
             selected_label = st.selectbox("Choose a case", tuple(CURATED_QUESTIONS))
             st.caption(CURATED_NOTES[CURATED_QUESTIONS[selected_label]])
         st.divider()
-        st.markdown('<span class="badge badge-green">● Read-only mode</span>', unsafe_allow_html=True)
+        st.markdown('<span class="badge badge-green">Read-only mode</span>', unsafe_allow_html=True)
         st.caption("No model calls · no database writes")
         st.caption("Accepted run · agents_v7")
 
