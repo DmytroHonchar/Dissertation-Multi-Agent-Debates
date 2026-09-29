@@ -31,7 +31,7 @@ def test_viewer_has_the_nine_planned_steps():
 def test_viewer_has_an_overview_and_curated_real_cases():
     source = VIEWER_PATH.read_text()
     assert 'page = st.radio("Workspace", ("Overview", "Debate replay")' in source
-    assert "load_experiment_overview" in source
+    assert "load_public_experiment_overview" in source
     assert '"mmlu_pro_v1:test:5503"' in source
     assert '"mmlu_pro_v1:test:11994"' in source
     assert "Group accuracy by round" in source
@@ -55,7 +55,7 @@ def test_viewer_depends_on_the_read_only_layer_not_experimental_writers():
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module)
 
-    assert "mad.viewer_data" in imported
+    assert "mad.public_viewer_data" in imported
     assert not imported.intersection(
         {
             "mad.api_client",
@@ -63,8 +63,17 @@ def test_viewer_depends_on_the_read_only_layer_not_experimental_writers():
             "mad.database",
             "mad.evaluation",
             "mad.runner",
+            "mad.viewer_data",
         }
     )
+
+
+def test_viewer_uses_only_the_sanitized_public_bundle():
+    source = VIEWER_PATH.read_text()
+    assert "load_public_question_replay" in source
+    assert "load_question_replay(" not in source
+    assert "results.sqlite" not in source
+    assert "cache.sqlite" not in source
 
 
 def test_viewer_never_names_an_answer_key_or_model_client():

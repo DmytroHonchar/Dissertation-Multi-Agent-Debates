@@ -1603,6 +1603,33 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Rehearse the CA2 walkthrough on the presentation display, then
   return to writing.
 
+### 2026-09-29 — Public deployment package isolated from research storage
+
+- **Built:** Added a sanitized, versioned JSON bundle containing only the
+  accepted experiment overview and the six curated replay cases. The public
+  Streamlit page now reads that bundle through `public_viewer_data.py` and no
+  longer needs `storage/results.sqlite` or `storage/cache.sqlite`. Added an
+  explicit exporter, a fail-closed deployment preflight, pinned hosted
+  dependencies and deployment instructions.
+- **Why:** The full SQLite files contain the audit history, pilot runs and the
+  complete response cache. They are research evidence and backups, not public
+  web assets. Publishing a small allow-listed bundle makes the demonstration
+  usable online without exposing or risking the private evidence layer.
+- **Tested:** The source database hashes were unchanged before and after the
+  export. All 516 offline tests pass locally. The six public cases match the
+  verified local reconstructions after the public-only account-ID redaction,
+  every case traverses all nine Streamlit steps, and a clean copy with no
+  `storage/` directory starts successfully in a fresh Python 3.13 environment
+  installed only from `requirements.txt`. That clean copy also passes 510
+  tests; the six source-comparison checks are skipped because their private
+  database inputs are intentionally absent.
+- **Problems:** The public bundle is a presentation snapshot, not a research
+  backup and not a live database. An intentional change to the accepted result
+  requires explicit regeneration and the same safety checks.
+- **Next:** Review, commit and push the deployment package, then create the
+  public app in Streamlit Community Cloud and verify its URL in a private
+  browser window.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity

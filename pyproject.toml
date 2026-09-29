@@ -3,6 +3,7 @@ name = "dissertation-multi-agent-debates"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
+    "altair>=6.3,<7",
     "pyarrow>=15.0",
     "PyYAML>=6.0",
     "requests>=2.32",

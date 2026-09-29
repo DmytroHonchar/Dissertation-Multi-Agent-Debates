@@ -25,13 +25,13 @@ import streamlit as st
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from mad.viewer_data import (  # noqa: E402
+from mad.public_viewer_data import (  # noqa: E402
     AgentResponseView,
     ExperimentOverview,
     QuestionReplay,
     ViewerDataError,
-    load_experiment_overview,
-    load_question_replay,
+    load_public_experiment_overview,
+    load_public_question_replay,
 )
 
 
@@ -123,12 +123,12 @@ SLATE = "#64748B"
 
 @st.cache_data(show_spinner=False)
 def _load_overview() -> ExperimentOverview:
-    return load_experiment_overview()
+    return load_public_experiment_overview()
 
 
 @st.cache_data(show_spinner=False)
 def _load_replay(question_id: str) -> QuestionReplay:
-    return load_question_replay(question_id)
+    return load_public_question_replay(question_id)
 
 
 def _inject_styles() -> None:
