@@ -1572,6 +1572,37 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Run the full offline test suite, capture final screenshots and
   rehearse the CA2 explanation.
 
+### 2026-09-29 — Replay panels redrawn for the CA2 demo
+
+- **Built:** Replaced the two Streamlit widgets that did not survive the panel
+  widths they were given. The Round 2 answer flow was a slope chart in which
+  five agents drew only a few distinct lines, so three agents moving C to A
+  became one line; it is now one row per agent reading `C -> A` with a held,
+  changed or no-vote tag, and only a change is coloured. The summary's round
+  comparison was a `st.dataframe`, which brought its own rounded frame and a
+  fixed scroll box that hid the last two columns; it is now two plain rows under a
+  labelled header, in the same row language as the movement strip beside it. Added `STATE_LABELS`
+  and `STATUS_LABELS` so stored values print as `Insufficient answers` and
+  `API error` rather than shouting with underscores, and gave the status pill
+  in a vote card its own size so it fits inside a fifth of the row. Removed the
+  dot from the read-only badge.
+- **Why:** The CA2 demonstration is driven from this interface, so a reader has
+  to see who moved and what the group decided without being told what a clipped
+  column or an overlapping line means. `title()` on a stored constant also
+  produced `Insufficient Answers`, which was wide enough to be ellipsised in
+  its own column at laptop width.
+- **Tested:** The full offline suite passes (503 tests). Both redrawn panels
+  were inspected in a real localhost session at 1352 and 1568 pixels on the
+  hardest two curated cases: `5503`, where all five agents move, and `11994`,
+  where three Round 1 responses failed and the state reads
+  `Insufficient answers`. No clipping, no word breaking, no pill outside its
+  card. The interface remains read-only.
+- **Problems:** The status pill still falls back to an ellipsis if a status
+  longer than `Parse failure` is ever added. No such status exists, and neither
+  a refusal nor a parse failure occurred in the accepted run.
+- **Next:** Rehearse the CA2 walkthrough on the presentation display, then
+  return to writing.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity
