@@ -1,4 +1,4 @@
-# Where we stopped — 24 September 2026
+# Where we stopped — 29 September 2026
 
 ## Current resume point
 
@@ -29,9 +29,16 @@ complete JSON record and seven CSV tables. The command rechecks all 300
 questions and proves the results database stayed byte-for-byte unchanged.
 
 The representative-question review is complete in
-`docs/qualitative_review_20260925.md`. Next: build `app/viewer.py`, and write the
-dissertation and CA2 materials. Copy the Git-ignored post-run backups to
-separate storage.
+`docs/qualitative_review_20260925.md`. The Streamlit overview and six-case
+replay are also complete. A public deployment package is prepared without the
+private SQLite databases: it uses only
+`data/public_viewer/accepted_experiment_v1.json`. Deployment safety and the
+exact release steps are documented in `docs/deployment.md`.
+
+Next: review and commit the deployment package, push it, deploy
+`app/viewer.py` on Streamlit Community Cloud, and verify the hosted URL. Then
+continue dissertation and CA2 preparation. Keep the Git-ignored experiment
+databases and post-run backups in protected off-machine storage.
 
 The older checkpoint below is historical, not the current instruction to run.
 

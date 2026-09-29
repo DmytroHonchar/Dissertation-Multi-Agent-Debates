@@ -195,6 +195,11 @@ the proposal source, not in this repository.
 - [x] Complete the Streamlit replay interface — **needed working by CA2,
   6 November** (P13): modern overview, verified charts, six curated examples,
   nine-step replay and presentation styling.
+- [x] Prepare a safe public deployment artifact containing only the accepted
+  overview and six curated cases; the hosted app requires neither SQLite
+  database nor any API secret.
+- [ ] Commit, push and deploy `app/viewer.py` on Streamlit Community Cloud;
+  verify all views from the public URL in a private browser window.
 
 ## Writing alongside development
 

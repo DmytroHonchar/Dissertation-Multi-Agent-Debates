@@ -578,8 +578,12 @@ the verified evaluation export, reconstructs conversations with the real
 prompt builders, checks the stored peer response IDs and tests each request
 against its cache key. It never opens an answer-key file or calls a model.
 
-The UI is `app/viewer.py`. Streamlit. **Read-only**: it uses this data layer,
-never calls a model, never writes and never changes a stored result.
+The UI is `app/viewer.py`. Streamlit. **Read-only**: it never calls a model,
+never writes and never changes a stored result. Local verification uses
+`viewer_data.py`; the public deployment reads only the sanitized, versioned
+`data/public_viewer/accepted_experiment_v1.json` artifact through
+`public_viewer_data.py`. The private results and cache databases are not
+deployment files.
 
 The completed interface has two views. The overview presents the verified main
 result, question transitions, per-agent accuracy and consensus movement using
@@ -611,4 +615,6 @@ the debate never did.
 Show failures honestly. An agent that returned `TRUNCATED` or `PARSE_FAIL` is
 displayed as such, not as a blank or a guess.
 
-Dependencies: `streamlit`. Add it when this module is written, not before.
+Deployment dependencies are pinned in the root `requirements.txt`. The public
+app needs no API key or Streamlit secret. Export and release checks are
+documented in `docs/deployment.md`.
