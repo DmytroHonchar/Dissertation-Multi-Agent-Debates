@@ -1630,6 +1630,88 @@ responses, compute the group vote, and store an inspectable result.
   public app in Streamlit Community Cloud and verify its URL in a private
   browser window.
 
+### 2026-10-09 — Animated debate stage in the replay
+
+- **Built:** Added an "Animated debate" view beside the existing nine-step
+  evidence replay. Five agents stand at lecterns and each curated case plays
+  in seven scenes: question, independent Round 1 answers, first vote,
+  anonymous peer handover, Round 2 answers, final vote, answer-key check.
+  Play, pause, step, seek and speed controls run in the browser; clicking a
+  bubble opens the full stored response. The data comes from a new pure
+  module, `src/mad/debate_stage.py`; the page is `app/debate_stage.html`.
+- **Why:** The supervisor asked for a UI in which the agents visibly debate,
+  like a multi-party debate stage. The protocol has no free-form discussion,
+  so the stage shows the real mechanism instead: independent answers, one
+  simultaneous anonymous handover, then reconsideration.
+- **Tested:** 31 new offline test cases (most stage checks run on all six
+  curated cases) prove every bubble is a verbatim slice of
+  the stored response, letters, statuses and vote boards equal the stored
+  outcomes, handover arrows equal the stored peer IDs, a provider error is
+  never shown as model speech, and stored text cannot escape the page's data
+  block. All 547 tests pass and the public deployment preflight passes. All
+  seven scenes were played in a browser for the corrected-majority case and
+  the three-failure case, including the reader and the step-by-step view.
+- **Problems:** Fixed during the browser check: the empty Round 2 board
+  revealed which letters would receive votes, the faint handover arrows stayed
+  visible after the sharing scene, the arrows covered the peer badges, a long
+  quote clipped a failed agent's no-vote reason, and the line clamp leaked an
+  extra line. Model names are shown to the viewer; the footnote states that
+  the models themselves saw only PEER RESPONSE 1-4.
+- **Next:** Send the supervisor a screenshot and a short screen recording,
+  then deploy once they confirm the direction.
+
+### 2026-10-09 — Debate stage layout: nothing cut off
+
+- **Built:** Reworked the stage layout so content sets every size. Text now
+  scales with the stage width (13–16px), the question card shows the whole
+  question and every option, option columns widen for long options, and all
+  speech bubbles take the height of the longest quote across both rounds.
+  The stage resizes its own Streamlit frame to fit. The tallest version of
+  the header and vote board is reserved up front, so the lecterns do not move
+  between scenes. Bubble quotes were shortened from 190 to 140 characters,
+  and a failed agent's no-vote reason now sits on its own line above any text
+  it produced.
+- **Why:** The first version used fixed box heights. Question lengths in the
+  six cases range from 45 to 606 characters, so long questions, options and
+  quotes were cut off.
+- **Tested:** All six cases were opened at 892px (a laptop with the sidebar)
+  and 1250px. A script checked every scene for overflowing or clipped text
+  and found none; the stage height varies by at most 3px between scenes.
+  Played in the Streamlit app. All 547 tests pass and the public deployment
+  preflight passes.
+- **Problems:** Setting the frame height fired a resize event that re-ran the
+  layout, an endless loop that froze the browser tab. Layout now re-runs only
+  when the width changes, and the frame only grows within one layout. The
+  long law case (1203) is about 1,100px tall at laptop width, so it needs a
+  scroll; the other five are 780–940px.
+  The caption under the stage was covered once the stage grew, so it now
+  sits above the stage and the stage also grows Streamlit's slot around it.
+- **Next:** Supervisor review, then commit and deploy.
+
+### 2026-10-09 — Model logos on the debate stage
+
+- **Built:** Each agent's avatar now shows its model logo on a white disc:
+  Meta for Llama (no separate Llama mark), Qwen, Mistral AI, DeepSeek and
+  Gemma. The logos are stored in `app/logos/` and embedded in the stage as
+  inline images, so the public app fetches nothing from another site. A
+  failed agent's logo is greyed out, and the agent's letter remains as a
+  fallback if an image cannot load. The stage footnote states that the logos
+  are trademarks of their owners and only identify the models.
+- **Why:** The stage needed recognisable agents. Photographs of company
+  leaders were considered and rejected: the speech bubbles quote model output,
+  so a face would attribute those words, including wrong answers, to a real
+  person, and photos of identifiable people would add personal data to an A0
+  project. Model logos identify what the agents actually are.
+- **Tested:** Source `@lobehub/icons-static-svg` 1.95.1 (MIT), files
+  unchanged and recorded with their origin in `app/logos/README.md`. Each
+  file was checked to contain only paths and gradients. New tests confirm
+  every agent receives a logo, every logo stays free of scripts and external
+  references, and a missing file falls back to the letter. All 554 tests pass.
+  All five logos loaded in the Streamlit app.
+- **Problems:** The Gemma mark is a thin, light outline, so it reads more
+  faintly than the other four.
+- **Next:** Supervisor review, then commit and deploy.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity

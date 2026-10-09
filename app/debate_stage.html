@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debate stage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* The same tokens as app/viewer.py, so the stage reads as part of the page. */
+:root {
+  --paper: #F6F5F2;
+  --surface: #FFFFFF;
+  --sunk: #F0EEE9;
+  --ink: #1C1B19;
+  --ink-2: #45423C;
+  --muted: #6E6B65;
+  --rule: #DEDBD4;
+  --rule-2: #C6C2B8;
+  --accent: #1F4E79;
+  --accent-w: #E7EEF5;
+  --correct: #2D6A4F;
+  --correct-w: #E4EFE8;
+  --wrong: #9B2226;
+  --wrong-w: #F6E4E4;
+  --flag: #9A6212;
+  --flag-w: #F6EEDC;
+  --sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Set by the script: every bubble is as tall as the longest one, so the
+     lecterns never jump when Round 2 replaces Round 1. */
+  --bubble-h: 10rem;
+}
+* { box-sizing: border-box; }
+/* Text scales with the stage width: a narrow page keeps it readable, a wide
+   presentation screen gets it larger. Nothing below has a fixed height, so
+   no question, option or answer is ever cut off. */
+html { font-size: clamp(13px, 0.4rem + 0.8vw, 16px); }
+html, body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); }
+button { font-family: var(--sans); }
+
+.stage {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  padding: 1.1rem 1.25rem 1rem;
+  overflow: hidden;
+}
+
+/* ---- scene header and controls ---- */
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.scene-kicker { font-family: var(--mono); font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.scene-title { font-size: 1.4rem; font-weight: 600; letter-spacing: -.01em; margin-top: .2rem; line-height: 1.25; }
+.scene-note { font-size: .95rem; color: var(--ink-2); margin-top: .35rem; line-height: 1.5; max-width: 70ch; }
+.controls { display: flex; gap: .4rem; flex: 0 0 auto; }
+.controls button {
+  border: 1px solid var(--rule-2); background: var(--surface); color: var(--ink-2);
+  border-radius: 3px; height: 2.4rem; min-width: 2.4rem; padding: 0 .75rem; font-size: .95rem; cursor: pointer;
+}
+.controls button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.controls button:disabled { opacity: .4; cursor: default; }
+.controls .play { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; min-width: 6.2rem; }
+.controls .play:hover:not(:disabled) { color: #fff; filter: brightness(1.12); }
+
+.progress { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .3rem; margin: .9rem 0 1rem; }
+.progress button {
+  border: 0; padding: .3rem 0 0; background: none; cursor: pointer; text-align: left;
+  font-family: var(--mono); font-size: .74rem; color: var(--muted); letter-spacing: .02em; line-height: 1.3;
+  border-top: 3px solid var(--rule);
+}
+.progress button.done { border-top-color: var(--accent); color: var(--ink-2); }
+.progress button.current { border-top-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+/* ---- question and vote board ---- */
+.top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(17rem, .62fr); gap: 1rem; align-items: stretch; }
+.card { border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+.question { padding: .9rem 1.05rem 1rem; }
+.question-meta { font-family: var(--mono); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.question-text { font-size: 1.02rem; line-height: 1.5; font-weight: 500; margin: .4rem 0 .75rem; }
+.options {
+  display: grid; gap: .3rem 1rem; font-size: .9rem; color: var(--ink-2); line-height: 1.45;
+  /* The script widens the columns when the options are long. */
+  grid-template-columns: repeat(auto-fill, minmax(var(--option-w, 14rem), 1fr));
+}
+.option { display: flex; gap: .5rem; align-items: baseline; padding: .15rem .35rem; border-radius: 3px; transition: background .4s; }
+.option b { font-family: var(--mono); color: var(--accent); flex: 0 0 auto; }
+.option.is-key { background: var(--correct-w); }
+.option.is-key b { color: var(--correct); }
+
+.board { padding: .9rem 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.ballot { display: flex; flex-direction: column; min-width: 0; transition: opacity .4s; }
+.ballot.is-idle { opacity: .4; }
+.ballot-title { font-family: var(--mono); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: .55rem; }
+.rows { display: flex; flex-direction: column; gap: .4rem; position: relative; }
+.row { display: grid; grid-template-columns: 1.4rem 1fr 1.1rem; align-items: center; gap: .45rem; }
+.row-letter { font-family: var(--mono); font-weight: 600; font-size: 1rem; color: var(--ink); text-align: center; border-radius: 3px; }
+.slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: .2rem; position: relative; }
+.slot { height: .95rem; border-radius: 2px; background: var(--sunk); transition: background .25s; }
+.slot.on { background: var(--accent); }
+.slots::after { /* the fixed threshold, between the third and fourth vote */
+  content: ""; position: absolute; left: calc(60% - 1px); top: -3px; bottom: -3px;
+  border-left: 2px dashed var(--wrong); opacity: .7;
+}
+.row-count { font-family: var(--mono); font-size: .8rem; color: var(--muted); text-align: right; }
+.row.is-key .row-letter { background: var(--correct-w); color: var(--correct); }
+.row.is-key .slot.on { background: var(--correct); }
+.threshold-note { font-family: var(--mono); font-size: .72rem; color: var(--wrong); opacity: .8; margin-top: .5rem; }
+.verdict { padding-top: .7rem; font-size: .92rem; font-weight: 600; line-height: 1.4; opacity: 0; transition: opacity .4s; }
+.verdict.show { opacity: 1; }
+.verdict .tag { display: inline-block; font-family: var(--mono); font-size: .74rem; font-weight: 500; padding: .05rem .45rem; border-radius: 99px; margin-left: .3rem; }
+.tag.ok { background: var(--correct-w); color: var(--correct); }
+.tag.bad { background: var(--wrong-w); color: var(--wrong); }
+.empty-board { font-size: .86rem; color: var(--muted); line-height: 1.45; }
+
+/* ---- the floor: five lecterns in a shallow arc ---- */
+.floor { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .8rem; margin-top: 1.1rem; }
+.seat { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+.seat:nth-child(1), .seat:nth-child(5) { margin-top: 1.3rem; }
+.seat:nth-child(2), .seat:nth-child(4) { margin-top: .5rem; }
+
+.bubble {
+  position: relative; min-height: var(--bubble-h); border: 1px solid var(--rule); border-radius: 8px;
+  background: var(--surface); padding: .65rem .75rem .6rem; display: flex; flex-direction: column;
+  opacity: 0; transform: translateY(6px) scale(.98); transition: opacity .35s, transform .35s, border-color .3s;
+  cursor: default;
+}
+.bubble::after { /* the tail, pointing at the speaker */
+  content: ""; position: absolute; left: 50%; bottom: -8px; width: 14px; height: 14px;
+  background: var(--surface); border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  transform: translateX(-50%) rotate(45deg);
+}
+.bubble.show { opacity: 1; transform: none; }
+.bubble.readable { cursor: pointer; }
+.bubble.readable:hover { border-color: var(--accent); }
+.bubble.dim { opacity: .45; }
+.bubble-round { font-family: var(--mono); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.bubble-text { font-size: .86rem; line-height: 1.48; color: var(--ink-2); margin-top: .3rem; overflow-wrap: anywhere; }
+.bubble-text.note { color: var(--flag); }
+.bubble-text .reason { display: block; font-style: italic; margin-bottom: .25rem; }
+.bubble-foot {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .3rem .4rem;
+  margin-top: auto; padding-top: .55rem; font-family: var(--mono); font-size: .74rem; color: var(--muted);
+}
+.final-chip { font-weight: 600; color: var(--accent); background: var(--accent-w); padding: .08rem .4rem; border-radius: 3px; white-space: nowrap; }
+.final-chip.none { color: var(--flag); background: var(--flag-w); }
+.bubble-foot .time { white-space: nowrap; }
+.thinking { display: none; gap: .3rem; align-items: center; justify-content: center; flex: 1 1 auto; }
+.bubble.is-thinking .thinking { display: flex; }
+.bubble.is-thinking .bubble-text, .bubble.is-thinking .bubble-foot { display: none; }
+.thinking i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--rule-2); animation: blink 1.1s infinite ease-in-out; }
+.thinking i:nth-child(2) { animation-delay: .18s; }
+.thinking i:nth-child(3) { animation-delay: .36s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+
+/* Above the arrows, so they leave from behind each speaker and never cover a badge. */
+.lectern { display: flex; flex-direction: column; align-items: center; margin-top: .95rem; position: relative; z-index: 5; }
+.avatar {
+  width: 2.9rem; height: 2.9rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ink); color: #fff; font-family: var(--mono); font-weight: 600; font-size: 1.2rem;
+  position: relative; z-index: 2; transition: box-shadow .3s, background .3s;
+}
+.seat.speaking .avatar { box-shadow: 0 0 0 4px var(--accent-w), 0 0 0 6px var(--accent); }
+.seat.failed .avatar { background: var(--rule-2); }
+/* A logo sits on a white disc so every mark reads clearly on the dark desk. */
+.avatar.has-logo { background: #fff; box-shadow: 0 0 0 1px var(--rule); }
+.avatar img { width: 64%; height: 64%; object-fit: contain; display: block; }
+.seat.speaking .avatar.has-logo { box-shadow: 0 0 0 4px var(--accent-w), 0 0 0 6px var(--accent); }
+.seat.failed .avatar.has-logo { background: #fff; }
+.seat.failed .avatar img { filter: grayscale(1); opacity: .45; }
+.desk {
+  width: 100%; margin-top: -.45rem; padding: .85rem .55rem .65rem; text-align: center;
+  background: linear-gradient(180deg, #2A3B4D, #1F2D3B); color: #fff;
+  clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%); border-radius: 2px;
+}
+.desk-name { font-weight: 600; font-size: 1.02rem; }
+.desk-model { font-size: .74rem; opacity: .75; margin-top: .1rem; line-height: 1.35; }
+.plate {
+  margin: .45rem auto 0; width: 3.3rem; height: 2.3rem; border-radius: 3px; display: grid; place-items: center;
+  background: rgba(255,255,255,.1); font-family: var(--mono); font-weight: 600; font-size: 1.45rem;
+  transition: background .3s, color .3s;
+}
+.plate.pop { animation: pop .45s ease-out; }
+@keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.plate.changed { background: #fff; color: var(--accent); }
+.plate.right { background: var(--correct); color: #fff; }
+.plate.wrong { background: var(--wrong); color: #fff; }
+.plate.none { color: rgba(255,255,255,.45); }
+.desk-status { font-family: var(--mono); font-size: .74rem; margin-top: .35rem; min-height: 1.1em; opacity: .9; }
+.peer-badge {
+  position: absolute; top: -.35rem; left: calc(50% + .9rem); z-index: 3; white-space: nowrap;
+  font-family: var(--mono); font-size: .72rem; font-weight: 600; background: var(--accent); color: #fff;
+  border-radius: 99px; padding: .05rem .45rem; opacity: 0; transform: scale(.6); transition: opacity .3s, transform .3s;
+}
+.peer-badge.show { opacity: 1; transform: none; }
+.peer-badge.zero { background: var(--rule-2); }
+
+.footnote { font-size: .8rem; color: var(--muted); margin-top: .9rem; line-height: 1.5; }
+
+/* ---- moving things ---- */
+svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; overflow: visible; }
+.flying {
+  position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; font-family: var(--mono); font-weight: 600;
+  display: grid; place-items: center; border-radius: 4px;
+}
+.flying.vote { width: 1.9rem; height: 1.9rem; background: var(--accent); color: #fff; font-size: 1rem; }
+.flying.paper { width: 1.15rem; height: 1.45rem; background: var(--surface); border: 1.5px solid var(--accent); color: var(--accent); font-size: .7rem; border-radius: 2px; }
+
+/* ---- full response reader ---- */
+.reader { position: absolute; inset: 0; background: rgba(28,27,25,.38); display: none; z-index: 10; padding: 1.5rem; }
+.reader.open { display: flex; align-items: center; justify-content: center; }
+.reader-card { background: var(--surface); border-radius: 6px; width: min(52rem, 100%); max-height: 100%; display: flex; flex-direction: column; border: 1px solid var(--rule); }
+.reader-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .8rem 1rem; border-bottom: 1px solid var(--rule); }
+.reader-title { font-weight: 600; font-size: 1rem; }
+.reader-sub { font-family: var(--mono); font-size: .74rem; color: var(--muted); margin-top: .15rem; }
+.reader-close { border: 1px solid var(--rule-2); background: var(--surface); border-radius: 3px; height: 2.2rem; padding: 0 .75rem; cursor: pointer; font-size: .9rem; }
+.reader-body { padding: 1rem; overflow-y: auto; white-space: pre-wrap; font-family: var(--mono); font-size: .84rem; line-height: 1.6; color: var(--ink-2); }
+
+@media (max-width: 760px) {
+  .top { grid-template-columns: 1fr; }
+  .floor { gap: .35rem; }
+  .bubble { padding: .45rem; }
+  .desk-model { display: none; }
+  .progress button { font-size: 0; }
+  .head { flex-direction: column; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001s !important; transition-duration: .001s !important; }
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="head">
+    <div>
+      <div class="scene-kicker" id="kicker"></div>
+      <div class="scene-title" id="title"></div>
+      <div class="scene-note" id="note"></div>
+    </div>
+    <div class="controls">
+      <button id="restart" title="Start again">&#8634;</button>
+      <button id="prev" title="Previous scene">&lsaquo;</button>
+      <button id="play" class="play">&#9654; Play</button>
+      <button id="next" title="Next scene">&rsaquo;</button>
+      <button id="speed" title="Playback speed">1&times;</button>
+    </div>
+  </div>
+  <div class="progress" id="progress"></div>
+
+  <div class="top">
+    <div class="card question">
+      <div class="question-meta" id="question-meta"></div>
+      <div class="question-text" id="question-text"></div>
+      <div class="options" id="options"></div>
+    </div>
+    <div class="card board">
+      <div class="ballot" id="ballot-1"></div>
+      <div class="ballot" id="ballot-2"></div>
+    </div>
+  </div>
+
+  <div class="floor" id="floor"></div>
+  <div class="footnote">
+    Bubbles quote the opening of each stored response word for word; click one to read it in full.
+    Agents are named here for the viewer. In Round&nbsp;2 the models saw only &ldquo;PEER RESPONSE&nbsp;1&ndash;4&rdquo;, never a name.
+    Logos are trademarks of their owners and only identify each model.
+  </div>
+
+  <svg class="wires" id="wires"></svg>
+
+  <div class="reader" id="reader">
+    <div class="reader-card">
+      <div class="reader-head">
+        <div><div class="reader-title" id="reader-title"></div><div class="reader-sub" id="reader-sub"></div></div>
+        <button class="reader-close" id="reader-close">Close</button>
+      </div>
+      <div class="reader-body" id="reader-body"></div>
+    </div>
+  </div>
+</div>
+
+<script id="stage-data" type="application/json">__STAGE_DATA__</script>
+<script>
+(() => {
+  "use strict";
+
+  const D = JSON.parse(document.getElementById("stage-data").textContent);
+  const AGENTS = D.agents;
+  const KEY = D.correct_answer;
+  const LETTERS = "ABCDEFGHIJ";
+  const STATE_LABELS = {
+    UNANIMOUS: "Unanimous",
+    CONSENSUS: "Consensus",
+    NO_CONSENSUS: "No consensus",
+    INSUFFICIENT_ANSWERS: "Insufficient answers",
+  };
+  const STATUS_LABELS = { OK: "OK", TRUNCATED: "Truncated", API_ERROR: "API error", PARSE_FAILURE: "Parse failure", REFUSAL: "Refusal" };
+
+  const SCENES = [
+    { short: "Question", title: "The question",
+      note: "One real MMLU-Pro question. All five agents receive exactly this text and these options." },
+    { short: "Round 1", title: "Round 1: independent answers",
+      note: "Each agent answers alone. None of them can see another answer, and none is told a second round follows." },
+    { short: "Vote 1", title: "Round 1: group vote",
+      note: "A group answer needs three matching votes out of five. A failed response casts no vote, and the threshold stays at three." },
+    { short: "Sharing", title: "Sharing: anonymous peer responses",
+      note: "Each agent receives the other agents' valid Round 1 responses as PEER RESPONSE 1, 2, ... with no names. The group vote is not shown." },
+    { short: "Round 2", title: "Round 2: reconsidering",
+      note: "Each agent reads its peers' reasoning, then keeps or changes its answer." },
+    { short: "Vote 2", title: "Round 2: final vote",
+      note: "The same rule: three matching votes out of five." },
+    { short: "Result", title: "Result",
+      note: "Only now are the answers checked against the MMLU-Pro answer key." },
+  ];
+  const LAST = SCENES.length - 1;
+
+  const $ = (id) => document.getElementById(id);
+  const stage = $("stage");
+  const el = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+
+  // ---------------------------------------------------------------- build
+  $("question-meta").textContent = `${D.category} · ${D.question_id.split(":").pop()}`;
+  $("question-text").textContent = D.question;
+  // Short options sit five to a row; long ones get room to wrap in two.
+  const longest = Math.max(...D.options.map((option) => option.length));
+  $("options").style.setProperty("--option-w", longest <= 18 ? "7rem" : longest <= 45 ? "12rem" : "17rem");
+  D.options.forEach((option, index) => {
+    const row = el("div", "option");
+    row.dataset.letter = LETTERS[index];
+    row.append(el("b", "", LETTERS[index]), el("span", "", option));
+    $("options").append(row);
+  });
+
+  const seats = {};
+  AGENTS.forEach((agent) => {
+    const seat = el("div", "seat");
+    const bubble = el("div", "bubble");
+    const round = el("div", "bubble-round");
+    const thinking = el("div", "thinking");
+    thinking.append(el("i"), el("i"), el("i"));
+    const text = el("div", "bubble-text");
+    const foot = el("div", "bubble-foot");
+    const chip = el("span", "final-chip");
+    const latency = el("span", "time");
+    foot.append(chip, latency);
+    bubble.append(round, thinking, text, foot);
+
+    const lectern = el("div", "lectern");
+    const avatar = el("div", "avatar", agent.name.charAt(0));
+    if (agent.logo) {
+      // The letter stays underneath as the fallback if the image cannot load.
+      const logo = el("img");
+      logo.alt = "";
+      logo.addEventListener("error", () => { logo.remove(); avatar.classList.remove("has-logo"); avatar.textContent = agent.name.charAt(0); });
+      logo.src = agent.logo;
+      avatar.replaceChildren(logo);
+      avatar.classList.add("has-logo");
+      avatar.title = `${agent.model} · ${agent.developer}`;
+    }
+    const badge = el("div", "peer-badge");
+    const desk = el("div", "desk");
+    const plate = el("div", "plate");
+    const status = el("div", "desk-status");
+    desk.append(el("div", "desk-name", agent.name), el("div", "desk-model", `${agent.model} · ${agent.developer}`), plate, status);
+    lectern.append(badge, avatar, desk);
+    seat.append(bubble, lectern);
+    $("floor").append(seat);
+
+    bubble.addEventListener("click", () => {
+      const speech = bubble.dataset.round ? agent[`round${bubble.dataset.round}`] : null;
+      if (speech && speech.full_text) openReader(agent, Number(bubble.dataset.round), speech);
+    });
+    seats[agent.id] = { seat, bubble, round, text, chip, latency, avatar, badge, plate, status };
+  });
+
+  // Rows appear only once that round's vote starts, so an empty board never
+  // hints at which letters the agents are about to choose.
+  function buildBallot(roundNumber, withRows) {
+    const box = $(`ballot-${roundNumber}`);
+    box.replaceChildren();
+    box.append(el("div", "ballot-title", `Round ${roundNumber} vote`));
+    const tally = D.rounds[String(roundNumber)];
+    const rows = el("div", "rows");
+    const letters = withRows ? Object.keys(tally.counts) : [];
+    if (!withRows) rows.append(el("div", "empty-board", `Waiting for the Round ${roundNumber} answers.`));
+    else if (!letters.length) rows.append(el("div", "empty-board", "No valid votes."));
+    letters.forEach((letter) => {
+      const row = el("div", "row");
+      row.dataset.letter = letter;
+      const slots = el("div", "slots");
+      for (let i = 0; i < 5; i += 1) slots.append(el("div", "slot"));
+      row.append(el("div", "row-letter", letter), slots, el("div", "row-count", "0"));
+      rows.append(row);
+    });
+    box.append(rows, el("div", "threshold-note", "┆ 3 votes needed"));
+    const verdict = el("div", "verdict");
+    box.append(verdict);
+  }
+
+  // --------------------------------------------------------- static states
+  // Every scene has one settled picture. Seeking draws it directly, and an
+  // animation always starts from the previous scene's picture.
+
+  function speechFor(agent, roundNumber) { return agent[`round${roundNumber}`]; }
+
+  function showBubble(agent, roundNumber, { thinking = false, dim = false } = {}) {
+    const s = seats[agent.id];
+    const speech = speechFor(agent, roundNumber);
+    s.bubble.dataset.round = String(roundNumber);
+    s.bubble.className = "bubble show" + (thinking ? " is-thinking" : "") + (dim ? " dim" : "")
+      + (!thinking && speech.full_text ? " readable" : "");
+    s.round.textContent = `Round ${roundNumber}`;
+    const quote = speech.excerpt ? `“${speech.excerpt}${speech.excerpt_cut ? " …" : ""}”` : "";
+    if (speech.letter) {
+      s.text.className = "bubble-text";
+      s.text.textContent = quote || "(no reasoning text)";
+      s.chip.className = "final-chip";
+      s.chip.textContent = `Final answer: ${speech.letter}`;
+    } else {
+      // The reason is stated first, then whatever text the model did produce.
+      s.text.className = "bubble-text note";
+      s.text.replaceChildren(el("span", "reason", speech.no_vote_note || "No vote."));
+      if (quote) s.text.append(quote);
+      s.chip.className = "final-chip none";
+      s.chip.textContent = "No vote";
+    }
+    s.latency.textContent = `${speech.latency_seconds.toFixed(1)} s`;
+    s.latency.title = "Stored response time";
+  }
+
+  function hideBubble(agent) {
+    const s = seats[agent.id];
+    s.bubble.className = "bubble";
+    delete s.bubble.dataset.round;
+  }
+
+  function setPlate(agent, roundNumber, { reveal = false } = {}) {
+    const s = seats[agent.id];
+    s.seat.classList.remove("failed");
+    if (!roundNumber) {
+      s.plate.className = "plate none";
+      s.plate.textContent = "·";
+      s.status.textContent = "";
+      return;
+    }
+    const speech = speechFor(agent, roundNumber);
+    const before = agent.round1.letter;
+    const changed = roundNumber === 2 && before && speech.letter && before !== speech.letter;
+    let cls = "plate";
+    if (!speech.letter) cls += " none";
+    else if (reveal) cls += speech.letter === KEY ? " right" : " wrong";
+    else if (changed) cls += " changed";
+    s.plate.className = cls;
+    s.plate.textContent = speech.letter || "—";
+    if (!speech.letter) {
+      s.seat.classList.add("failed");
+      s.status.textContent = STATUS_LABELS[speech.status] || speech.status;
+    } else if (roundNumber === 2 && before) {
+      s.status.textContent = changed ? `changed ${before} → ${speech.letter}` : `kept ${speech.letter}`;
+    } else if (roundNumber === 2) {
+      s.status.textContent = "first valid answer";
+    } else {
+      s.status.textContent = "";
+    }
+  }
+
+  function setBadges(show) {
+    AGENTS.forEach((agent) => {
+      const s = seats[agent.id];
+      const count = agent.round2.peers_from.length;
+      s.badge.textContent = `+${count} peer${count === 1 ? "" : "s"}`;
+      s.badge.title = `Received ${count} anonymous peer response${count === 1 ? "" : "s"}`
+        + (agent.round2.own_previous_included ? " plus its own Round 1 response" : "; its own Round 1 response had failed");
+      s.badge.className = "peer-badge" + (count === 0 ? " zero" : "") + (show ? " show" : "");
+    });
+  }
+
+  function setBallot(roundNumber, { filled, idle, reveal }) {
+    const box = $(`ballot-${roundNumber}`);
+    const tally = D.rounds[String(roundNumber)];
+    box.classList.toggle("is-idle", idle);
+    box.querySelectorAll(".row").forEach((row) => {
+      const count = filled ? tally.counts[row.dataset.letter] : 0;
+      row.querySelectorAll(".slot").forEach((slot, index) => slot.classList.toggle("on", index < count));
+      row.querySelector(".row-count").textContent = String(count);
+      row.classList.toggle("is-key", reveal && row.dataset.letter === KEY);
+    });
+    const verdict = box.querySelector(".verdict");
+    verdict.replaceChildren();
+    if (filled) {
+      const label = STATE_LABELS[tally.state] || tally.state;
+      if (tally.answer) {
+        verdict.append(`${label}: group answer ${tally.answer}`);
+      } else if (tally.state === "INSUFFICIENT_ANSWERS") {
+        verdict.append(`${label}: only ${tally.valid_votes} valid vote${tally.valid_votes === 1 ? "" : "s"}, no group answer`);
+      } else {
+        verdict.append(`${label}: no option reached three, no group answer`);
+      }
+      if (reveal) {
+        const right = tally.answer === KEY;
+        verdict.append(el("span", "tag " + (right ? "ok" : "bad"), right ? "correct" : "not correct"));
+      }
+    }
+    verdict.classList.toggle("show", filled);
+  }
+
+  function setKey(reveal) {
+    document.querySelectorAll(".option").forEach((row) => row.classList.toggle("is-key", reveal && row.dataset.letter === KEY));
+  }
+
+  function setSpeaking(ids) {
+    AGENTS.forEach((agent) => seats[agent.id].seat.classList.toggle("speaking", ids.includes(agent.id)));
+  }
+
+  function renderStatic(scene) {
+    clearMotion();
+    buildBallot(1, scene >= 2);
+    buildBallot(2, scene >= 5);
+    setSpeaking([]);
+    AGENTS.forEach((agent) => {
+      if (scene <= 0) hideBubble(agent);
+      else if (scene <= 3) showBubble(agent, 1, { dim: scene === 3 && !agent.round1.letter });
+      else showBubble(agent, 2);
+      setPlate(agent, scene <= 0 ? 0 : scene <= 3 ? 1 : 2, { reveal: scene === LAST });
+    });
+    setBadges(scene === 3 || scene === 4);
+    setBallot(1, { filled: scene >= 2, idle: scene < 2, reveal: scene === LAST });
+    setBallot(2, { filled: scene >= 5, idle: scene < 5, reveal: scene === LAST });
+    setKey(scene === LAST);
+    if (scene === 3) drawWires(0.22);
+    setHeader(scene);
+  }
+
+  // ------------------------------------------------------------- motion
+  let token = 0;
+  let speed = 1;
+  let scene = 0;
+  let playing = false;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  class Cancelled extends Error {}
+  const guard = (my) => { if (my !== token) throw new Cancelled(); };
+  const wait = (ms, my) => new Promise((resolve, reject) => {
+    setTimeout(() => (my === token ? resolve() : reject(new Cancelled())), reduced ? 0 : ms / speed);
+  });
+
+  function clearMotion() {
+    document.querySelectorAll(".flying").forEach((node) => node.remove());
+    $("wires").replaceChildren();
+  }
+
+  function centre(node) {
+    const box = node.getBoundingClientRect();
+    const base = stage.getBoundingClientRect();
+    return { x: box.left - base.left + box.width / 2, y: box.top - base.top + box.height / 2 };
+  }
+
+  async function fly(node, from, to, duration, my) {
+    stage.append(node);
+    const half = node.offsetWidth / 2;
+    const animation = node.animate(
+      [
+        { transform: `translate(${from.x - half}px, ${from.y - half}px) scale(.7)`, opacity: 0 },
+        { opacity: 1, offset: 0.15 },
+        { transform: `translate(${to.x - half}px, ${to.y - half}px) scale(1)`, opacity: 1 },
+      ],
+      { duration: reduced ? 1 : duration / speed, easing: "cubic-bezier(.45,.05,.35,1)", fill: "forwards" },
+    );
+    try { await animation.finished; } catch (error) { /* cancelled by clearMotion */ }
+    node.remove();
+    guard(my);
+  }
+
+  function arc(from, to) {
+    const lift = 70 + Math.abs(to.x - from.x) * 0.18;
+    const cx = (from.x + to.x) / 2;
+    const cy = Math.min(from.y, to.y) - lift;
+    return `M ${from.x} ${from.y} Q ${cx} ${cy} ${to.x} ${to.y}`;
+  }
+
+  function edges() {
+    const list = [];
+    AGENTS.forEach((receiver) => {
+      receiver.round2.peers_from.forEach((senderId, index) => list.push({ from: senderId, to: receiver.id, number: index + 1 }));
+    });
+    return list;
+  }
+
+  function drawWires(opacity) {
+    const svg = $("wires");
+    svg.replaceChildren();
+    const paths = [];
+    edges().forEach((edge) => {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", arc(centre(seats[edge.from].avatar), centre(seats[edge.to].avatar)));
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "#1F4E79");
+      path.setAttribute("stroke-width", "1.4");
+      path.setAttribute("stroke-opacity", String(opacity));
+      svg.append(path);
+      paths.push({ edge, path });
+    });
+    return paths;
+  }
+
+  async function animateScene(target, my) {
+    renderStatic(target - 1);
+    // The faint arrows belong to the settled sharing picture only.
+    $("wires").replaceChildren();
+    setHeader(target);
+
+    if (target === 1) {
+      const from = centre($("question-text"));
+      await Promise.all(AGENTS.map((agent, index) => {
+        const paper = el("div", "flying paper", "Q");
+        return wait(index * 90, my).then(() => fly(paper, from, centre(seats[agent.id].avatar), 900, my));
+      }));
+      AGENTS.forEach((agent) => showBubble(agent, 1, { thinking: true }));
+      const order = [...AGENTS].sort((a, b) => a.round1.latency_seconds - b.round1.latency_seconds);
+      for (const agent of order) {
+        await wait(650, my);
+        setSpeaking([agent.id]);
+        showBubble(agent, 1);
+        setPlate(agent, 1);
+        seats[agent.id].plate.classList.add("pop");
+      }
+      await wait(500, my);
+      setSpeaking([]);
+    }
+
+    if (target === 2 || target === 5) {
+      const roundNumber = target === 2 ? 1 : 2;
+      buildBallot(roundNumber, true);
+      const box = $(`ballot-${roundNumber}`);
+      box.classList.remove("is-idle");
+      const counts = {};
+      for (const agent of AGENTS) {
+        const letter = speechFor(agent, roundNumber).letter;
+        if (!letter) continue;
+        const row = box.querySelector(`.row[data-letter="${letter}"]`);
+        const slotIndex = counts[letter] || 0;
+        const slot = row.querySelectorAll(".slot")[slotIndex];
+        await fly(el("div", "flying vote", letter), centre(seats[agent.id].plate), centre(slot), 650, my);
+        counts[letter] = slotIndex + 1;
+        slot.classList.add("on");
+        row.querySelector(".row-count").textContent = String(counts[letter]);
+      }
+      await wait(350, my);
+      setBallot(roundNumber, { filled: true, idle: false, reveal: false });
+      await wait(900, my);
+    }
+
+    if (target === 3) {
+      AGENTS.forEach((agent) => { if (!agent.round1.letter) seats[agent.id].bubble.classList.add("dim"); });
+      const paths = drawWires(0);
+      paths.forEach(({ path }) => path.animate([{ strokeOpacity: 0 }, { strokeOpacity: 0.35 }], { duration: 500 / speed, fill: "forwards" }));
+      await wait(500, my);
+      // Every agent receives at the same time: one shared step, not a conversation.
+      await Promise.all(paths.map(({ edge, path }) => {
+        const node = el("div", "flying paper", String(edge.number));
+        stage.append(node);
+        const length = path.getTotalLength();
+        const duration = reduced ? 1 : 1500 / speed;
+        return new Promise((resolve) => {
+          const started = performance.now();
+          const step = (now) => {
+            if (my !== token) { node.remove(); resolve(); return; }
+            const t = Math.min(1, (now - started) / duration);
+            const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            const point = path.getPointAtLength(length * eased);
+            node.style.transform = `translate(${point.x - 8}px, ${point.y - 10}px)`;
+            if (t < 1) requestAnimationFrame(step); else { node.remove(); resolve(); }
+          };
+          requestAnimationFrame(step);
+        });
+      }));
+      guard(my);
+      setBadges(true);
+      await wait(1200, my);
+    }
+
+    if (target === 4) {
+      AGENTS.forEach((agent) => showBubble(agent, 2, { thinking: true }));
+      const order = [...AGENTS].sort((a, b) => a.round2.latency_seconds - b.round2.latency_seconds);
+      for (const agent of order) {
+        await wait(750, my);
+        setSpeaking([agent.id]);
+        showBubble(agent, 2);
+        setPlate(agent, 2);
+        seats[agent.id].plate.classList.add("pop");
+      }
+      await wait(600, my);
+      setSpeaking([]);
+    }
+
+    if (target === LAST) {
+      await wait(300, my);
+      setKey(true);
+      await wait(500, my);
+      setBallot(1, { filled: true, idle: false, reveal: true });
+      setBallot(2, { filled: true, idle: false, reveal: true });
+      AGENTS.forEach((agent) => setPlate(agent, 2, { reveal: true }));
+      await wait(400, my);
+    }
+  }
+
+  // ------------------------------------------------------------- controls
+  function setHeader(current) {
+    $("kicker").textContent = `Scene ${current + 1} of ${SCENES.length}`;
+    $("title").textContent = SCENES[current].title;
+    $("note").textContent = SCENES[current].note;
+    document.querySelectorAll(".progress button").forEach((button, index) => {
+      button.className = index < current ? "done" : index === current ? "current" : "";
+    });
+  }
+
+  function updateButtons() {
+    $("play").innerHTML = playing ? "&#10074;&#10074; Pause" : scene === LAST ? "&#8634; Replay" : "&#9654; Play";
+    $("prev").disabled = scene === 0 && !playing;
+    $("next").disabled = scene === LAST && !playing;
+  }
+
+  async function run(count) {
+    const my = ++token;
+    playing = true;
+    updateButtons();
+    try {
+      let left = count;
+      while (scene < LAST && left > 0) {
+        await animateScene(scene + 1, my);
+        scene += 1;
+        renderStatic(scene);
+        left -= 1;
+        if (left > 0 && scene < LAST) await wait(700, my);
+      }
+    } catch (error) {
+      if (!(error instanceof Cancelled)) throw error;
+      return;
+    }
+    playing = false;
+    updateButtons();
+  }
+
+  function stop() {
+    token += 1;
+    playing = false;
+    renderStatic(scene);
+    updateButtons();
+  }
+
+  function seek(target) {
+    stop();
+    scene = Math.max(0, Math.min(LAST, target));
+    renderStatic(scene);
+    updateButtons();
+  }
+
+  SCENES.forEach((item, index) => {
+    const button = el("button", "", `${index + 1} ${item.short}`);
+    button.title = item.title;
+    button.addEventListener("click", () => seek(index));
+    $("progress").append(button);
+  });
+
+  $("play").addEventListener("click", () => {
+    if (playing) { stop(); return; }
+    if (scene === LAST) { scene = 0; renderStatic(0); }
+    run(Infinity);
+  });
+  $("next").addEventListener("click", () => { if (playing) stop(); if (scene < LAST) run(1); });
+  $("prev").addEventListener("click", () => seek(scene - 1));
+  $("restart").addEventListener("click", () => { seek(0); run(Infinity); });
+  $("speed").addEventListener("click", () => {
+    speed = speed === 1 ? 2 : speed === 2 ? 0.5 : 1;
+    $("speed").textContent = speed === 0.5 ? "½×" : `${speed}×`;
+  });
+
+  // ------------------------------------------------------------- reader
+  function openReader(agent, roundNumber, speech) {
+    $("reader-title").textContent = `${agent.name} · Round ${roundNumber}`;
+    $("reader-sub").textContent = `${agent.model} · ${STATUS_LABELS[speech.status] || speech.status} · `
+      + (speech.letter ? `parsed answer ${speech.letter}` : "no vote") + ` · ${speech.latency_seconds.toFixed(1)} s`;
+    $("reader-body").textContent = speech.full_text;
+    $("reader").classList.add("open");
+  }
+  $("reader-close").addEventListener("click", () => $("reader").classList.remove("open"));
+  $("reader").addEventListener("click", (event) => { if (event.target === $("reader")) $("reader").classList.remove("open"); });
+
+  // ------------------------------------------------------------- sizing
+  // Every bubble takes the height of the longest one across both rounds, so
+  // nothing is clipped and the lecterns stay put when Round 2 arrives.
+  function measureBubbles() {
+    document.documentElement.style.setProperty("--bubble-h", "0px");
+    let tallest = 0;
+    AGENTS.forEach((agent) => [1, 2].forEach((roundNumber) => {
+      showBubble(agent, roundNumber);
+      tallest = Math.max(tallest, seats[agent.id].bubble.offsetHeight);
+    }));
+    document.documentElement.style.setProperty("--bubble-h", `${tallest}px`);
+  }
+
+  // Streamlit gives the frame a fixed height, so the stage sets it to its own
+  // height. If the frame cannot be reached, the height from Python stays.
+  // The frame only grows within one layout, so a pixel of difference between
+  // scenes never makes the page below it twitch.
+  let frameHeight = 0;
+  function fitFrame() {
+    const height = Math.ceil(stage.getBoundingClientRect().height) + 2;
+    if (height <= frameHeight) return;
+    frameHeight = height;
+    try {
+      const frame = window.frameElement;
+      if (frame) {
+        frame.style.height = `${height}px`;
+        // Streamlit reserves a slot of the starting height around the frame.
+        // Growing the slot too keeps the page flowing below the stage.
+        const slot = frame.parentElement;
+        if (slot && slot.getBoundingClientRect().height < height) slot.style.height = `${height}px`;
+      }
+    } catch (error) { /* a cross-origin frame keeps its given height */ }
+  }
+
+  // The header note, the vote board and its verdicts differ from scene to
+  // scene. Reserving the tallest version of each keeps the lecterns still
+  // while the debate plays.
+  function reserveSceneHeights() {
+    const parts = [document.querySelector(".head"), document.querySelector(".top")];
+    parts.forEach((part) => { part.style.minHeight = ""; });
+    const tallest = parts.map(() => 0);
+    for (let index = 0; index <= LAST; index += 1) {
+      renderStatic(index);
+      parts.forEach((part, at) => { tallest[at] = Math.max(tallest[at], part.offsetHeight); });
+    }
+    parts.forEach((part, at) => { part.style.minHeight = `${tallest[at]}px`; });
+  }
+
+  let laidOutWidth = 0;
+  function layout() {
+    laidOutWidth = window.innerWidth;
+    frameHeight = 0;
+    measureBubbles();
+    reserveSceneHeights();
+    renderStatic(scene);
+    fitFrame();
+  }
+
+  // Resizing the frame's height fires a resize event too. Only a change of
+  // width can change the layout, so anything else is ignored; otherwise the
+  // stage would resize its frame for ever.
+  let resizeTimer = 0;
+  window.addEventListener("resize", () => {
+    if (window.innerWidth === laidOutWidth) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (!playing) layout(); }, 150);
+  });
+  new ResizeObserver(fitFrame).observe(stage);
+
+  layout();
+  updateButtons();
+  // The web fonts change line breaks once they arrive.
+  if (document.fonts) document.fonts.ready.then(() => { if (!playing) layout(); });
+})();
+</script>
+</body>
+</html>

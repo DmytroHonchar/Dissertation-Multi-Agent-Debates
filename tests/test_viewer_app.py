@@ -90,3 +90,10 @@ def test_viewer_never_names_an_answer_key_or_model_client():
 def test_viewer_file_is_valid_python():
     spec = importlib.util.spec_from_file_location("viewer", VIEWER_PATH)
     assert spec is not None and spec.loader is not None
+
+
+def test_viewer_offers_the_animated_stage_beside_the_evidence_steps():
+    source = VIEWER_PATH.read_text()
+    assert 'REPLAY_VIEWS = ("Animated debate", "Step-by-step evidence")' in source
+    assert "build_stage_payload" in source
+    assert (REPOSITORY_ROOT / "app" / "debate_stage.html").is_file()

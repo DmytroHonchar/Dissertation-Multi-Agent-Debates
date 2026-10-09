@@ -593,6 +593,17 @@ Round 1 request, stored responses, parsing, first vote, one agent's exact
 anonymous Round 2 input, revised responses, final vote and question-level
 usage. The answer stays hidden until the first vote can be evaluated.
 
+Each replay case can also be played as an animated debate stage
+(`app/debate_stage.html`, fed by `src/mad/debate_stage.py`). The five agents
+stand at lecterns and the debate plays in seven scenes: the question, the
+independent Round 1 answers, the first vote, the anonymous peer handover, the
+Round 2 answers, the final vote and the answer-key check. Everything on it is
+stored data: each speech bubble quotes the opening of a stored response word for
+word, bubbles appear in stored-latency order, the vote board fills from the
+parsed letters, and the handover arrows follow each Round 2 row's stored peer
+IDs, so a failed agent visibly sends nothing. The stage runs in the browser and
+makes no model calls.
+
 Required by CA2 on 2026-11-06 — the demonstration uses a real stored debate, so
 this cannot be left to the end.
 

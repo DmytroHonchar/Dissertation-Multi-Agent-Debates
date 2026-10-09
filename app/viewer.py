@@ -20,11 +20,13 @@ from pathlib import Path
 
 import altair as alt
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
+from mad.debate_stage import build_stage_payload, load_logos, stage_document  # noqa: E402
 from mad.public_viewer_data import (  # noqa: E402
     AgentResponseView,
     ExperimentOverview,
@@ -55,6 +57,14 @@ CURATED_NOTES = {
     "mmlu_pro_v1:test:2697": "The group disagreed in both rounds, so no answer was recorded either time.",
     "mmlu_pro_v1:test:11994": "Three agents failed in Round 1, leaving too few votes to reach three. Round 2 completed and was correct.",
 }
+
+REPLAY_VIEWS = ("Animated debate", "Step-by-step evidence")
+
+# The animated stage is one self-contained page. Streamlit needs a starting
+# height; the stage then resizes its own frame to fit the question shown.
+STAGE_TEMPLATE = Path(__file__).with_name("debate_stage.html")
+STAGE_LOGOS = Path(__file__).with_name("logos")
+STAGE_HEIGHT = 780
 
 STEPS = (
     ("question", "The question"),
@@ -1405,6 +1415,24 @@ def _render_step(step_name: str, replay: QuestionReplay) -> None:
         raise ValueError(f"unknown replay step {step_name!r}") from error
 
 
+def _render_debate_stage(replay: QuestionReplay) -> None:
+    """The same stored debate, played as five agents at their lecterns.
+
+    The stage runs in the browser, so playing it never reruns this script.
+    It shows only stored data: bubbles quote the stored responses and the
+    peer arrows follow the stored Round 2 rows.
+    """
+    # The caption goes above the stage. The stage grows its own frame past the
+    # height Streamlit reserved, so anything placed after it would be covered.
+    st.caption(
+        "Press Play to watch the debate, or click a scene to jump to it. "
+        "The step-by-step view shows every request, parse and vote in full."
+    )
+    payload = build_stage_payload(replay, MODEL_LABELS, load_logos(STAGE_LOGOS))
+    template = STAGE_TEMPLATE.read_text(encoding="utf-8")
+    components.html(stage_document(payload, template), height=STAGE_HEIGHT, scrolling=False)
+
+
 def _render_replay(replay: QuestionReplay, example_label: str) -> None:
     _page_header(
         "Interactive evidence replay",
@@ -1421,6 +1449,15 @@ def _render_replay(replay: QuestionReplay, example_label: str) -> None:
         ("Final outcome", "Correct" if final_correct else "Not correct",
          f"Benchmark answer {replay.correct_answer}"),
     ))
+
+    # Only the chosen view is drawn. A component inside a hidden tab mounts at
+    # zero width and would measure its lecterns wrongly.
+    view = st.segmented_control(
+        "View", REPLAY_VIEWS, default=REPLAY_VIEWS[0], key="replay_view", label_visibility="collapsed"
+    )
+    if view != REPLAY_VIEWS[1]:
+        _render_debate_stage(replay)
+        return
 
     # Switching case starts its replay at step 1. Carrying the previous
     # case's step over lands the viewer mid-debate on a question they have
