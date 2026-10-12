@@ -45,7 +45,7 @@ SAMPLING_SEED = 42
 
 
 class FrozenArtifactExistsError(FileExistsError):
-    """Raised when freezing would replace an existing permanent artifact."""
+    """Stops the frozen question files from being overwritten."""
 
 
 # 2. Loading the raw dataset
@@ -54,7 +54,7 @@ class FrozenArtifactExistsError(FileExistsError):
 def load_benchmark_questions(
     config_path: str | Path,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Load every locally configured split and immediately assign stable IDs."""
+    """Load the questions from every file in the YAML, each with its ID."""
     resolved_config_path = Path(config_path).resolve()
     with resolved_config_path.open(encoding="utf-8") as config_file:
         config = yaml.safe_load(config_file)
