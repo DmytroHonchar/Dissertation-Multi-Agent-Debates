@@ -680,6 +680,11 @@ def _inject_styles() -> None:
         }
         .stButton > button:disabled { opacity: .45; }
         hr { border-color: var(--rule); }
+        /* The animated stage grows the slot around its frame. Switching to the
+           step-by-step view reuses that slot for the next element, which would
+           keep the stage's height as empty space. Only a slot holding a frame
+           may keep a forced height. */
+        [data-testid="stElementContainer"]:not(:has(iframe)) { height: auto !important; }
 
         @media (max-width: 900px) {
             .integrity-strip { grid-template-columns: 1fr; }

@@ -1712,6 +1712,44 @@ responses, compute the group vote, and store an inspectable result.
   faintly than the other four.
 - **Next:** Supervisor review, then commit and deploy.
 
+### 2026-10-12 — CA2 recording guide and spoken script prepared
+
+- **Built:** Added `docs/ca2_recording_plan.md`: a 9:15 target timeline, three
+  slide outlines, exact app interactions, code locations, spoken text,
+  understanding notes, recording preparation, Q&A answers and a Claude review
+  handoff. The user reports that Meng approved the completed UI.
+- **Why:** The user needs one practical script connecting slides, the existing
+  Streamlit demonstration and source code, with a 9:30 working ceiling and
+  enough understanding to defend the implementation.
+- **Tested:** Checked the provided CA2 brief, accepted report, current app
+  controls and source functions. The public replay loader confirmed Qwen's
+  Peer Response 4 was Gemma and that Qwen already chose A before reconsidering;
+  three other agents changed C to A. Failure case `11994` was checked against
+  both stored rounds. Focused answer-leakage tests passed: 10 tests. No model
+  call or experimental-data mutation was performed.
+- **Problems:** The spoken timings and screen fit require a rehearsal. Slide
+  contents are specified but no rendered deck or video exists yet. Claude's
+  review remains pending; the plan does not assume agreement or claim a newly
+  verified full-suite test count.
+- **Next:** Review this single guide with Claude, continue the second-day code
+  walkthrough, prepare the three slides and complete a timed rehearsal.
+
+### 2026-10-15 — Replay: empty gap in the step-by-step view removed
+
+- **Built:** One CSS rule in `app/viewer.py`: a Streamlit element slot that
+  does not hold a frame always takes its natural height.
+- **Why:** The animated stage grows the slot around its frame
+  (`fitFrame` in `app/debate_stage.html`). After switching to "Step-by-step
+  evidence", Streamlit reused that slot for the step pipeline, which kept the
+  stage's inline height and left a large empty space under the pipeline.
+- **Tested:** Reproduced in a local browser on a private port: after the
+  switch the pipeline slot measured 826 px. With the rule it measured 100 px
+  while the stale inline value stayed, and switching back gave the stage its
+  full 792 px frame. Offline suite: 554 passed. No model call or data change.
+- **Problems:** The stale inline height is now ignored rather than removed;
+  the rule depends on the browser supporting CSS `:has()`.
+- **Next:** Check the replay once on the deployed Streamlit app.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity
