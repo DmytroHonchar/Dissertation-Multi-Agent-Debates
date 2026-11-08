@@ -1750,6 +1750,29 @@ responses, compute the group vote, and store an inspectable result.
   the rule depends on the browser supporting CSS `:has()`.
 - **Next:** Check the replay once on the deployed Streamlit app.
 
+### 2026-11-08 — MMLU-Pro licence notice and viewer credit
+
+- **Built:** `THIRD_PARTY_NOTICES.md` at the repository root, crediting
+  MMLU-Pro (TIGER-Lab, revision `b189ec7…`, Wang et al. 2024) and including
+  the MIT licence text. It lists where the material appears: `data/raw/`,
+  `data/frozen/mmlu_pro_v1/` and the public viewer bundle. One sidebar caption
+  in `app/viewer.py` credits MMLU-Pro and its licence, with a link.
+- **Why:** The repository is public and redistributes the raw MMLU-Pro files,
+  the 320 frozen questions with answer keys, and six questions in the public
+  viewer. MIT allows this only if the licence notice is kept. Neither the
+  repository nor the viewer carried it. Found while writing dissertation
+  Section 6.4 (Project ethics).
+- **Tested:** Licence read from the Hugging Face dataset API (`license: mit`).
+  TIGER-Lab's separate GitHub code repository is Apache 2.0, but the data was
+  downloaded from Hugging Face. All 320 frozen questions were compared with the
+  raw parquet: question text, options and category match exactly. Offline
+  suite: 554 passed. `check_public_deployment.py` passed. Headless Streamlit
+  render: no exceptions, credit caption present. No model call, and no frozen
+  or stored data changed.
+- **Problems:** The dataset card names no individual copyright holder, so the
+  notice credits TIGER-Lab and the MMLU-Pro authors.
+- **Next:** Commit and push, then check the caption on the deployed app.
+
 ## Entry template
 
 ### YYYY-MM-DD — Component or activity

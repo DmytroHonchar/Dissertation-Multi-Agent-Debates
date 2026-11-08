@@ -1500,6 +1500,10 @@ def main() -> None:
         st.markdown('<span class="badge badge-green">Read-only mode</span>', unsafe_allow_html=True)
         st.caption("No model calls · no database writes")
         st.caption("Accepted run · agents_v7")
+        st.caption(
+            "Questions from [MMLU-Pro](https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro) "
+            "by TIGER-Lab, MIT licence"
+        )
 
     try:
         overview = _load_overview()
