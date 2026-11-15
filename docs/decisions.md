@@ -881,3 +881,23 @@ Mistral's 77 upstream terminal 429 errors and lower individual accuracy are
 prominent limitations. They do not invalidate the stored run, and they did not
 cause most initial undecided cases: only five of the 22 questions without a
 Round 1 majority had a failed Mistral Round 1 response.
+
+## D030 — Post hoc answer-key check, no score changed (2026-11-15)
+
+After the CA2 Q&A, the second marker suggested checking cases where the models
+may be right and the benchmark key wrong. A small descriptive check was added
+to the Limitations section in response. It is post hoc: it was added after the
+main results were known, and it changes no score, table or headline number.
+
+From the stored `question_comparisons.csv`: in 18 questions all five agents
+agreed in Round 2 on an answer the key marks wrong, and in eight of these they
+had already agreed on that answer in Round 1. All 18 were scored incorrect in
+both rounds, so none contributed to the net gain of ten correct answers.
+
+The dissertation reports these counts and two examples where the key itself
+looks doubtful and can be checked without subject expertise: question 3894
+(the keyed option equates 7.352 mT with 10.104 gauss) and question 2129 (the
+keyed "behaviour disorder" is hemiplegia). The questions are not re-marked, no
+classification of all 18 is reported, and no accuracy is recalculated on a
+reduced question set. Accuracy continues to mean agreement with the fixed
+MMLU-Pro key (D029 unchanged).
