@@ -1,4 +1,8 @@
-# Pilot review — corrected 22 September 2026
+# Pilot review: corrected 22 September 2026
+
+This file reviews the first 20-question pilot, which ran on 10 September 2026
+under `agents_v5`. Pilot results are development data and are not part of the
+final results.
 
 Source: stored run `pilot_agents_v5_20260910T161210Z`, scored offline with
 `evaluation_v2`, `pilot_answers.jsonl` and `expected_questions=20`.

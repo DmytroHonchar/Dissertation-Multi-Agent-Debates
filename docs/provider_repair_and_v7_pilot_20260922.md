@@ -1,4 +1,9 @@
-# Provider repair and accepted `agents_v7` pilot — 22 September 2026
+# Provider repair and accepted `agents_v7` pilot: 22 September 2026
+
+This file tells what happened to the Mistral agent on 22 September 2026. The
+original model stopped being available through OpenRouter, its replacement was
+rate-limited on its first host, and a second host was chosen. The file ends
+with the accepted pilot under `agents_v7`.
 
 This document records the full provider problem, the investigation, the fixes,
 the rejected alternatives and the final pilot evidence. It is an engineering

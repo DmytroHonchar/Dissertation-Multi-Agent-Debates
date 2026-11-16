@@ -1,5 +1,10 @@
 # Project Decisions
 
+Read this file when a code comment or another document names a decision such as
+D004 or D012. Each entry gives one decision, its date and the reason for it.
+The entries are in the order they were made, so a later entry can replace an
+earlier one.
+
 This document is the source of truth for the current dissertation experiment.
 The old three-model `0.x` pipeline is obsolete and may be consulted only as a
 technical reference. A change to any fixed decision below must be dated and
@@ -13,7 +18,7 @@ final export, and D029 is the authority for interpreting the result. A
 component-by-component explanation of the whole project is in
 `docs/project_record.md`.
 
-## D001 — Research comparison
+## D001: Research comparison
 
 - **Status:** Fixed
 - **Decision:** Evaluate whether a heterogeneous multi-agent debate changes or
@@ -24,7 +29,7 @@ component-by-component explanation of the whole project is in
 The core implementation uses five heterogeneous agents. There is no homogeneous
 model condition and no judge model.
 
-## D002 — Selected models and API provider
+## D002: Selected models and API provider
 
 - **Status:** Fixed for development; freeze again after the pilot
 - **Decision:** Use one OpenRouter API key to access the following five exact
@@ -43,7 +48,7 @@ Context limits and prices were confirmed from OpenRouter's live model registry
 on 2026-08-26. They are a dated snapshot and must be checked again immediately
 before the main experiment.
 
-### Generation settings — updated 2026-08-28
+### Generation settings: updated 2026-08-28
 
 All five agents use **temperature `0`** and **top-p `1.0`** in both rounds. The
 experiment measures how much of any accuracy change comes from aggregating
@@ -60,12 +65,12 @@ tokens are billed and consume the budget before any visible answer appears.
 
 Provider pinning is addressed in D015.
 
-## D003 — Core debate protocol
+## D003: Core debate protocol
 
 - **Status:** Fixed
 - **Decision:** Use two rounds with five agents.
 - **Recorded:** 2026-08-26
-- **Clarified:** 2026-09-03 — Round 2 restores each agent's own valid Round 1
+- **Clarified:** 2026-09-03: Round 2 restores each agent's own valid Round 1
   response as conversation history, separately from the anonymous peer set.
 
 ### Round 1
@@ -94,7 +99,7 @@ prompt version that produced it: `round1_v1` or `round2_v1`.
 An additional debate round is desirable future work but is not part of the core
 implementation, pilot, or main experiment.
 
-## D004 — Voting and failed responses
+## D004: Voting and failed responses
 
 - **Status:** Fixed
 - **Decision:** A group answer requires at least three matching votes out of the
@@ -111,7 +116,7 @@ The database must preserve both the raw response and its parse/failure status so
 that failures can be audited rather than silently converted into incorrect
 answers.
 
-## D005 — Dataset and separation of pilot data
+## D005: Dataset and separation of pilot data
 
 - **Status:** Frozen
 - **Decision:** Use the prepared MMLU-Pro test-split artifacts in
@@ -128,7 +133,7 @@ context use, latency, and cost. After fixes from the pilot, prompts, model
 settings, parser behaviour, retry rules, and experiment configuration must be
 frozen before any of the 300 main questions are run.
 
-## D006 — Call count and budget
+## D006: Call count and budget
 
 - **Status:** Fixed budget for the core two-round design
 - **Decision:** Set the maximum API budget to **£15** and the OpenRouter key
@@ -147,7 +152,7 @@ scenario in which both responses reach the current 1,024-token limit costs about
 £10.04, or £13.06 with the same reserve. Repeating the full pilot or increasing
 completion limits substantially requires a revised estimate before proceeding.
 
-## D007 — Reproducibility and auditability
+## D007: Reproducibility and auditability
 
 - **Status:** Fixed principle; implementation incomplete
 - **Decision:** Every model call and derived vote must be reproducible or
@@ -168,7 +173,7 @@ crashes, `ended_at` deliberately remains `NULL`, which marks that run as
 incomplete. Clients, caches and database connections are still closed normally;
 only the experimental run remains unfinished.
 
-## D008 — Implementation milestones
+## D008: Implementation milestones
 
 - **Status:** Fixed development order
 - **Recorded:** 2026-08-26
@@ -183,7 +188,7 @@ only the experimental run remains unfinished.
 5. Run and inspect the 20-question pilot, then freeze all experimental settings.
 6. Run the 300-question main experiment without changing frozen settings.
 
-## D009 — Outcome measures
+## D009: Outcome measures
 
 - **Status:** Fixed
 - **Decision:** Report three separate accuracy measures on the same 300
@@ -205,7 +210,7 @@ and communication. D001 is unchanged; this entry makes its comparison explicit.
 Also report per question: whether the answer changed between rounds, consensus
 state, token usage, estimated cost and latency, for each round separately.
 
-## D010 — Scoring of no-consensus and failed responses
+## D010: Scoring of no-consensus and failed responses
 
 - **Status:** Fixed
 - **Decision:** A no-consensus outcome counts as incorrect in group accuracy and
@@ -224,7 +229,7 @@ recorded as a wrong answer. Reporting either figure without the other is
 misleading, because an agent that answers one question correctly and fails the
 rest would otherwise appear perfectly accurate.
 
-## D011 — Statistical analysis
+## D011: Statistical analysis
 
 - **Status:** Fixed
 - **Decision:** Compare the paired Round 1 and Round 2 group outcomes on the same
@@ -241,7 +246,7 @@ correct, became incorrect, or stayed incorrect, and report the counts. The same
 four-way classification is reported for individual agents over their valid
 answers.
 
-### Resolved method — 2026-08-28
+### Resolved method: 2026-08-28
 
 - **Primary outcome:** Round 2 group accuracy minus Round 1 group accuracy, in
   percentage points, on the same 300 questions.
@@ -253,14 +258,14 @@ answers.
   interval would break.
 - **Significance test:** McNemar's exact test on the paired correct/incorrect
   results. If there are no discordant pairs, report **p = 1**.
-- **Transitions:** report all four counts — correct→correct, correct→incorrect,
+- **Transitions:** report all four counts: correct→correct, correct→incorrect,
   incorrect→correct, incorrect→incorrect.
 
 The bootstrap seed must be fixed and recorded so the interval is reproducible.
 This method is fixed now, before any results exist, and must not be changed after
 seeing them.
 
-## D012 — Retry policy
+## D012: Retry policy
 
 - **Status:** Fixed and implemented (2026-08-28)
 - **Decision:** A temporary API error is retried **once**, and the retry is
@@ -276,7 +281,7 @@ and the 2026-08-28 smoke test confirmed it live: the rate-limited Mistral call
 reported `failed after 2 attempts`. The documentation was not relaxed to permit
 five attempts; the code was corrected to match the proposal.
 
-## D013 — Replay interface
+## D013: Replay interface
 
 - **Status:** Fixed scope
 - **Decision:** A Streamlit page replays one completed debate, read-only.
@@ -292,7 +297,7 @@ outcome; and per-question tokens, estimated cost and response time.
 The interface must be working by CA2 on 2026-11-06, because the demonstration
 uses a real stored debate.
 
-## D014 — Desirable extensions
+## D014: Desirable extensions
 
 - **Status:** Desirable only; not part of the core implementation
 - **Recorded:** 2026-08-28 (from the CA1 proposal, Section 3.3)
@@ -307,7 +312,7 @@ uses a real stored debate.
 Neither may change the frozen core configuration or the headline comparison in
 D009.
 
-## D015 — Provider routing
+## D015: Provider routing
 
 - **Status:** Pre-pilot pins selected; awaiting Milestone 2 and pilot validation
 - **Decision:** Use the exact provider pins in `agents_v5`, with fallbacks off.
@@ -350,7 +355,7 @@ only company serving `mistralai/mistral-large-2512`: its EU pin fixes the
 endpoint variant but cannot provide a different host if Mistral is unavailable.
 That availability risk remains under D016.
 
-## D016 — Mistral upstream availability
+## D016: Mistral upstream availability
 
 - **Status:** Open risk; not blocking the current milestone
 - **Recorded:** 2026-08-28
@@ -376,7 +381,7 @@ Separately noted for the parser (P6): Mistral answered `'Yes.'` to a prompt
 asking for the single word `ready`, as it did on 2026-08-26. Weak
 instruction-format compliance is a parser concern, not a connection fault.
 
-## D017 — Parser tolerance rules
+## D017: Parser tolerance rules
 
 - **Status:** Implemented, open for review before the pilot freeze
 - **Decision:** `parser_v1.py` accepts a bare letter on a `FINAL ANSWER:` line
@@ -413,7 +418,7 @@ does answer: `I cannot answer A, so FINAL ANSWER: B`. This **narrows P6's rule
 that refusal takes priority over a present letter.** A provider signal still
 takes priority over any letter. A refusal *phrase in the text* is only trusted
 when no valid letter was extracted. Text is weak evidence, and discarding a real
-answer because of a substring is worse than missing a refusal — a missed refusal
+answer because of a substring is worse than missing a refusal: a missed refusal
 becomes `PARSE_FAIL`, which is still not scored as a wrong answer.
 
 **Truncation guessed from text requires a long reply.** Where the provider
@@ -429,31 +434,31 @@ The phrase list and the 200-character floor must both be checked against the
 pilot transcripts before the freeze.
 
 
-## D018 — Token limits after the Milestone 1 truncations
+## D018: Token limits after the Milestone 1 truncations
 
 - **Status:** Pre-pilot values selected; awaiting Milestone 2 and pilot validation
 - **Decision:** The `agents_v5` candidate uses Llama 1024, Qwen 3072, Mistral
   1024, DeepSeek 2048 and Gemma 1024 completion tokens. Qwen also requests a
   2048 reasoning-token maximum, recorded as best-effort because Parasail did
-  not enforce it exactly. Selection uses completion, truncation and cost—not
+  not enforce it exactly. Selection uses completion, truncation and cost, not
   answer correctness.
 - **Recorded:** 2026-09-01
 
 The live Milestone 1 run (`milestone1_20260901T161852Z`, settings `agents_v1`)
 found Qwen and DeepSeek spending the entire 1024-token output budget on internal
 reasoning: `finish_reason=length`, `content=null`, no visible answer, no vote.
-Those two calls cost $0.0072 of the run's $0.0082 — 88% of the spend bought
+Those two calls cost $0.0072 of the run's $0.0082: 88% of the spend bought
 nothing. Truncation is therefore the most expensive possible outcome, and the
 ceiling exists to prevent runaway, not to ration ability.
 
 **How the final limits are chosen.** Probe 2–3 pilot questions per candidate.
 If any response ends with `finish_reason=length`, the ceiling is a lower bound,
-not a measurement — move up one step (2048 → 3072 → 4096) under a new settings
+not a measurement: move up one step (2048 → 3072 → 4096) under a new settings
 version. Once everything finishes, take the largest completed token count, add
 roughly 25% margin, round up to the next 256. The chosen limits are used
 unchanged in both rounds and frozen with the rest of the configuration.
 Selection uses truncation, valid-answer rate and cost only. Pilot accuracy is
-20 questions — one question is five percentage points — so choosing settings by
+20 questions, one question is five percentage points, so choosing settings by
 it would be fitting noise, and tuning the configuration on the outcome measure
 is exactly what this project criticises elsewhere.
 
@@ -481,7 +486,7 @@ probe candidate is `configs/models/agents_v2.yaml`: identical except Qwen and
 DeepSeek at `max_tokens: 2048`, clearly marked provisional.
 
 
-## D018 addendum — the controlled reasoning-cap test (2026-09-02)
+## D018 addendum: the controlled reasoning-cap test (2026-09-02)
 
 - **Status of D018:** corrected on 2026-09-03; pre-pilot values chosen
 - **Test:** run `round1_agents_v4_20260902T224109Z`, maths question
@@ -491,7 +496,7 @@ DeepSeek at `max_tokens: 2048`, clearly marked provisional.
   One deliberate change from `agents_v3`; question and provider held fixed.
 
 **Initial result:** Qwen answered with `finish_reason=stop`, visible
-`FINAL ANSWER: D`, parsed `OK`, and $0.0028 cost—against the $0.0100 uncapped
+`FINAL ANSWER: D`, parsed `OK`, and $0.0028 cost, against the $0.0100 uncapped
 3072 truncation on the identical question and provider. It used only 578
 reasoning tokens of the requested 2048 maximum. This showed that the capped
 request could complete, but it did **not** prove enforcement because the model
@@ -527,7 +532,7 @@ ceiling is the control that can be relied upon. Provider pins and reasoning
 settings are part of the cache key, so incompatible requests cannot share a
 cached response.
 
-## D019 — What counts as a valid Round 1 response in Round 2
+## D019: What counts as a valid Round 1 response in Round 2
 
 - **Status:** Fixed and implemented (2026-09-07)
 - **Decision:** Valid means `status == "OK"` and nothing else.
@@ -555,7 +560,7 @@ on, which is exactly the comparison D009 depends on. `peer_count` is stored per
 response because the number of peers actually seen is a confound the results
 chapter must report.
 
-## D020 — Two-round run labels and peer ordering
+## D020: Two-round run labels and peer ordering
 
 - **Status:** Fixed and implemented (2026-09-07)
 - **Decision:** A run containing both rounds is named `debate_config_v1`, and
@@ -581,7 +586,7 @@ the peers are read. That is accepted as a known property of the design and
 recorded here, not claimed to be harmless. The pilot is where any sign of it
 would first show.
 
-## D021 — The three evaluation choices left open by D011
+## D021: The three evaluation choices left open by D011
 
 - **Status:** Fixed and implemented (2026-09-10)
 - **Decision:** Bootstrap seed `20260828`; exact McNemar from the standard
@@ -606,7 +611,7 @@ scipy would put a large compiled dependency into a project whose entire test
 suite runs offline, to compute a sum of binomial coefficients. P12 is corrected.
 
 **The aggregation gain has two baselines, and both are reported.** D009 measure
-1 is per-agent accuracy - five numbers - and measure 2 is one group number, so
+1 is per-agent accuracy, five numbers, and measure 2 is one group number, so
 "measure 2 minus measure 1" was ambiguous. It is now:
 
 - **versus the mean agent** - the average gain over picking one agent blindly.
@@ -624,7 +629,7 @@ requires every question in the run to appear in the supplied answer key, which
 refuses a pilot run paired with the experimental key and the reverse, since the
 two sets do not overlap.
 
-## D022 — Supplementary failure-free comparison (2026-09-22)
+## D022: Supplementary failure-free comparison (2026-09-22)
 
 Added after inspecting the formal pilot, before the main experiment; this is
 not a pre-pilot decision. The primary group comparison remains over every
@@ -643,7 +648,7 @@ control, so extra inference and communication are not causally separated.
 Per-question diagnostics report the stored votes, correctness and failure
 identities in each round; they do not infer what caused an answer change.
 
-## D023 — Bounded post-pilot diagnostics (2026-09-22)
+## D023: Bounded post-pilot diagnostics (2026-09-22)
 
 User approved trying the provider and token tests. Before paid calls: at most
 six single-attempt requests, no automatic retry, with cumulative conservative
@@ -668,7 +673,7 @@ raw completions and attempts are stored in a separate timestamped diagnostic
 SQLite file under ignored storage/. All production rows and agents_v5 remain
 unchanged. Findings do not select a new frozen configuration by themselves.
 
-## D024 — Mistral replacement candidate after endpoint withdrawal (2026-09-22)
+## D024: Mistral replacement candidate after endpoint withdrawal (2026-09-22)
 
 - **Status:** Candidate implemented; the repeated pilot is still required
   before freeze or main experiment.
@@ -706,7 +711,7 @@ Because the agent model changed after the formal pilot, the 20-question pilot
 must be repeated under `agents_v6`. No main result is permitted before this
 candidate passes and is explicitly frozen.
 
-## D025 — Replace the Mistral Parasail pin after the agents_v6 pilot (2026-09-22)
+## D025: Replace the Mistral Parasail pin after the agents_v6 pilot (2026-09-22)
 
 - **Status:** `agents_v6` rejected; `agents_v7` is the new pilot candidate.
 - **Decision:** Preserve `agents_v6` exactly because a completed live pilot is
@@ -738,7 +743,7 @@ remains a replacement-safety check, not permission to mix providers within a
 run. The full 20-question pilot must now be repeated under `agents_v7` before
 the configuration can be frozen.
 
-## D026 — Freeze the core experiment as agents_v7 (2026-09-22)
+## D026: Freeze the core experiment as agents_v7 (2026-09-22)
 
 - **Status:** Accepted after the complete `agents_v7` pilot; applies to the
   300-question main experiment.
@@ -778,13 +783,13 @@ dated provider-repair report.
 Any semantic change to these settings requires a new version (`agents_v8` or
 later), a recorded decision and another full 20-question pilot.
 
-**Completion addendum — 2026-09-24.** The remaining safeguards named above
+**Completion addendum: 2026-09-24.** The remaining safeguards named above
 were completed: the protected main runner, execution window, finite account
 credit check, one formal run and SQLite-safe post-run backups. D027 records the
 accepted execution. This addendum updates the status without rewriting the
 pre-run decision that was true on 2026-09-22.
 
-## D027 — Accept one formal main experiment without repair or repetition
+## D027: Accept one formal main experiment without repair or repetition
 
 - **Status:** Fixed and completed
 - **Recorded:** 2026-09-24
@@ -819,7 +824,7 @@ rows, enable provider fallback after seeing the result, or silently omit failed
 responses. Each would change the frozen treatment or hide a measured failure
 mode.
 
-## D028 — Produce the final result tables through one read-only exporter
+## D028: Produce the final result tables through one read-only exporter
 
 - **Status:** Fixed and implemented
 - **Recorded:** 2026-09-25
@@ -843,7 +848,7 @@ verified calculations instead of manually copying numbers or implementing
 slightly different formulas. It does not change the database, recompute model
 answers or create a second result.
 
-## D029 — Interpretation boundary for the main result
+## D029: Interpretation boundary for the main result
 
 - **Status:** Fixed for reporting
 - **Recorded:** 2026-09-25
@@ -882,7 +887,7 @@ prominent limitations. They do not invalidate the stored run, and they did not
 cause most initial undecided cases: only five of the 22 questions without a
 Round 1 majority had a failed Mistral Round 1 response.
 
-## D030 — Post hoc answer-key check, no score changed (2026-11-15)
+## D030: Post hoc answer-key check, no score changed (2026-11-15)
 
 After the CA2 Q&A, the second marker suggested checking cases where the models
 may be right and the benchmark key wrong. A small descriptive check was added

@@ -1,10 +1,15 @@
 # Development Log
 
+This is the diary of the project. Each dated entry says what was built, why,
+how it was tested, what went wrong and what came next. Read it to see how the
+system reached its final form. For a short description of the finished system,
+read `docs/project_record.md` first.
+
 This log records what was built, why it was built, how it was tested, and any
 problems discovered. Add a short dated entry after every meaningful component
 or experiment change.
 
-## 2026-08-04 — MMLU-Pro dataset preparation
+## 2026-08-04: MMLU-Pro dataset preparation
 
 Built the benchmark loading, validation, stable-ID, deterministic sampling, and
 freezing code in `src/mad/benchmark.py`. The MMLU-Pro test split was validated,
@@ -14,7 +19,7 @@ separate 20-question pilot. Model-visible questions and answer keys were stored
 separately to prevent answer leakage, with manifests and SHA-256 checksums for
 reproducibility. Dataset and sampling tests passed.
 
-## 2026-08-26 — Five-model OpenRouter foundation
+## 2026-08-26: Five-model OpenRouter foundation
 
 Replaced the planned obsolete three-model design with five heterogeneous agents:
 Llama, Qwen, Mistral, DeepSeek, and Gemma. Added the model registry in
@@ -30,7 +35,7 @@ visible content when restricted to 16 completion tokens. This showed that API
 access works but also revealed that the checker must reject empty responses and
 that reasoning models require realistic completion limits during the pilot.
 
-## 2026-08-26 — Repository and protocol audit
+## 2026-08-26: Repository and protocol audit
 
 Audited the repository against the fixed dissertation design. Dataset
 preparation and basic model access exist, but Round 1 prompts, response parsing,
@@ -44,7 +49,7 @@ recorded in `docs/decisions.md`. The next implementation target is Milestone 1:
 run one pilot question through five independent Round 1 calls, parse the five
 responses, compute the group vote, and store an inspectable result.
 
-## 2026-08-28 — Documentation consolidation and scaffold removal
+## 2026-08-28: Documentation consolidation and scaffold removal
 
 - **Built:** Deleted 17 empty placeholder files and 19 empty directories,
   including the orphaned `medqa` trees left from the abandoned second benchmark.
@@ -65,7 +70,7 @@ responses, compute the group vote, and store an inspectable result.
   scaffold made the project look implemented when it was not. Each document now
   has one job: `decisions.md` for what is decided, `pipeline.md` for how to build
   it, `checklist.md` for order and progress, this log for what happened.
-- **Tested:** `pytest` — 16 passed. Confirmed nothing imported the deleted
+- **Tested:** `pytest`: 16 passed. Confirmed nothing imported the deleted
   modules before removing them.
 - **Problems:** Three conflicts surfaced between the proposal, the decisions and
   the code. (1) Temperature is `0.7` in `agents_v1.yaml` and D002 but `0` in the
@@ -80,7 +85,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Commit this work, resolve the temperature and retry decisions, then
   build P2 prompts and P6 parser toward Milestone 1.
 
-## 2026-08-28 — Settings fixed, retry corrected, five-model connection confirmed
+## 2026-08-28: Settings fixed, retry corrected, five-model connection confirmed
 
 - **Built:** Set temperature `0` and top-p `1.0` for all five agents in both
   rounds (D002). Lowered `api_client.DEFAULT_MAX_ATTEMPTS` from 5 to 2 so the
@@ -99,7 +104,7 @@ responses, compute the group vote, and store an inspectable result.
   a working connection to the five model IDs, so requests use OpenRouter's
   automatic provider routing and `require_parameters: true`; pinning each agent
   to one provider is deferred to before the pilot and recorded in D015.
-- **Tested:** `pytest` — 29 passed, up from 16. Offline registry check reports
+- **Tested:** `pytest`: 29 passed, up from 16. Offline registry check reports
   5/5 agents. Live smoke calls confirmed all five model IDs reachable, returning
   non-empty parseable content with usage recorded: Llama, Qwen, DeepSeek and
   Gemma passed in a single batch run; Mistral failed the batch twice with HTTP
@@ -109,8 +114,8 @@ responses, compute the group vote, and store an inspectable result.
   upstream pool and is the only provider serving that model, so a 429 during the
   main run costs `agent_mistral` its vote for that question. Recorded as D016 to
   be measured during the pilot. Automatic routing was observed selecting a
-  different provider on every run — Qwen came from Alibaba, then Chutes, then
-  Reka; Gemma from OpenInference, then CoreWeave, then DeepInfra — which is
+  different provider on every run (Qwen came from Alibaba, then Chutes, then
+  Reka; Gemma from OpenInference, then CoreWeave, then DeepInfra), which is
   harmless for a connectivity check but would confound the main run, so D015
   keeps pinning as required before the settings freeze. The first-party DeepSeek
   endpoint returns HTTP 404 under the account's data policy; automatic routing
@@ -120,7 +125,7 @@ responses, compute the group vote, and store an inspectable result.
   a prompt demanding the single word `ready`, a parser concern for P6.
 - **Next:** Build P2 prompts and P6 parser toward Milestone 1.
 
-## 2026-08-30 — Round 1 prompt, and a readability pass over the whole codebase
+## 2026-08-30: Round 1 prompt, and a readability pass over the whole codebase
 
 - **Built:** `src/mad/prompts_v1.py`, which turns one frozen question into the
   two messages sent to a model. The system prompt gives a five-step reasoning
@@ -143,11 +148,11 @@ responses, compute the group vote, and store an inspectable result.
   words; whether that fits inside the provisional 1,024-token limit is still an
   open question for the pilot, since reasoning models spend tokens before
   emitting visible text.
-- **Next:** `parser_v1.py` — read the answer letter out of a reply and classify
+- **Next:** `parser_v1.py`: read the answer letter out of a reply and classify
   failures as OK, REFUSAL, TRUNCATED, PARSE_FAIL or API_ERROR.
 
 
-### 2026-08-31 — Response parser (P6)
+### 2026-08-31: Response parser (P6)
 
 - **Built:** `src/mad/parser_v1.py` and `tests/test_parser.py` (53 tests). The
   parser takes a reply, the letters that question actually offers, and the
@@ -167,7 +172,7 @@ responses, compute the group vote, and store an inspectable result.
   the reasoning is never used to infer an answer: a reply that argues for C and
   writes `FINAL ANSWER: A` parses as A. A final parametrised test asserts that no
   failure of any kind ever contributes a vote.
-- **Problems:** Markdown broke the first version — `**FINAL ANSWER:** B` failed
+- **Problems:** Markdown broke the first version: `**FINAL ANSWER:** B` failed
   to parse, which would have turned valid answers into failures. Asterisks are
   now stripped from the matching copy only. Refusal detection had the opposite
   risk: a loose phrase list would classify ordinary reasoning containing
@@ -184,10 +189,10 @@ responses, compute the group vote, and store an inspectable result.
   evidence is now ranked below provider signals, and a text-guessed truncation
   needs at least 200 characters. D017 and P6 were both updated, since the
   refusal change narrows a rule P6 had stated absolutely.
-- **Next:** `database.py` — the SQLite results store, so a response and its
+- **Next:** `database.py`: the SQLite results store, so a response and its
   parsed outcome can be written down.
 
-### 2026-08-31 — Review fixes to `prompts_v1.py` and `api_client.py`
+### 2026-08-31: Review fixes to `prompts_v1.py` and `api_client.py`
 
 - **Built:** A review of the two existing modules found six defects, all fixed.
   In `prompts_v1.py`, `format_question` coerced its input with `str()`, so a
@@ -214,15 +219,15 @@ responses, compute the group vote, and store an inspectable result.
   and a body that is not JSON. Two more assert the raw body is kept whole and
   that the cost of a failed attempt is recorded alongside the successful one.
   Five new tests in `tests/test_prompts.py` cover the non-string question text.
-- **Problems:** The retry branches had been almost untested — the only retry
+- **Problems:** The retry branches had been almost untested: the only retry
   test asserted `DEFAULT_MAX_ATTEMPTS == 2`, which proves a constant, not
   behaviour. Three existing tests stubbed `_post_with_retries` and had to be
   updated for its new return shape; that stubbing was what hid the gap.
   `docs/checklist.md` still listed the Round 1 prompt as unbuilt and is now
   corrected.
-- **Next:** unchanged — `database.py`.
+- **Next:** unchanged: `database.py`.
 
-### 2026-08-31 — Results database (P4)
+### 2026-08-31: Results database (P4)
 
 - **Built:** `src/mad/database.py` and `tests/test_database.py` (53 tests).
   SQLite through the standard library, so there is no server, no driver and no
@@ -259,7 +264,7 @@ responses, compute the group vote, and store an inspectable result.
   `data/frozen/` is not read.
 - **Problems:** Checking the integration boundary found that `AttemptRecord` had
   no raw body and no finish reason, and that its `error` field was truncated to
-  400 characters — so a failed attempt could not satisfy `response_attempts`'s
+  400 characters, so a failed attempt could not satisfy `response_attempts`'s
   raw-response column, and P4 would have stored a summary where the record
   requires the reply. `AttemptRecord` gained `raw_response` and `finish_reason`,
   populated from the untruncated `response.text`; `error` stays short as a log
@@ -271,7 +276,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** `cache.py` (P5), so a repeated call is not paid for twice, then
   `debate.py` (P9-P10).
 
-### 2026-08-31 — Three-of-five voting (P9)
+### 2026-08-31: Three-of-five voting (P9)
 
 - **Built:** `src/mad/voting.py` and `tests/test_voting.py` (48 tests).
   `tally()` takes a mapping of `agent_id` to `ParsedResponse` and returns a
@@ -307,12 +312,12 @@ responses, compute the group vote, and store an inspectable result.
   wrong. `docs/checklist.md` puts P9 voting before the cache, and voting is what
   Milestone 1 needs. The order is: voting (done), then a small runner for
   Milestone 1, then `cache.py`.
-- **Next:** Milestone 1 — one real pilot question through Round 1: five calls,
+- **Next:** Milestone 1, one real pilot question through Round 1: five calls,
   parsed, stored, voted and inspected by hand. It needs a small runner to
   sequence call, parse, store and vote, and it is the first real spend on the
   pipeline. `cache.py` (P5) follows.
 
-### 2026-08-31 — Review fixes to voting (P9)
+### 2026-08-31: Review fixes to voting (P9)
 
 - **Built:** Two corrections found by review, before any commit. `VoteOutcome`
   was declared frozen but held a plain dict in `vote_counts`, so
@@ -324,7 +329,7 @@ responses, compute the group vote, and store an inspectable result.
   claims in its own docstring. The second corrects an overstatement rather than
   a bug: the code validated the count and the identifiers, not the names, so
   five unrelated IDs could produce `UNANIMOUS`. Voting still does not read
-  `agents_v1.yaml` — it has no business knowing which models the agents are, so
+  `agents_v1.yaml`: it has no business knowing which models the agents are, so
   the caller supplies the expected set and the runner will pass
   `load_model_registry()`'s keys.
 - **Tested:** 242 tests pass, up from 236. Six new tests: `vote_counts` refuses
@@ -335,17 +340,17 @@ responses, compute the group vote, and store an inspectable result.
 - **Problems:** None outstanding. Noted for the runner: passing
   `expected_agents` is optional, so Milestone 1 must actually pass it or the
   identity check does nothing.
-- **Next:** unchanged — Milestone 1, then `cache.py` (P5).
+- **Next:** unchanged: Milestone 1, then `cache.py` (P5).
 
-### 2026-09-01 — Round 1 runner and P8 configuration
+### 2026-09-01: Round 1 runner and P8 configuration
 
 - **Built:** `src/mad/round1.py`, `scripts/run_round1.py` and
   `tests/test_round1.py` (23 tests). `Round1Config` freezes the P8 recipe:
   `round1_config_v1`, question set `mmlu_pro_v1`, prompt `round1_v1`, settings
   `agents_v1`, parser `parser_v1`, cache off, 120s timeout, two attempts,
   sequential calls. `run_round1_question()` takes one question through the full
-  sequence — five calls, parse, store each response with its attempts, tally
-  with `expected_agents=registry.keys()`, store the outcome, finish the run —
+  sequence (five calls, parse, store each response with its attempts, tally
+  with `expected_agents=registry.keys()`, store the outcome, finish the run)
   and returns a report for hand inspection. `FixtureClient` supplies labelled
   deterministic replies (provider `fixture` on every row): three agents agree,
   one dissents, one refuses.
@@ -372,7 +377,7 @@ responses, compute the group vote, and store an inspectable result.
   dry run aimed at the real database were all refused, and no `storage/`
   directory exists.
 - **Problems:** None new. The account now holds $5 of credit, but the key still
-  has no spending limit — that stays a blocker for the live run (D015's pinning
+  has no spending limit: that stays a blocker for the live run (D015's pinning
   question also remains open, deferred to before the pilot). `max_tokens=1024`
   is provisional; the report prints a warning naming any truncated agent, which
   is the signal to watch on the live run.
@@ -381,7 +386,7 @@ responses, compute the group vote, and store an inspectable result.
   --yes-spend-real-money`, inspect the five stored replies by hand, and record
   what it cost. Then `cache.py` (P5).
 
-### 2026-09-01 — Review fixes to the Round 1 runner
+### 2026-09-01: Review fixes to the Round 1 runner
 
 - **Built:** Four corrections from review, before any live call. First, retry
   money: a call that failed once and then succeeded stored only the successful
@@ -401,7 +406,7 @@ responses, compute the group vote, and store an inspectable result.
   `storage/results.sqlite` regardless of the launch directory, every refusal
   check runs before a client exists, and the client is closed even when the run
   raises.
-- **Why:** The first two were honesty bugs in the money and audit trail — the
+- **Why:** The first two were honesty bugs in the money and audit trail: the
   budget is £15 and D016 expects Mistral retries, so undercounted retry spend
   and vanished malformed replies would have surfaced during the pilot as
   unexplained account drain. The config fix closes a gap where the stored
@@ -409,22 +414,22 @@ responses, compute the group vote, and store an inspectable result.
 - **Tested:** 278 tests pass, up from 265. New: a $0.00002 failed attempt plus
   a $0.00010 success stored as a $0.00012 response, outcome and report, with
   the per-attempt split intact; a malformed 200 body through the real client
-  keeping attempt number, full raw body, cost and a truthful outcome, then
+  keeping attempt number, full raw body, cost and its real outcome, then
   through the runner as `API_ERROR` with the other four continuing; cache and
   parallel configs refused; and seven CLI-level tests driving `main(argv)`
-  offline — dry run completes, chosen `--db` kept, `--live` alone refused, the
+  offline, dry run completes, chosen `--db` kept, `--live` alone refused, the
   spend flag alone refused, experimental IDs refused, the production path
   refused before any file exists, and the client closed even when the run
   raises. The dry run was re-run and `git diff --check` is clean; no `storage/`
   directory exists.
 - **Problems:** None outstanding from the review. The key's missing spending
   limit remains the blocker for the live run.
-- **Next:** unchanged — spending limit, live Milestone 1, `cache.py`, provider
+- **Next:** unchanged: spending limit, live Milestone 1, `cache.py`, provider
   pinning before the pilot, then Round 2.
 
-### 2026-09-01 — Milestone 1 ran live
+### 2026-09-01: Milestone 1 ran live
 
-- **Built:** Nothing — this entry records the first real experimental-pipeline
+- **Built:** Nothing: this entry records the first real experimental-pipeline
   run. `run_id milestone1_20260901T161852Z`, question `mmlu_pro_v1:test:7296`,
   settings `agents_v1`, total cost **$0.0081956**, 35.9 seconds. Verified
   directly from `storage/results.sqlite`, not from memory. Per agent:
@@ -437,34 +442,34 @@ responses, compute the group vote, and store an inspectable result.
 - **Tested:** Every stage behaved: five calls went out, raw replies and
   attempts stored, both truncations correctly classified `TRUNCATED` with no
   letter and no vote, the three-of-five rule held with two agents lost, and the
-  run closed cleanly. Correctness against the answer key was not checked — the
+  run closed cleanly. Correctness against the answer key was not checked: the
   key stays unread outside evaluation.
 - **Problems:** Qwen and DeepSeek returned `finish_reason=length` with
   `content=null`: the entire 1024-token budget went to internal reasoning and
   no visible answer was produced. Those two calls cost $0.0072 of the $0.0082
-  total — 88% of the spend bought zero votes. A 40% agent-failure rate from
+  total: 88% of the spend bought zero votes. A 40% agent-failure rate from
   configuration alone is not acceptable for the pilot. Routing was automatic
   (four different providers served five agents), acceptable for this milestone
   but reinforcing D015.
-- **Next:** fix the token ceilings scientifically (D018) — cache first so later
+- **Next:** fix the token ceilings scientifically (D018): cache first so later
   probing never pays twice for the same reply.
 
-### 2026-09-01 — Response cache (P5), agents_v2 probe config, D018
+### 2026-09-01: Response cache (P5), agents_v2 probe config, D018
 
 - **Built:** `src/mad/cache.py` and `tests/test_cache.py` (12 tests): one
   SQLite file, `storage/cache.sqlite`, separate from the results database. The
   key hashes agent_id, slug, the full message list, temperature, top_p and
-  max_tokens — agent_id included so two agents never share a reply, run ID
+  max_tokens: agent_id included so two agents never share a reply, run ID
   excluded so replies are reusable across runs. Stores the complete raw API
   body; a hit rebuilds the reply from it with original tokens and latency,
   zero new cost, and no API call. Genuine outcomes are cached, refusals
   included; an `ApiRequestError` never is, and the cache itself refuses
-  fixture replies and bodyless results. First write wins — entries are never
+  fixture replies and bodyless results. First write wins: entries are never
   overwritten. The runner gained the P5 call order (lookup → call on miss →
-  parse → store → cache), a `cache_hit` flag stored honestly per response, and
+  parse → store → cache), a `cache_hit` flag stored per response, and
   a guard that `config.cache_enabled` must match whether a cache was actually
-  supplied. The CLI gained `--agents {agents_v1,agents_v2}` — the selected
-  registry name becomes the stored `settings_version` and the run ID prefix —
+  supplied. The CLI gained `--agents {agents_v1,agents_v2}` (the selected
+  registry name becomes the stored `settings_version` and the run ID prefix)
   and `--no-cache`; the cache is live-only, since dry runs are free.
   `configs/models/agents_v2.yaml` was created, marked provisional: identical
   to `agents_v1` except Qwen and DeepSeek at `max_tokens: 2048`. `agents_v1`
@@ -475,7 +480,7 @@ responses, compute the group vote, and store an inspectable result.
   noting that is not proof any given provider honours `reasoning.max_tokens`.
 - **Why:** The cache had to exist before more paid probing, because probing
   repeats questions. The ceiling-first approach keeps the models being studied
-  unchanged — lowering reasoning effort would make the dissertation describe
+  unchanged: lowering reasoning effort would make the dissertation describe
   "Qwen forced to think less". Choosing by pilot accuracy would tune the
   configuration on the outcome measure with a 20-question sample where one
   question moves the number by five points.
@@ -496,7 +501,7 @@ responses, compute the group vote, and store an inspectable result.
   asserts the real database's bytes are unchanged instead. Verification then
   caught a real bug in this session: opening `ResultsDatabase` re-ran the DDL
   and rewrote `PRAGMA user_version` on every open, so merely *reading* the
-  results file changed its bytes — my own read-only inspection of the
+  results file changed its bytes. My own read-only inspection of the
   Milestone 1 run dirtied the file header (every row verified intact:
   1 run, 5 responses, 5 attempts, 1 outcome, identical values). Fixed: an
   already-stamped database is opened without a single write, proven by a test
@@ -508,7 +513,7 @@ responses, compute the group vote, and store an inspectable result.
   to 3072 as agents_v3. Then provider pinning (D015) before the 20-question
   pilot. Round 2 after.
 
-### 2026-09-01 — Review fixes before the paid probe
+### 2026-09-01: Review fixes before the paid probe
 
 - **Built:** Two review findings fixed before any money moves. First,
   ordering: the runner cached a successful reply *before* writing it to the
@@ -517,13 +522,13 @@ responses, compute the group vote, and store an inspectable result.
   parse → results database → cache; a crash can now only lose the cache entry,
   which costs a repeat call, not audit truth. Second, provenance:
   `CONFIG_VERSION` still said `round1_config_v1`, but v1 was the cacheless
-  Milestone 1 recipe — the cache-capable runner is `round1_config_v2`, and the
-  stored Milestone 1 run keeps its truthful v1 label. Also: the truncation
+  Milestone 1 recipe, the cache-capable runner is `round1_config_v2`, and the
+  stored Milestone 1 run keeps its original v1 label. Also: the truncation
   warning printed a hardcoded `max_tokens=1024`; it now prints the truncated
   agent's actual limit. Cache-hit attempt provenance is now explicit and
   tested: a hit stores zero attempt rows because that run made no API attempt,
   while its `attempt_count` of 1 names the original call behind the cached
-  body and `cache_hit=1` marks the difference — the schema stays at version 1,
+  body and `cache_hit=1` marks the difference. The schema stays at version 1,
   which the real Milestone 1 database already carries.
 - **Why:** Both P1s were provenance risks, and the entire point of the
   database design is that the record never lies about what was spent or which
@@ -535,10 +540,10 @@ responses, compute the group vote, and store an inspectable result.
 - **Problems:** None outstanding from the review. Still true: OpenRouter
   metadata does not prove `reasoning.max_tokens` works on the serving
   providers (D018), and the dashboard spending limit cannot be checked from
-  here - if it is set, the blocker is cleared.
-- **Next:** unchanged - the agents_v2 token probe on 2-3 pilot questions.
+  here. If it is set, the blocker is cleared.
+- **Next:** unchanged: the agents_v2 token probe on 2-3 pilot questions.
 
-### 2026-09-02 — Qwen token probes at 2048 and 3072
+### 2026-09-02: Qwen token probes at 2048 and 3072
 
 - **Built:** `configs/models/agents_v3.yaml`, identical to `agents_v2` except
   Qwen's completion ceiling rises from 2048 to 3072. The Milestone 1 CLI now
@@ -584,11 +589,11 @@ responses, compute the group vote, and store an inspectable result.
   support for the reasoning control and decide between a final ceiling probe
   and an explicit reasoning cap.
 
-### 2026-09-02 — Reasoning cap: the controlled test worked
+### 2026-09-02: Reasoning cap: the controlled test worked
 
 - **Built:** `ModelSpec` gained `pinned_provider` and `reasoning_max_tokens`,
   flowing into the request (`provider.only` with fallbacks off; `reasoning:
-  {max_tokens}`) and into the cache key - added to the key only when set, so
+  {max_tokens}`) and into the cache key, added to the key only when set, so
   every reply cached before these fields existed keeps its key, while a pinned
   or capped request can never be served an old unpinned, uncapped reply.
   `configs/models/agents_v4.yaml`: Qwen pinned to Parasail, total 3072
@@ -598,24 +603,24 @@ responses, compute the group vote, and store an inspectable result.
   through the same provider. Holding question, provider and total fixed makes
   the cap the only effective change, so the result is attributable.
 - **Tested:** 300 offline tests pass, then the one approved live call:
-  run `round1_agents_v4_20260902T224109Z`, $0.002815, only Qwen paid - the
-  other four agents were served from the cache at zero cost, which is the
+  run `round1_agents_v4_20260902T224109Z`, $0.002815, only
+  Qwen paid. The other four agents were served from the cache at zero cost, which is the
   cache doing exactly its job. Qwen through Parasail: `finish_reason=stop`,
   824 completion tokens of which 578 reasoning, visible `FINAL ANSWER: D`,
   parsed `OK`. All five agents valid for the first time on this question;
-  the vote is genuinely `NO_CONSENSUS` (E,E,D,D,H) - a hard question the
+  the vote is `NO_CONSENSUS` (E,E,D,D,H) - a hard question the
   group disagrees on, which is data, not a fault.
 - **Problems:** None in the mechanism. The surprise is recorded in the D018
   addendum: capped at 2048, Qwen used only 578 reasoning tokens, against
-  3054+ uncapped on the identical question and provider - the declared budget
+  3054+ uncapped on the identical question and provider. The declared budget
   seems to change the deliberation itself, not just fence it. Single run;
-  treated as an observation. Whether D's answer is correct is unknown here -
+  treated as an observation. Whether D's answer is correct is unknown here:
   the key stays unread outside evaluation.
 - **Next:** confirm the capped configuration on the remaining pilot probes,
   then pin the other four agents (D015) and freeze the settings. Round 2
   after that.
 
-### 2026-09-03 — Clean Round 1 check and the fully pinned pilot candidate
+### 2026-09-03: Clean Round 1 check and the fully pinned pilot candidate
 
 - **Built:** `configs/models/agents_v5.yaml`, the configuration to use
   unchanged for Milestone 2 and the 20-question pilot. Token settings remain
@@ -701,7 +706,7 @@ responses, compute the group vote, and store an inspectable result.
   `agents_v5` becomes the final frozen settings version for the 300 questions;
   if a genuine fault appears, create `agents_v6` and preserve `agents_v5`.
 
-### 2026-09-03 — The agents_v5 pins work live
+### 2026-09-03: The agents_v5 pins work live
 
 - **Built:** Nothing. This records the one approved validation call.
 - **Why:** The pins were chosen from metadata and stored reachability, but no
@@ -718,17 +723,17 @@ responses, compute the group vote, and store an inspectable result.
   through NextBit under automatic routing. Pinning trades some cost for
   experimental control; the full-run estimate must be recalculated from the
   20-question pilot rather than from the cheapest historical routing.
-- **Next:** build `debate.py` (P10, Round 2), then Milestone 2 — one question
+- **Next:** build `debate.py` (P10, Round 2), then Milestone 2: one question
   through both rounds with peer inputs checked by hand.
 
-### 2026-09-03 — Round 2 prompt and conversation structure
+### 2026-09-03: Round 2 prompt and conversation structure
 
 - **Built:** Added `ROUND2_PROMPT_VERSION = "round2_v1"` and
   `build_round2_messages()` to `src/mad/prompts_v1.py`. A normal Round 2
   conversation contains the original question, the target agent's exact valid
   Round 1 response as its previous assistant turn, and up to four complete peer
   responses under anonymous numbered labels. An unavailable own response and
-  zero surviving peers are represented honestly rather than fabricated.
+  zero surviving peers are recorded as they are, not invented.
 - **Why:** Round 2 is meant to challenge an opinion established in Round 1. If
   the model received only a new question plus four answers, it would make a new
   conditioned prediction without the continuity of its own earlier reasoning.
@@ -746,19 +751,19 @@ responses, compute the group vote, and store an inspectable result.
   both rounds, then implement `src/mad/debate.py` to select peers, call, parse,
   cache, store and vote on Round 2.
 
-### 2026-09-07 — Combined prompt version for two-round runs
+### 2026-09-07: Combined prompt version for two-round runs
 
 - **Built:** Added `DEBATE_PROMPT_VERSION`, with the fixed value
   `round1_v1+round2_v1`.
 - **Why:** The `runs` table has one prompt-version field, while a complete debate
-  uses two prompts. The combined label describes the whole run honestly; each
+  uses two prompts. The combined label describes the whole run correctly; each
   response row still stores its own Round 1 or Round 2 version.
 - **Tested:** The exact combined label is pinned by an offline test. No API calls
   were made.
 - **Problems:** None.
 - **Next:** Move the run lifecycle out of the per-question Round 1 function.
 
-### 2026-09-07 — Run lifecycle moved to the caller
+### 2026-09-07: Run lifecycle moved to the caller
 
 - **Built:** `run_round1_question()` now requires an existing unfinished run and
   processes one question without opening or finishing the run. The Milestone 1
@@ -785,7 +790,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Define the Round 2 configuration and validity rule, then implement
   `src/mad/debate.py` entirely against offline fixtures.
 
-### 2026-09-07 — Round 2 built, and the machinery both rounds share
+### 2026-09-07: Round 2 built, and the machinery both rounds share
 
 - **Built:** `src/mad/debate.py` (P10) with `Round2Config`
   (`debate_config_v1`, `round2_v1`) and `run_round2_question()`. Per agent it
@@ -830,12 +835,12 @@ responses, compute the group vote, and store an inspectable result.
   round configs still default to `agents_v1`, so `run_debate.py` must pass
   the registry it actually wants; a mismatch with the run row is refused before
   any call rather than silently mislabelled.
-- **Next:** Build `scripts/run_debate.py` — one pilot question through
+- **Next:** Build `scripts/run_debate.py`: one pilot question through
   Round 1, its vote, Round 2 and its vote, in one run, dry by default and live
   only with both spend flags. Then inspect one real Milestone 2 question.
 
 
-### 2026-09-07 — Commands renamed for their actual jobs; full debate command built
+### 2026-09-07: Commands renamed for their actual jobs; full debate command built
 
 - **Built:** Renamed `scripts/run_milestone1.py` to `scripts/run_round1.py` and
   its CLI test to `tests/test_round1_cli.py`. Added `run_debate_question()` as
@@ -848,7 +853,7 @@ responses, compute the group vote, and store an inspectable result.
   The executable names now say exactly what they run. The shared
   `run_debate_question()` function can later be reused by the 20-question pilot
   runner without copying the two-round sequence.
-- **Tested:** Added offline tests for the complete CLI, truthful run labels, ten
+- **Tested:** Added offline tests for the complete CLI, correct run labels, ten
   stored responses, two outcomes, spending confirmation, experimental-question
   refusal, production-database protection, crash handling, and configuration
   refusal before any call. Full suite: 367 tests passed. Both commands also
@@ -862,7 +867,7 @@ responses, compute the group vote, and store an inspectable result.
   the five Round 2 conversations by hand.
 
 
-### 2026-09-07 — Milestone 2: one real question through both rounds
+### 2026-09-07: Milestone 2: one real question through both rounds
 
 - **Built:** Nothing. This records the one approved live debate run and what
   was checked in it afterwards.
@@ -884,13 +889,13 @@ responses, compute the group vote, and store an inspectable result.
   slug, developer prefix or provider name appears in any rebuilt conversation;
   all five Round 2 replies say explicitly that they kept their answer. Round 2
   input was 2,702 to 2,941 prompt tokens per agent against 357 to 413 in
-  Round 1 - about seven times larger - for 14,201 prompt tokens in total.
+  Round 1, about seven times larger, for 14,201 prompt tokens in total.
   Earlier runs are untouched: 9 runs, 50 responses, 10 outcomes, all prior
   rows present. The frozen dataset has not changed since commit `d50e2e2`.
 - **Problems:** One finding that was missed on 2026-09-02 and matters for the
   results chapter. DeepSeek's Round 1 reply (`response_id 44`, 1,166
-  completion tokens, 0 reasoning tokens) is a repetition loop - `PCl_5 ⇌ PCl_5
-  ⇌ PCl_5 ...` then `initialPCl_initialPCl_...` for most of its length - that
+  completion tokens, 0 reasoning tokens) is a repetition loop (`PCl_5 ⇌ PCl_5
+  ⇌ PCl_5 ...` then `initialPCl_initialPCl_...` for most of its length) that
   recovers at the end into a correct derivation and `FINAL ANSWER: D`. The
   parser is right to mark it `OK`: it finished on `stop` and carries exactly
   one answer line. It is a real model output and is stored as it arrived. But
@@ -904,7 +909,7 @@ responses, compute the group vote, and store an inspectable result.
   five agreed before communicating, and nobody had anything to reconsider. A
   question where Round 1 split is the test that would show whether an agent
   changes its answer under disagreement. Cost note for the budget: DeepSeek
-  pinned to DigitalOcean was $0.004423 of the $0.008884 Round 2 - half the
+  pinned to DigitalOcean was $0.004423 of the $0.008884 Round 2, half the
   round for one agent, driven by its input pricing on 2,898 prompt tokens.
   An uncached question through both rounds is about $0.017 on this evidence;
   320 questions is roughly $5.50, comfortably inside the budget, before
@@ -912,19 +917,19 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Build the 20-question pilot runner around `run_debate_question()`,
   and `evaluation.py` so the three headline numbers come from code rather than
   from reading the key by hand. Before the pilot, run one more approved live
-  debate on a question where Round 1 did not agree - `mmlu_pro_v1:test:8844`
-  went `NO_CONSENSUS` three times under agents_v2 to v4 - so Round 2 is seen
+  debate on a question where Round 1 did not agree (`mmlu_pro_v1:test:8844`
+  went `NO_CONSENSUS` three times under agents_v2 to v4), so Round 2 is seen
   doing its job at least once.
 
-### 2026-09-07 — A split question live: debate reached a unanimous wrong answer
+### 2026-09-07: A split question live: debate reached a unanimous wrong answer
 
 - **Built:** Nothing. This records the second approved live debate, on the one
   pilot question known to split in Round 1, and what its stored rows show.
 - **Why:** Question 3932 was unanimous before anyone spoke, so it could not show
   Round 2 changing anything. `mmlu_pro_v1:test:8844` had gone `NO_CONSENSUS`
   three times under agents_v2 to v4. It is the question on which Round 2 has
-  work to do. It is not malformed - the key, E = [1, 1], is among the ten
-  options and two agents had reached it independently in every earlier run -
+  work to do. It is not malformed (the key, E = [1, 1], is among the ten
+  options and two agents had reached it independently in every earlier run)
   but its wording is ambiguous, which turned out to matter (see Problems).
 - **Tested:** Dry run first, free, on fixtures: two rounds, both `CONSENSUS A`,
   the refusing fixture agent shown 4 peers and the others 3, as designed. Then
@@ -970,12 +975,12 @@ responses, compute the group vote, and store an inspectable result.
   the E responses' assumed uniform bound false, and gives the counterexample;
   Mistral and Llama then changed to D on that argument, and DeepSeek moved from
   H to D on the theorem question. These were reasoned changes, not majority
-  following - Round 1 had no majority to follow, 2-2-1.
+  following: Round 1 had no majority to follow, 2-2-1.
 
   Third, therefore: the label is the standard the project fixed and it stays
   the standard, nothing subtler is claimed, and the key is not edited. But
   this question is not clean evidence of anything about factual accuracy. It
-  is not malformed - the key is among the options and was reached - but its
+  is not malformed (the key is among the options and was reached) but its
   wording is ambiguous and its literal reading supports the answer the agents
   chose. It served its purpose as a stress test of Round 2 under
   disagreement, and it must not be presented as debate producing a worse
@@ -993,7 +998,7 @@ responses, compute the group vote, and store an inspectable result.
   so the three numbers, the transitions and the failure rates come from code.
   Do not run any more single live questions before then.
 
-### 2026-09-10 — evaluation.py: the calculator, and no statistics dependency
+### 2026-09-10: evaluation.py: the calculator, and no statistics dependency
 
 - **Built:** `src/mad/evaluation.py` (P12). `evaluate_run(db, run_id, key)`
   returns one `EvaluationReport` carrying per-agent accuracy and failures for
@@ -1007,8 +1012,8 @@ responses, compute the group vote, and store an inspectable result.
   run path imports it.
 - **Why:** The three headline numbers had to come from code rather than from
   reading the key by hand. Three things in D011 and P12 were left open and are
-  now closed. The aggregation comparison was genuinely ambiguous - D009 measure
-  1 is five per-agent numbers and measure 2 is one group number - and reporting
+  now closed. The aggregation comparison was ambiguous (D009 measure
+  1 is five per-agent numbers and measure 2 is one group number) and reporting
   only the gain over the mean agent would have flattered aggregation, since a
   group nearly always beats its weakest members. Both baselines are reported.
 - **Tested:** 42 new offline tests. McNemar checked digit-for-digit against the
@@ -1035,7 +1040,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Build the 20-question pilot runner, then run the pilot and score it
   with this module before freezing anything.
 
-### 2026-09-10 — Four accounting fixes in evaluation.py before the pilot
+### 2026-09-10: Four accounting fixes in evaluation.py before the pilot
 
 - **Built:** Corrections to `evaluation.py`, all found by review, all mine.
   Cache hits no longer count as API attempts. The budget reports this run's cost
@@ -1053,7 +1058,7 @@ responses, compute the group vote, and store an inspectable result.
   into the results chapter. The completeness checks close a gap where a run
   could be marked finished with rows missing, which would understate the failure
   rate rather than fail. The percentile was one position out of 10,000 whenever
-  fraction x n was a whole number, which at 10,000 resamples it always is -
+  fraction x n was a whole number, which at 10,000 resamples it always is:
   numerically trivial, but the docstring claimed nearest-rank and it was not.
 - **Tested:** Six new tests covering each fix, including a cached round
   reporting zero API attempts, a retried response counting both attempts, an
@@ -1066,13 +1071,13 @@ responses, compute the group vote, and store an inspectable result.
   the seed was fixed "before any results exist", which stopped being true once
   the ten development runs were made. It now says before the formal pilot and
   main experiment, and notes that the seed is a date rather than a value chosen
-  from a result - which is the property D011 was protecting.
+  from a result, which is the property D011 was protecting.
 - **Next:** Unchanged. The 20-question pilot runner, then the pilot, scored with
   `expected_questions=20`. That argument is not optional: without it the
   completeness check is inactive, so it is recorded in `NEXT.md` and the
   checklist rather than left to memory.
 
-### 2026-09-10 — The pilot runner
+### 2026-09-10: The pilot runner
 
 - **Built:** `scripts/run_pilot.py` (P11) and `load_pilot_questions()` in
   `runner.py`. One run, all 20 frozen questions in file order through both
@@ -1082,7 +1087,7 @@ responses, compute the group vote, and store an inspectable result.
   consensus states for both rounds, how many questions had no Round 1 majority,
   how many group answers moved, token usage, cost per question and the projected
   300-question cost.
-- **Why:** Everything it needs already existed - this is the payoff for moving
+- **Why:** Everything it needs already existed: this is the payoff for moving
   the run lifecycle to the caller, since one run can now hold 20 questions
   instead of 1. It deliberately does not score: the answer key never enters a
   process that can reach OpenRouter, so accuracy is computed afterwards from the
@@ -1091,7 +1096,7 @@ responses, compute the group vote, and store an inspectable result.
   errors are not caught, so a crash leaves `ended_at` NULL and evaluation
   refuses the run rather than scoring 14 questions as though they were 20.
 - **Tested:** 9 offline tests: 20 questions stored as 200 responses and 40
-  outcomes in one finished run; truthful run labels; the stored dry run passing
+  outcomes in one finished run; correct run labels; the stored dry run passing
   `evaluate_run(..., expected_questions=20)` end to end against the real pilot
   key; both spend flags required, with the message naming 200 calls; a dry run
   refused the production database, byte-checked; a crash on question 3 leaving
@@ -1102,7 +1107,7 @@ responses, compute the group vote, and store an inspectable result.
   fixture pilot completed all 20 questions. Full suite: 431 passed. No API
   calls, no money spent.
 - **Problems:** Three found in review and fixed before committing, all in the
-  same family - the summary claiming more than it did. The spend guard quoted
+  same family: the summary claiming more than it did. The spend guard quoted
   200 calls when a retry makes the billable ceiling 400 attempts; every command
   now quotes attempts rather than responses, so `run_round1.py` says 10 and
   `run_debate.py` says 20. The summary claimed to print token usage and printed
@@ -1115,7 +1120,7 @@ responses, compute the group vote, and store an inspectable result.
   stored rows by hand against P11's checklist, score with
   `expected_questions=20`, and only then freeze.
 
-### 2026-09-10 — The 20-question pilot ran. Read the caveat before the headline.
+### 2026-09-10: The 20-question pilot ran. Read the caveat before the headline.
 
 - **Built:** Nothing. This records the first complete pilot,
   `pilot_agents_v5_20260910T161210Z`, and what it actually shows.
@@ -1143,9 +1148,9 @@ responses, compute the group vote, and store an inspectable result.
   the five questions that became correct were `NO_CONSENSUS` or
   `INSUFFICIENT_ANSWERS` in Round 1, scored incorrect under D010. Only one
   (`mmlu_pro_v1:test:1689`, F to A) was a decided wrong answer that debate
-  repaired. Round 2 decided 20 of 20 where Round 1 decided 15. The honest claim
+  repaired. Round 2 decided 20 of 20 where Round 1 decided 15. The accurate claim
   is that a second round broke deadlock, and the resolution happened to match
-  the label four times in five - not that communication corrected reasoning.
+  the label four times in five, not that communication corrected reasoning.
 
   **Correction added 2026-09-22:** the causal interpretation in items 2 and 3
   below is superseded by the dated review at the end of this log and
@@ -1165,8 +1170,8 @@ responses, compute the group vote, and store an inspectable result.
   60% while the worst agent scored 55% and the best 83.3%. This is D010 working
   exactly as designed: five undecided questions count as incorrect, so a strict
   three-of-five threshold that failures never lower is punished hard by an
-  unreliable provider. It is a real result and worth reporting - it is the
-  opposite of what most MAD papers claim for voting - but it says as much about
+  unreliable provider. It is a real result and worth reporting (it is the
+  opposite of what most MAD papers claim for voting) but it says as much about
   the failure rate as about aggregation.
 
   Two infrastructure faults need a decision before the main run.
@@ -1197,10 +1202,10 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Decide nothing now. On return: read several complete Round 2
   conversations by hand, settle the DeepSeek provider question, decide on
   parallel calls and the key limit, and only then freeze. If the provider pin
-  changes, that is `agents_v6` and the pilot is rerun - which the $3.27
+  changes, that is `agents_v6` and the pilot is rerun, which the $3.27
   projection makes affordable.
 
-### 2026-09-22 — Corrected pilot interpretation and supplementary analysis
+### 2026-09-22: Corrected pilot interpretation and supplementary analysis
 
 - **Built:** `evaluation_v2` adds per-question stored votes, correctness and
   failure identities, plus a complete-case comparison requiring all ten
@@ -1231,7 +1236,7 @@ responses, compute the group vote, and store an inspectable result.
   provider, retry, token, prompt or cache changes; no paid calls, commit or push
   in this step. The main experiment is not yet cleared to run.
 
-### 2026-09-22 — Bounded provider and token probes, paid and separately audited
+### 2026-09-22: Bounded provider and token probes, paid and separately audited
 
 - **Built:** One-off diagnostic under `storage/probe_20260922.py`, exact raw
   audit in `storage/diagnostic_20260922T150205759313Z.sqlite`, and readable
@@ -1257,7 +1262,7 @@ responses, compute the group vote, and store an inspectable result.
   pilot rerun, commit or push performed. Preserve and back up the separate
   diagnostic audit alongside the original pilot.
 
-### 2026-09-22 — Mistral route repair candidate and live-run preflight
+### 2026-09-22: Mistral route repair candidate and live-run preflight
 
 - **Built:** `agents_v6` changes only the Mistral agent to open-weight Mistral
   Small 3.2 24B (`mistralai/mistral-small-3.2-24b-instruct`) pinned to
@@ -1283,7 +1288,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** With explicit spending approval, rerun the pilot with
   `--agents agents_v6`. Keep the main experiment blocked until that passes.
 
-### 2026-09-22 — agents_v6 pilot rejected; Mistral host repaired in agents_v7
+### 2026-09-22: agents_v6 pilot rejected; Mistral host repaired in agents_v7
 
 - **Built:** A bounded diagnostic reconstructed the four exact Mistral requests
   that failed in `pilot_agents_v6_20260922T171757Z` and tested them once each on
@@ -1303,12 +1308,12 @@ responses, compute the group vote, and store an inspectable result.
   `storage/mistral_host_probe_20260922T180857610453Z.sqlite`.
 - **Problems:** Four same-session calls cannot prove long-term reliability.
   DeepInfra also serves Gemma, so a provider-wide outage could affect two
-  agents. Failures remain stored honestly and never lower the voting threshold.
+  agents. Failures remain stored as they happened and never lower the voting threshold.
 - **Next:** Run the full pilot under `agents_v7`; inspect every failure before
   freezing. Do not edit `agents_v6`, whose completed pilot must remain
   reproducible.
 
-### 2026-09-22 — agents_v7 pilot accepted and core configuration frozen
+### 2026-09-22: agents_v7 pilot accepted and core configuration frozen
 
 - **Built:** The full investigation is consolidated in
   `provider_repair_and_v7_pilot_20260922.md`, covering the unavailable Mistral
@@ -1319,8 +1324,8 @@ responses, compute the group vote, and store an inspectable result.
   supplement. Documentation, checklist and resume point now agree.
 - **Why:** The earlier evidence was spread across several logs and could be
   mistaken for one fault. The audit separates endpoint withdrawal, rate
-  limiting, truncation and parsing, and explains why provider reliability—not
-  answer correctness—selected the repair. A dated freeze is required before
+  limiting, truncation and parsing, and explains why provider reliability, not
+  answer correctness, selected the repair. A dated freeze is required before
   the main experiment can be reproducible.
 - **Tested:** Accepted live run `pilot_agents_v7_20260922T181727Z`: 200 stored
   responses, 80 cache hits, 120 paid responses and 122 paid attempts. No final
@@ -1343,7 +1348,7 @@ responses, compute the group vote, and store an inspectable result.
   before the main experiment. Any settings change requires `agents_v8` and a
   new pilot.
 
-### 2026-09-23 — Protected 300-question main runner built offline
+### 2026-09-23: Protected 300-question main runner built offline
 
 - **Built:** `scripts/run_experiment.py` runs all 300 frozen experimental model
   inputs through both rounds in one database run. It is deliberately locked to
@@ -1380,7 +1385,7 @@ responses, compute the group vote, and store an inspectable result.
   protected live command. After completion, back up again and score separately
   with `expected_questions=300`.
 
-### 2026-09-23/24 — Main experiment completed, backed up and evaluated
+### 2026-09-23/24: Main experiment completed, backed up and evaluated
 
 - **Built:** No experimental code changed. The single accepted formal run is
   `experiment_agents_v7_20260923T114934Z`, executed from commit `d4109d4` under
@@ -1412,7 +1417,7 @@ responses, compute the group vote, and store an inspectable result.
   result-table/export command, inspect representative changes, then build the
   read-only replay interface and write the dissertation and CA2 material.
 
-### 2026-09-25 — Formal main-result exports generated offline
+### 2026-09-25: Formal main-result exports generated offline
 
 - **Built:** `scripts/evaluate_experiment.py` is fixed to the accepted main run
   and exports one Markdown report, one complete JSON record and seven CSV
@@ -1435,7 +1440,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Commit the reporter and generated tables, then inspect the 12
   improvements and two regressions before building the read-only replay UI.
 
-### 2026-09-25 — Completed design and decision record consolidated
+### 2026-09-25: Completed design and decision record consolidated
 
 - **Built:** Added `project_record.md`, a component-by-component account of the
   research design, data, models, prompts, API path, token limits, parser,
@@ -1459,7 +1464,7 @@ responses, compute the group vote, and store an inspectable result.
   inspect representative question transitions, then build the read-only replay
   interface.
 
-### 2026-09-25 — Representative debate reasoning inspected offline
+### 2026-09-25: Representative debate reasoning inspected offline
 
 - **Built:** Added `qualitative_review_20260925.md`. The review covers all four
   complete-case questions where an existing Round 1 majority changed
@@ -1483,7 +1488,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Build the read-only Streamlit viewer, then use the verified exports
   and qualitative review for dissertation and CA2 materials.
 
-### 2026-09-28 — Safe viewer result export prepared
+### 2026-09-28: Safe viewer result export prepared
 
 - **Built:** Added `correct_answer` to each evaluated question comparison and
   regenerated `evaluation_summary.json` and `question_comparisons.csv` for the
@@ -1503,7 +1508,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Build and test the read-only viewer data layer, reusing the real
   prompt builders and verifying reconstructed conversations against cache keys.
 
-### 2026-09-28 — Read-only viewer data layer built
+### 2026-09-28: Read-only viewer data layer built
 
 - **Built:** Added `src/mad/viewer_data.py`. It loads one accepted debate's
   question, five responses in both rounds, attempts, votes, usage and exported
@@ -1525,7 +1530,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Build `app/viewer.py` with Previous/Next navigation for the `5503`
   replay before adding alternative examples or animation.
 
-### 2026-09-28 — First Streamlit debate replay built
+### 2026-09-28: First Streamlit debate replay built
 
 - **Built:** Added `app/viewer.py` and the Streamlit dependency. The initial
   page walks through real question `5503` in nine Previous/Next steps: question,
@@ -1547,7 +1552,7 @@ responses, compute the group vote, and store an inspectable result.
   three-of-five failure rule, then build one concise overview of the main
   experiment result.
 
-### 2026-09-28 — Results dashboard and curated replay completed
+### 2026-09-28: Results dashboard and curated replay completed
 
 - **Built:** Redesigned `app/viewer.py` as a modern two-view research product.
   The overview has compact experiment metrics and verified charts for group
@@ -1572,7 +1577,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Run the full offline test suite, capture final screenshots and
   rehearse the CA2 explanation.
 
-### 2026-09-29 — Replay panels redrawn for the CA2 demo
+### 2026-09-29: Replay panels redrawn for the CA2 demo
 
 - **Built:** Replaced the two Streamlit widgets that did not survive the panel
   widths they were given. The Round 2 answer flow was a slope chart in which
@@ -1603,7 +1608,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Rehearse the CA2 walkthrough on the presentation display, then
   return to writing.
 
-### 2026-09-29 — Public deployment package isolated from research storage
+### 2026-09-29: Public deployment package isolated from research storage
 
 - **Built:** Added a sanitized, versioned JSON bundle containing only the
   accepted experiment overview and the six curated replay cases. The public
@@ -1630,7 +1635,7 @@ responses, compute the group vote, and store an inspectable result.
   public app in Streamlit Community Cloud and verify its URL in a private
   browser window.
 
-### 2026-10-09 — Animated debate stage in the replay
+### 2026-10-09: Animated debate stage in the replay
 
 - **Built:** Added an "Animated debate" view beside the existing nine-step
   evidence replay. Five agents stand at lecterns and each curated case plays
@@ -1660,7 +1665,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Send the supervisor a screenshot and a short screen recording,
   then deploy once they confirm the direction.
 
-### 2026-10-09 — Debate stage layout: nothing cut off
+### 2026-10-09: Debate stage layout: nothing cut off
 
 - **Built:** Reworked the stage layout so content sets every size. Text now
   scales with the stage width (13–16px), the question card shows the whole
@@ -1688,7 +1693,7 @@ responses, compute the group vote, and store an inspectable result.
   sits above the stage and the stage also grows Streamlit's slot around it.
 - **Next:** Supervisor review, then commit and deploy.
 
-### 2026-10-09 — Model logos on the debate stage
+### 2026-10-09: Model logos on the debate stage
 
 - **Built:** Each agent's avatar now shows its model logo on a white disc:
   Meta for Llama (no separate Llama mark), Qwen, Mistral AI, DeepSeek and
@@ -1712,7 +1717,7 @@ responses, compute the group vote, and store an inspectable result.
   faintly than the other four.
 - **Next:** Supervisor review, then commit and deploy.
 
-### 2026-10-12 — CA2 recording guide and spoken script prepared
+### 2026-10-12: CA2 recording guide and spoken script prepared
 
 - **Built:** Added `docs/ca2_recording_plan.md`: a 9:15 target timeline, three
   slide outlines, exact app interactions, code locations, spoken text,
@@ -1734,7 +1739,7 @@ responses, compute the group vote, and store an inspectable result.
 - **Next:** Review this single guide with Claude, continue the second-day code
   walkthrough, prepare the three slides and complete a timed rehearsal.
 
-### 2026-10-15 — Replay: empty gap in the step-by-step view removed
+### 2026-10-15: Replay: empty gap in the step-by-step view removed
 
 - **Built:** One CSS rule in `app/viewer.py`: a Streamlit element slot that
   does not hold a frame always takes its natural height.
@@ -1750,7 +1755,7 @@ responses, compute the group vote, and store an inspectable result.
   the rule depends on the browser supporting CSS `:has()`.
 - **Next:** Check the replay once on the deployed Streamlit app.
 
-### 2026-11-08 — MMLU-Pro licence notice and viewer credit
+### 2026-11-08: MMLU-Pro licence notice and viewer credit
 
 - **Built:** `THIRD_PARTY_NOTICES.md` at the repository root, crediting
   MMLU-Pro (TIGER-Lab, revision `b189ec7…`, Wang et al. 2024) and including
@@ -1775,7 +1780,7 @@ responses, compute the group vote, and store an inspectable result.
 
 ## Entry template
 
-### YYYY-MM-DD — Component or activity
+### YYYY-MM-DD: Component or activity
 
 - **Built:** What changed.
 - **Why:** The research or engineering reason.

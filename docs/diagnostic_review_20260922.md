@@ -1,4 +1,9 @@
-# Paid diagnostic results — 22 September 2026
+# Paid diagnostic results: 22 September 2026
+
+This file reports six paid test calls made on 22 September 2026, after the
+first pilot. Three calls checked whether DeepSeek's host worked again, and
+three checked whether a higher token limit would stop Qwen's truncated replies.
+They are not pilot or main-experiment results.
 
 Protocol D023. Six fresh single-attempt requests, no retries, about three
 minutes in one session. Reported charge **$0.029602848**, against conservative

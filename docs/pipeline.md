@@ -1,5 +1,9 @@
 # Build Pipeline
 
+This file explains how each part of the experiment is built, in 13 stages named
+P1 to P13. Code comments refer to these stage names, so read the stage that
+matches the file you are looking at.
+
 How each stage of the experiment is built. This document is the **technical
 reference**: it says *how* to implement a stage.
 
@@ -9,7 +13,6 @@ Precedence, so there is exactly one answer to any question:
 |---|---|---|
 | `docs/decisions.md` | *What is decided and frozen* | Highest. If this file disagrees with it, this file is wrong. |
 | `docs/pipeline.md` (here) | *How to build each stage* | Implementation detail only. |
-| `docs/checklist.md` | *What order, and what is done* | Progress tracking only. |
 | `docs/development_log.md` | *What actually happened* | Append-only history. |
 
 This pipeline replaces the obsolete three-model `0.x` version, which assumed
@@ -22,7 +25,7 @@ decision that must be recorded in `decisions.md` before the pilot is frozen.
 
 ---
 
-## P1 — Question set — DONE
+## P1: Question set (DONE)
 
 Implemented in `src/mad/benchmark.py`, frozen in `data/frozen/mmlu_pro_v1`.
 
@@ -35,11 +38,11 @@ is recorded in `metadata/validation_report.json`.
 Seed 42, category-stratified: 300 experimental questions and 20 non-overlapping
 pilot questions. Model inputs and answer keys are stored in separate files with
 SHA-256 checksums. Prompt-building and calling code receives question ID, text
-and options only — never the answer. Guarded by `tests/test_no_answer_leakage.py`.
+and options only, never the answer. Guarded by `tests/test_no_answer_leakage.py`.
 
 **Do not regenerate.** The frozen set is final.
 
-## P2 — Round 1 prompt
+## P2: Round 1 prompt
 
 New file `src/mad/prompts_v1.py`, carrying `PROMPT_VERSION = "round1_v1"`.
 
@@ -53,14 +56,14 @@ chosen even when the model is uncertain.
 
 One formatting function renders the stored question as its text followed by
 every option in stored order. MMLU-Pro questions have up to ten options, so the
-option count must be read from the question — never hardcoded to four.
+option count must be read from the question, never hardcoded to four.
 
 The same wording goes to all five agents. Round 1 must not mention other
 agents, a later round, review, or the correct answer.
 
 Record `PROMPT_VERSION` on every stored response.
 
-## P3 — Generation settings
+## P3: Generation settings
 
 The historical shared defaults began in `configs/models/agents_v1.yaml`. The
 frozen experimental registry is `configs/models/agents_v7.yaml` (D026):
@@ -92,14 +95,14 @@ Do not rely on the API `seed` parameter. Support varies and the experiment does
 not depend on it. Record the limitation that identical settings still do not
 guarantee byte-identical outputs from a hosted API.
 
-## P4 — Results database — DONE
+## P4: Results database (DONE)
 
 `src/mad/database.py`. SQLite, no server. Four tables.
 
-`runs` — one row per run: run ID, configuration name, question-set version,
+`runs`, one row per run: run ID, configuration name, question-set version,
 prompt version, settings version, parser version, start time, end time.
 
-`model_responses` — one row per `(run, question, round, agent)`: run ID, question
+`model_responses`, one row per `(run, question, round, agent)`: run ID, question
 ID, round, `agent_id`, requested slug, served slug, provider, generation ID, raw
 response text, extracted letter, extraction method, status, attempt count,
 selected attempt, finish reason, prompt version, temperature, `top_p`,
@@ -107,17 +110,17 @@ selected attempt, finish reason, prompt version, temperature, `top_p`,
 timestamp. For Round 2, also the anonymised references to the four peer
 responses supplied to that agent (D007).
 
-`response_attempts` — one row per API attempt, linked to its parent
+`response_attempts`, one row per API attempt, linked to its parent
 `model_responses` row: attempt number, raw response, extracted letter, status,
 finish reason, tokens, latency, cache-hit flag.
 
-`question_outcomes` — one row per `(run, question, round)`: consensus state,
+`question_outcomes`, one row per `(run, question, round)`: consensus state,
 consensus answer, whether decided, valid-answer count, total tokens, total
 latency. Round 1 and Round 2 outcomes are separate rows, because comparing them
 is the research question.
 
 Rules: store the full raw response before parsing, never only the letter. Never
-overwrite a row — a repeat means a new run ID. The correct answer never enters
+overwrite a row: a repeat means a new run ID. The correct answer never enters
 this path; only evaluation reads the answer key.
 
 Built 2026-08-31. `ResultsDatabase(path)` creates `storage/results.sqlite` and
@@ -131,10 +134,10 @@ failure cannot carry a vote; `round = 2 OR peer_count = 0` keeps Round 1 free of
 peers; and no table has a column that could hold a correct answer, which a test
 asserts by name. `record_response()` writes a response and all of its attempts
 in one transaction, so a half-written pair cannot understate what the run cost.
-`finish_run()` is the only `UPDATE` in the module — `ended_at`, once — and a
+`finish_run()` is the only `UPDATE` in the module (`ended_at`, once) and a
 test parses the module's SQL to keep it that way.
 
-## P5 — Response cache — DONE
+## P5: Response cache (DONE)
 
 New file `src/mad/cache.py`. Separate store from the results database. It exists
 only to avoid paying twice; it is not part of the experimental record.
@@ -142,12 +145,12 @@ only to avoid paying twice; it is not part of the experimental record.
 Every call passes through it. The key hashes: model slug, the full message list,
 temperature, `top_p`, `max_tokens`, and `agent_id`. `agent_id` is included even
 though it is not sent to the API, so two agents issuing an identical request
-cannot share one response. Round and peer content need no separate key field —
+cannot share one response. Round and peer content need no separate key field:
 they are already inside the message list. The run ID is excluded, so responses
 are reusable across runs.
 
 Store the complete raw API body, not just the text, and store the original
-latency — return that on a hit, not the lookup time.
+latency: return that on a hit, not the lookup time.
 
 Cache genuine model outcomes, including refusals and unparseable replies. Never
 cache transport, rate-limit or provider errors; caching those would make a
@@ -163,7 +166,7 @@ replies and results without a raw body. The runner does lookup → call on miss 
 parse → results database → cache, in that order: the paid call reaches the
 audit record before the cache, so a crash between the two can leave an
 unrecorded row in neither place, never a cached reply whose spend vanished from
-the record. A cache-hit row stores no attempt rows — that run made no API
+the record. A cache-hit row stores no attempt rows: that run made no API
 attempt; its `attempt_count` of 1 names the original call behind the cached
 body and `cache_hit=1` marks the difference. The runner records `cache_hit` per
 response and refuses a config whose `cache_enabled` disagrees with reality.
@@ -171,7 +174,7 @@ Config version `round1_config_v2` labels the cache-capable runner; `v1` was the
 cacheless Milestone 1 recipe and stays on that run. The CLI enables the cache for
 live runs only and honours `--no-cache`.
 
-## P6 — Parser and failure statuses
+## P6: Parser and failure statuses
 
 New file `src/mad/parser_v1.py`, one parser for all five agents.
 
@@ -187,8 +190,8 @@ an answer from the reasoning.
 
 Statuses: `OK`, `REFUSAL`, `TRUNCATED`, `PARSE_FAIL`, `API_ERROR`.
 
-An empty response is `PARSE_FAIL`. A provider signal — `content_filter` for
-refusal, `length` or `max_tokens` for truncation — takes priority even when a
+An empty response is `PARSE_FAIL`. A provider signal (`content_filter` for
+refusal, `length` or `max_tokens` for truncation) takes priority even when a
 letter is present. Evidence read out of the text itself does not: a refusal
 phrase or a mid-sentence ending only counts when no valid letter was extracted.
 See D017, which narrowed this after `I cannot answer A, so FINAL ANSWER: B` was
@@ -196,7 +199,7 @@ being classified as a refusal. Identify truncation from the provider finish
 reason first; inspect text only when no finish reason is returned, and only when
 the reply is long enough for the guess to mean anything.
 
-**Retry (D012, settled).** One initial attempt plus exactly one retry — two in
+**Retry (D012, settled).** One initial attempt plus exactly one retry: two in
 total. This lives in `OpenRouterClient._post_with_retries`, where
 `DEFAULT_MAX_ATTEMPTS = 2`. Do not add a second retry loop on top of it; the
 parser and orchestrator add none. `REFUSAL`, `TRUNCATED` and `PARSE_FAIL` are
@@ -207,7 +210,7 @@ same place. An upstream provider error that survives both attempts is recorded a
 Summary selection for `model_responses`: the first `OK` attempt; if none, the
 last failed attempt. Record which attempt was selected and how many were made.
 
-Count tokens and cost from every live attempt, not only the selected one —
+Count tokens and cost from every live attempt, not only the selected one:
 failures cost money. Cache hits keep their stored token counts but add no spend.
 
 Never count a failure as a wrong answer. Always report accuracy among
@@ -218,19 +221,19 @@ Test before the pilot against: valid answers, lowercase, extra spaces, bracketed
 letters, multiple answer lines, trailing text, letters outside the option set,
 missing answers, empty responses, refusals, truncation, and API errors.
 
-## P7 — Shared calling layer — DONE
+## P7: Shared calling layer (DONE)
 
 `src/mad/api_client.py`. One OpenRouter key reaches all five models, so the old
 three-SDK normalisation problem no longer exists.
 
 `OpenRouterClient.complete()` returns a `CompletionResult` carrying text,
 `agent_id`, requested slug, served slug, provider, generation ID, finish reason,
-prompt and completion tokens, cost, latency and attempt count — the provenance
+prompt and completion tokens, cost, latency and attempt count: the provenance
 D007 requires. It also carries `raw_response`, OpenRouter's complete reply body
 for P5 to cache, and `attempt_log`, an `AttemptRecord` per attempt so the tokens
 and cost of a failed first attempt are not lost. A call that never succeeds
-raises `ApiRequestError` with the same `attempt_log` attached — including for a
-malformed HTTP 200 body, whose final attempt is relabelled `malformed_body` —
+raises `ApiRequestError` with the same `attempt_log` attached (including for a
+malformed HTTP 200 body, whose final attempt is relabelled `malformed_body`),
 so a dead call is still costable. On a stored response row, tokens and cost sum
 over every attempt (P6); the per-attempt split lives in `response_attempts`. `load_model_registry()` builds a `ModelSpec` per agent from
 `configs/models/agents_v1.yaml`. Verified against all five models by
@@ -241,7 +244,7 @@ parse → store, with per-call exception isolation so one agent's failure does
 not end the run. Calls remain sequential in both rounds; that execution mode
 was used by the accepted pilot and is frozen for the main experiment.
 
-## P8 — Round 1 configuration — DONE
+## P8: Round 1 configuration (DONE)
 
 Versioned config, currently `CONFIG_VERSION = "round1_config_v2"`, recording the
 question-set version, the five model slugs and their `agent_id`s, prompt
@@ -254,7 +257,7 @@ Round 1 has no communication between agents: same question and options to all
 five, answered independently, no agent sees another's answer, no agent is told a
 second round follows.
 
-API keys stay in the ignored `.env` only — never in configs, the database, git,
+API keys stay in the ignored `.env` only, never in configs, the database, git,
 prompts or results.
 
 Built 2026-09-01 as `src/mad/round1.py`; its command is now
@@ -274,11 +277,11 @@ a throwaway database; live mode needs both `--live` and
 refuses experimental IDs by name, and a dry run is refused
 `storage/results.sqlite` so fixture rows can never sit next to real results.
 
-## P9 — Voting — DONE
+## P9: Voting (DONE)
 
 Fixed rule (D004): a group answer requires **at least three matching votes out
 of the five configured agents**. A failed, missing, empty or unparseable
-response contributes no vote, and the threshold stays at three — it is never
+response contributes no vote, and the threshold stays at three: it is never
 reduced to a majority of the successful responses. No judge model, no tie-break.
 
 Recorded consensus states, all derived from that single rule:
@@ -290,36 +293,36 @@ Recorded consensus states, all derived from that single rule:
 | `NO_CONSENSUS` | three or more valid answers, none reaching three votes |
 | `INSUFFICIENT_ANSWERS` | fewer than three valid answers, so three votes is unreachable |
 
-`INSUFFICIENT_ANSWERS` is a reporting label, not a second rule — it separates
+`INSUFFICIENT_ANSWERS` is a reporting label, not a second rule: it separates
 "the agents disagreed" from "too many agents failed", which matter differently
 in the results chapter. Both are undecided.
 
 Store the state, the consensus letter where one exists, whether the question was
-decided, and the valid-answer count — separately for Round 1 and Round 2.
+decided, and the valid-answer count: separately for Round 1 and Round 2.
 
 Built 2026-08-31 as `src/mad/voting.py`. `tally()` takes a mapping of
 `agent_id` to `ParsedResponse` and returns a frozen `VoteOutcome` carrying the
 state, the consensus letter or `None`, whether it was decided, the valid-answer
 count, the per-letter vote counts for inspection and replay, and which agents
 failed. It refuses any group that is not exactly five identified agents, so the
-threshold can never be quietly rebased on however many responses arrived.
+threshold can never be rebased on however many responses arrived.
 Passing `expected_agents` additionally checks that the five *are* the configured
 five; without it, only the count and the identifiers are guaranteed. The runner
-should pass `load_model_registry()`'s keys — voting does not read the registry,
+should pass `load_model_registry()`'s keys: voting does not read the registry,
 because it has no business knowing which models the agents are. Only a
 response the parser marked `OK` votes. No judge, no tie-break: two letters
 cannot both reach three of five, so a tie is already below the threshold. The
-module imports the parser and nothing else — it cannot read a key, score an
+module imports the parser and nothing else: it cannot read a key, score an
 answer or write a row, and a test asserts that by parsing its imports.
 
 **Scoring (D010).** An undecided question counts as **incorrect** in group
 accuracy, and is also reported as its own category. Group accuracy therefore
 always has a denominator of all 300 questions, which is what keeps Round 1 and
 Round 2 comparable when the two rounds decide different numbers of questions.
-Do not silently drop undecided questions from the denominator — that would
+Do not silently drop undecided questions from the denominator: that would
 inflate whichever round failed more.
 
-## P10 — Round 2 — DONE
+## P10: Round 2 (DONE)
 
 New file `src/mad/debate.py`. This stage did not exist in the old pipeline.
 
@@ -341,7 +344,7 @@ are parsed and voted on separately under the same three-of-five rule.
 
 A Round 1 failure means that agent contributes no peer response, so some agents
 may see fewer than four. Record how many peer responses each agent actually
-received — it is a confound the results chapter must report.
+received: it is a confound the results chapter must report.
 
 A third round is desirable future work, not part of this implementation. If it
 is ever built, D014 restricts it: it is offered only to questions still without a
@@ -373,7 +376,7 @@ finishes the run only after both rounds succeed. It defaults to free fixture
 replies and `agents_v7`; live mode requires both `--live` and
 `--yes-spend-real-money` because one uncached question can make ten paid calls.
 
-## P11 — Pilot — PASSED AND FROZEN
+## P11: Pilot (PASSED AND FROZEN)
 
 The 20 frozen pilot questions, both rounds, full pipeline.
 
@@ -386,7 +389,7 @@ tokens, cost, latency and finish reason were stored; cache hits do not reach the
 API; an induced API error does not end the run; sequential agent calls remain
 isolated; every row links to the right run, question, round and agent.
 
-Check `TRUNCATED` rates specifically — the smoke test already warned about
+Check `TRUNCATED` rates specifically: the smoke test already warned about
 reasoning models. If truncation is common, raise `max_tokens`, bump the settings
 version and rerun the pilot. Resolve this before the main run.
 
@@ -401,8 +404,8 @@ The accepted pilot is `pilot_agents_v7_20260922T181727Z` (D026): 20 questions,
 both rounds, zero terminal API errors and 40/40 valid Mistral responses. Two
 temporary Mistral 429s recovered on retry. The run cost $0.100227 and took 29.1
 minutes; the paid-response projection is about $2.51 for 300 uncached
-questions. Remaining output failures—three Qwen truncations, two Gemma
-truncations and one DeepSeek parse failure—are stored and accepted. See the
+questions. Remaining output failures (three Qwen truncations, two Gemma
+truncations and one DeepSeek parse failure) are stored and accepted. See the
 dated provider-repair report for the full interpretation and limitations.
 
 Built 2026-09-10 as `scripts/run_pilot.py`. It opens one run, loops
@@ -424,7 +427,7 @@ cost projection taken per paid response so cached requests cannot make the
 300-question estimate read low. `tests/test_no_answer_leakage.py` enforces the separation: no
 script that constructs an `OpenRouterClient` may touch the key.
 
-## P12 — Main run and evaluation — DONE
+## P12: Main run and evaluation (DONE)
 
 New file `src/mad/evaluation.py`, built and validated on pilot data *before* the
 main run. It reads the stored database and the separate answer key. It never
@@ -440,8 +443,8 @@ completion, record the end time, mark the run complete, and back up the database
 Computed on the same 300 questions and never collapsed into one figure:
 
 1. **Per-agent Round 1 accuracy**, over that agent's valid parsed answers only.
-2. **Round 1 group vote accuracy** — aggregation, no communication.
-3. **Round 2 group vote accuracy** — after one round of communication.
+2. **Round 1 group vote accuracy**: aggregation, no communication.
+3. **Round 2 group vote accuracy**: after one round of communication.
 
 (2) − (1) describes the aggregation comparison (mean and best agent, D021;
 individual valid-only denominators differ from the fixed group denominator).
@@ -464,7 +467,7 @@ Fixed in D011 on 2026-08-28, before any results exist.
 
 **Primary outcome:** (3) − (2), in percentage points, on the same 300 questions.
 
-**Confidence interval — paired question-level bootstrap.** Resample the 300
+**Confidence interval: paired question-level bootstrap.** Resample the 300
 questions with replacement 10,000 times. For each resample recompute both round
 accuracies and their difference. Report the 2.5th and 97.5th percentiles as the
 95% interval. Resample whole *questions*, never rounds independently: each
@@ -510,7 +513,7 @@ bootstrap interval, the McNemar result, per-round usage and spend against the
 budget. It refuses before computing anything if the run is unknown, unfinished,
 missing a round, scoring different questions in each round, short of a response
 from any agent on any question, or carrying a question the supplied key does not
-cover - the last check is what stops a pilot
+cover: the last check is what stops a pilot
 run being scored against the experimental key, since the two frozen sets are
 disjoint. Seed `20260828`, 10,000 resamples (D021). No printing lives here, so
 a later command and the replay page cannot disagree about a number.
@@ -519,7 +522,7 @@ Two reporting rules that are easy to get wrong. A cache hit keeps
 `attempt_count = 1` from the original paid call, so it is excluded from
 `api_attempts` and counted as a cache hit instead; the debate run that served
 all five Round 1 responses from cache made zero calls, not five. And the budget
-reports two numbers - this run's cost, and every run recorded in the database -
+reports two numbers (this run's cost, and every run recorded in the database)
 because subtracting one run from the whole £15 would report a balance the key
 does not have. The cumulative figure is a floor, not a bank balance: a run in
 another database, or a call whose row never landed, is spending no row can see.
@@ -570,7 +573,7 @@ will read this generated result artifact instead. This lets the interface
 reveal correctness without giving a model-calling component access to an
 answer key.
 
-## P13 — Replay interface
+## P13: Replay interface
 
 The read-only data layer is built as `src/mad/viewer_data.py`. It opens the
 results and cache databases in SQLite read-only mode, loads correctness from
@@ -604,26 +607,26 @@ parsed letters, and the handover arrows follow each Round 2 row's stored peer
 IDs, so a failed agent visibly sends nothing. The stage runs in the browser and
 makes no model calls.
 
-Required by CA2 on 2026-11-06 — the demonstration uses a real stored debate, so
+Required by CA2 on 2026-11-06: the demonstration uses a real stored debate, so
 this cannot be left to the end.
 
 Layout, per the CA1 mockup:
 
 - Question selector, showing the question's subject.
 - The question text and every option (up to ten).
-- **Round 1** — the five agents side by side, each with its answer letter and
+- **Round 1**: the five agents side by side, each with its answer letter and
   reasoning. Then the first majority vote and how it was reached
-  ("B — majority reached with three of five votes").
-- **Round 2** — the same five agents, each marked **changed** or **unchanged**
+  ("B: majority reached with three of five votes").
+- **Round 2**: the same five agents, each marked **changed** or **unchanged**
   against its Round 1 answer, with the revised reasoning. Then the final vote and
   the outcome (correct / incorrect / no consensus).
 - Per-question totals: tokens, estimated cost, response time.
 
 Agents are shown as `agent_1`…`agent_5` or by model name, but the *stored* Round
-2 peer inputs stay anonymised — the viewer may reveal identities after the fact,
+2 peer inputs stay anonymised: the viewer may reveal identities after the fact,
 the debate never did.
 
-Show failures honestly. An agent that returned `TRUNCATED` or `PARSE_FAIL` is
+Show failures as they are. An agent that returned `TRUNCATED` or `PARSE_FAIL` is
 displayed as such, not as a blank or a guess.
 
 Deployment dependencies are pinned in the root `requirements.txt`. The public

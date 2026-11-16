@@ -1,5 +1,9 @@
 # Public Streamlit deployment
 
+This file explains how the public replay viewer gets its data and what the
+public copy of the project contains. Read it if you want to run or publish
+`app/viewer.py`.
+
 The public interface is deliberately separated from the research databases.
 It reads `data/public_viewer/accepted_experiment_v1.json`, a sanitized snapshot
 containing only:

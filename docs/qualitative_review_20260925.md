@@ -1,4 +1,8 @@
-# Qualitative review of representative main-run debates — 25 September 2026
+# Qualitative review of representative main-run debates: 25 September 2026
+
+This file looks at the stored replies for eight questions from the main run, to
+describe how answers changed between the two rounds. It supports the two debate
+cases in the dissertation. No model was called for it.
 
 ## Purpose and limits
 
@@ -35,7 +39,7 @@ where the stored responses expose plausible ambiguity in a question.
 
 ## 1. Correcting an existing wrong majority
 
-### `mmlu_pro_v1:test:5503` — securitization theory
+### `mmlu_pro_v1:test:5503`: securitization theory
 
 - **Correct answer:** A
 - **Round 1:** C won 3–2. DeepSeek, Llama and Mistral chose C; Gemma and Qwen
@@ -53,7 +57,7 @@ implement a measure is a policy or implementation failure. Here peer reasoning
 corrected a specific conceptual error and overturned a three-agent wrong
 majority.
 
-### `mmlu_pro_v1:test:7670` — bank reserves and money supply
+### `mmlu_pro_v1:test:7670`: bank reserves and money supply
 
 - **Correct answer:** H, a `$30,000` reduction
 - **Round 1:** I won 3–2. DeepSeek, Llama and Mistral calculated `$40,000`;
@@ -71,7 +75,7 @@ provides a checkable correction rather than merely a different letter.
 
 ## 2. Resolving initial disagreement correctly
 
-### `mmlu_pro_v1:test:11081` — propositional logic
+### `mmlu_pro_v1:test:11081`: propositional logic
 
 - **Correct answer:** E, valid
 - **Round 1:** no consensus: E received two votes; A, F and I received one each.
@@ -87,7 +91,7 @@ The debate resolved disagreement because the correct reasoning was directly
 verifiable. The peers did not need to trust a model's memory; they could repeat
 the truth-table test.
 
-### `mmlu_pro_v1:test:5605` — 2013 corruption survey figure
+### `mmlu_pro_v1:test:5605`: 2013 corruption survey figure
 
 - **Correct answer:** J, `76%`
 - **Round 1:** no consensus: J received two votes; C, F and H received one each.
@@ -106,7 +110,7 @@ that the agents independently validated the statistic.
 
 ## 3. Losing a correct Round 1 result
 
-### `mmlu_pro_v1:test:5104` — *The Hudsucker Proxy*
+### `mmlu_pro_v1:test:5104`: *The Hudsucker Proxy*
 
 - **Correct answer:** I, Hula Hoop
 - **Round 1:** I won 3–1–1. Gemma chose E (Slinky) and Qwen chose H (Yo-Yo).
@@ -123,7 +127,7 @@ account sounded authoritative despite being false. Debate did not make the two
 remaining correct agents wrong, but one switch was enough to destroy the group
 majority.
 
-### `mmlu_pro_v1:test:7075` — tax brackets
+### `mmlu_pro_v1:test:7075`: tax brackets
 
 - **Correct answer under the benchmark key:** F
 - **Round 1:** F won 3–1–1. DeepSeek chose H and Qwen chose I.
@@ -145,7 +149,7 @@ presented simply as irrational model behaviour.
 
 ## 4. Consensus is not the same as correctness
 
-### `mmlu_pro_v1:test:1203` — lease termination
+### `mmlu_pro_v1:test:1203`: lease termination
 
 - **Correct answer under the benchmark key:** I
 - **Round 1:** no consensus: D and I had two votes each; F had one.
@@ -166,7 +170,7 @@ truth.
 
 ## 5. Debate sometimes changes nothing
 
-### `mmlu_pro_v1:test:2697` — work-related accidents
+### `mmlu_pro_v1:test:2697`: work-related accidents
 
 - **Correct answer:** E, more recent life stress
 - **Round 1:** no consensus: E and C had two votes each; A had one.

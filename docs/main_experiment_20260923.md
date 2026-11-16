@@ -1,4 +1,8 @@
-# Main experiment record — 23 September 2026
+# Main experiment record: 23 September 2026
+
+This file is the record of the one formal run of 300 questions. Read it
+together with `reports/main_experiment_20260923/`, which holds the result
+tables.
 
 This is the permanent audit record for the only formal 300-question
 experiment. The run is complete, backed up and accepted as the final

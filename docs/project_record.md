@@ -1,8 +1,11 @@
-# Project record — what was built, why, and what it is for
+# Project record: what was built, why, and what it is for
+
+Start here if you are new to the project. This file describes the finished
+system part by part: what was decided, why, and where the code is.
 
 This document is the readable map of the completed experiment. It explains the
 system by component rather than by date. `docs/decisions.md` remains the formal
-source of truth and contains the full evidence behind decisions D001–D029.
+source of truth and contains the full evidence behind decisions D001–D030.
 
 ## 1. Research design
 
@@ -65,7 +68,7 @@ independent compatible hosts before a live run.
 
 **Why.** Automatic OpenRouter routing previously served the same model through
 different companies and quantisations. Pinning makes the serving setup stable
-enough to describe and reproduce. Versioned YAML keeps historical runs honest:
+enough to describe and reproduce. Versioned YAML keeps old run labels correct:
 a run labelled `agents_v5` continues to mean the settings it actually used.
 
 **What changed and why.** The original Mistral Large route became unavailable.
@@ -143,7 +146,7 @@ limits are Llama 1,024, Qwen 3,072, Mistral 1,024, DeepSeek 2,048 and Gemma
 
 **Why.** A ceiling that is too small pays for reasoning but loses the answer; a
 ceiling that is too large permits unnecessary cost. Limits were selected from
-completion, truncation and cost—not answer correctness—so the settings were not
+completion, truncation and cost, not answer correctness, so the settings were not
 tuned to make pilot accuracy look better.
 
 **Important finding.** Parasail did not enforce Qwen's reasoning request as a
@@ -199,8 +202,8 @@ Authority: D004 and D010.
 
 **What was built.** `src/mad/cache.py` uses a separate SQLite file. Its key
 includes agent/model identity, the full message list, sampling settings, output
-limit, reasoning settings and provider pin. Successful completions—including
-valid refusals or truncations—can be reused; transport/API errors and fixture
+limit, reasoning settings and provider pin. Successful completions, including
+valid refusals or truncations, can be reused; transport/API errors and fixture
 responses are not cached. First write wins.
 
 A cache hit costs zero, makes zero new API attempts and retains the original
@@ -379,16 +382,18 @@ disagreement rather than simply missing Mistral votes.
 
 Authority: D029 and `docs/main_experiment_20260923.md`.
 
-## 17. Work deliberately not done yet
+## 17. Work after the experiment
 
-The model experiment and numerical evaluation are complete. Remaining work is
-offline:
+The model experiment and numerical evaluation are complete. When this record
+was first written, on 25 September 2026, five offline tasks remained. Their
+state now is:
 
-1. build `app/viewer.py`, a read-only Streamlit replay interface for CA2;
-2. create dissertation figures and tables from the accepted exports;
-3. write methods, results, discussion, limitations and conclusion;
-4. create and practise the CA2 demonstration; and
-5. copy the ignored database backups to separate off-machine storage.
+1. `app/viewer.py`, the read-only Streamlit replay interface, is built;
+2. the dissertation figures and tables were made from the accepted exports;
+3. the methods, results, discussion, limitations and conclusion are written;
+4. the CA2 demonstration was recorded and presented; and
+5. copying the ignored database backups to separate off-machine storage is a
+   task outside this repository.
 
 The representative-question inspection is complete in
 `docs/qualitative_review_20260925.md`. It is descriptive evidence for the
@@ -430,3 +435,4 @@ repeat main run is authorised as part of the completed core experiment.
 | D027 | Formal run acceptance | Keep one complete, uncleaned main experiment |
 | D028 | Final export | Generate all result artifacts reproducibly and read-only |
 | D029 | Interpretation | State what the result supports and what it does not |
+| D030 | Answer-key check | Record a post hoc check that changed no score |
