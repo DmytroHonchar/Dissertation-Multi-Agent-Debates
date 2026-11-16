@@ -261,7 +261,7 @@ overwrite of an existing record.
 | Folder | What is in it | Why it exists |
 |---|---|---|
 | `data/` | The questions. `raw/` is the MMLU-Pro download. `frozen/mmlu_pro_v1/model_inputs/` holds the 300 + 20 questions without answers. `answer_keys/` holds the correct answers. `metadata/` holds the chosen IDs, checksums and the validation report. | All five agents must answer the same questions, and the models must never see the answers. |
-| `configs/` | Settings. `benchmark/mmlu_pro_v1.yaml` names the dataset and its file hashes. `models/agents_v7.yaml` is the frozen setup of the five agents. | The code reads its settings from these files. Versions v1 to v6 stay because old runs refer to them. |
+| `configs/` | Settings. `benchmark/mmlu_pro_v1.yaml` names the dataset and its file hashes. `models/agents_v7.yaml` is the frozen setup of the five agents. | The code reads its settings from these files. Versions v1 to v6 stay because old runs refer to them. These files are frozen, comments included. The SHA-256 fingerprint of `agents_v7.yaml` is part of the experiment record, so any edit would break it. |
 | `src/mad/` | The main code, with one job in each file. See the table below. | The scripts call this code. |
 | `scripts/` | The commands you run. Four runners in growing size (1 question and 1 round, 1 question and 2 rounds, 20 questions, 300 questions), the scoring command, three check scripts and two scripts for the public viewer. | The project was built in small steps, and each step kept its own command. |
 | `app/` | The Streamlit viewer: `viewer.py`, the page template `debate_stage.html`, and the model logos. | To look at the results. |
