@@ -1,5 +1,9 @@
 """Verify every configured agent slug exists on OpenRouter and answers a prompt.
 
+Run this file on its own before a live run, to see that the five models still
+exist. It needs the OpenRouter key in the .env file and an internet connection.
+It uses src/mad/api_client.py and nothing else from the project.
+
 A model passes the smoke test when the request succeeds, the response body is
 well formed, and the visible content is not empty. Empty content is a FAILURE,
 not a pass: some reasoning models spend their whole completion budget before
@@ -8,7 +12,7 @@ See docs/decisions.md D002.
 
 OpenRouter chooses the upstream provider. The served model and provider are
 logged on every call, but a response is never rejected for coming from a
-different provider than last time — pinning is deferred until before the pilot
+different provider than last time. Pinning is deferred until before the pilot
 (D015).
 
 Usage:
@@ -22,9 +26,10 @@ import argparse
 import sys
 from pathlib import Path
 
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from mad.api_client import (  # noqa: E402
+from mad.api_client import (
     ApiRequestError,
     OpenRouterClient,
     load_model_registry,
@@ -36,8 +41,7 @@ MODEL_CONFIG_PATH = Path(__file__).resolve().parents[1] / "configs/models/agents
 SMOKE_TEST_MESSAGES = [
     {"role": "user", "content": "Reply with exactly one word: ready"},
 ]
-# Big enough that a reasoning model can think and still say something.
-# At 16 tokens, Qwen and DeepSeek returned nothing at all.
+# Big enough for a reasoning model to answer. At 16 tokens Qwen and DeepSeek said nothing.
 SMOKE_TEST_MAX_TOKENS = 256
 
 

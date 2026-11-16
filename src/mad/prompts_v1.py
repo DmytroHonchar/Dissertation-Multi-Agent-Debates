@@ -1,11 +1,14 @@
 """Builds the versioned prompts sent to all five models.
 
+You do not run this file. round1.py and debate.py call it to build the messages
+for each agent, and runner.py then sends them.
+
 Three rules this file exists to protect:
   - Round 1 models must not know a debate follows.
   - Round 2 peers must stay anonymous and separate from the agent's own reply.
   - The correct answer must never get in here.
 
-Change a prompt and you change the experiment - bump that round's version.
+Change a prompt and you change the experiment, so bump that round's version.
 """
 
 from __future__ import annotations
@@ -18,19 +21,17 @@ from typing import Any
 
 ROUND1_PROMPT_VERSION = "round1_v1"
 
-# Kept as the Round 1 alias so existing stored runs and imports remain truthful.
+# Kept as the Round 1 alias so existing stored runs and imports stay correct.
 PROMPT_VERSION = ROUND1_PROMPT_VERSION
 
 ROUND2_PROMPT_VERSION = "round2_v1"
 
-# A run containing both rounds records both prompt versions in its single
-# run-level prompt_version field. Individual response rows still record only
-# the prompt version that produced that response.
+# A two-round run stores both prompt versions in its run-level field. Each response row its own.
 DEBATE_PROMPT_VERSION = f"{ROUND1_PROMPT_VERSION}+{ROUND2_PROMPT_VERSION}"
 
 ROUND2_MAX_PEERS = 4
 
-# Questions have 3 to 10 options - never assume 10.
+# Questions have 3 to 10 options. Never assume 10.
 ANSWER_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # The parser looks for this exact text. Both files import it so they can't drift.
@@ -161,8 +162,7 @@ def format_question(question: Mapping[str, Any]) -> str:
     """The part the model sees: question text, blank line, then the options."""
     assert_no_answer_key(question)
 
-    # Must already be text. Converting a number or None into a string here
-    # would build a prompt out of "123" or "None" and never say anything.
+    # Must already be text. Converting a number or None would build a prompt from "123" or "None".
     text = question.get("question")
     if not isinstance(text, str) or not text.strip():
         raise PromptConstructionError(
@@ -207,8 +207,7 @@ def build_round2_messages(
             raise PromptConstructionError(
                 "own_round1_response must be non-empty text or None when unavailable"
             )
-        # Preserve the model's response exactly. It is conversation history, not
-        # an anonymous peer response and not text reconstructed from its letter.
+        # Keep the model's response exactly as it was. It is conversation history, not a peer reply.
         messages.append({"role": "assistant", "content": own_round1_response})
         previous_note = "Your complete previous response appears above."
         final_instruction = (

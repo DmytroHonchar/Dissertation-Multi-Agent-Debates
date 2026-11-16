@@ -1,5 +1,9 @@
 """Where every result is stored.
 
+You do not run this file. A run file opens the database and starts one run.
+round1.py, debate.py and runner.py write responses and votes into it during the
+run, and evaluation.py reads them back afterwards.
+
 SQLite, so it is one file and there is no server to run. The file is
 storage/results.sqlite, which git ignores. Results stay off git; the dataset
 does not.
@@ -8,7 +12,7 @@ Four rules this file has to hold:
 
     store the whole reply, not just the letter
     keep every attempt, including the ones that failed and cost money
-    never overwrite a row - a repeat means a new run ID
+    never overwrite a row (a repeat means a new run ID)
     no column can hold a correct answer
 
 Round 1 and Round 2 get separate rows. Comparing them is the research question,
@@ -37,8 +41,7 @@ DEFAULT_DATABASE_PATH = Path("storage") / "results.sqlite"
 
 ROUNDS = (1, 2)
 
-# The four ways a vote can end. All four come from the one rule: an answer needs
-# three of the five agents.
+# The four ways a vote can end, all from one rule: an answer needs three of the five agents.
 CONSENSUS_STATES = (
     "UNANIMOUS",              # everyone said the same thing
     "CONSENSUS",              # three or four said the same thing
@@ -58,14 +61,12 @@ class DatabaseError(RuntimeError):
 
 
 class DuplicateRecordError(DatabaseError):
-    """This row is already there. Nothing gets replaced - use a new run ID."""
+    """This row is already there. Nothing gets replaced. Use a new run ID."""
 
 
 # 3. Schema
 
-# The CHECK and UNIQUE lines below are not decoration. They put the project's
-# rules into the file itself, so breaking one is an error instead of a quiet
-# wrong number months later. Each is explained where it sits.
+# The CHECK and UNIQUE lines below put the project's rules in the file, so breaking one errors.
 
 SCHEMA_STATEMENTS = (
     """
@@ -304,9 +305,7 @@ class ResultsDatabase:
                 f"but this code is version {SCHEMA_VERSION}. Use a new file."
             )
         if existing == SCHEMA_VERSION:
-            # Already stamped, so the tables exist. Stop here: rewriting the
-            # version would dirty the file, and merely opening a database to
-            # read it must never change a byte of it.
+            # Already stamped, so stop. Opening a database to read it must never change it.
             return
         with self._connection:
             for statement in SCHEMA_STATEMENTS:
@@ -425,7 +424,7 @@ class ResultsDatabase:
         )
 
     def _insert(self, table: str, row: dict[str, Any], *, duplicate_message: str) -> None:
-        """A plain INSERT. Never INSERT OR REPLACE - a duplicate has to fail."""
+        """A plain INSERT. Never INSERT OR REPLACE, because a duplicate has to fail."""
         try:
             with self._connection:
                 self._connection.execute(*_insert_sql(table, row))
@@ -508,7 +507,7 @@ def response_from_completion(
     The API client knows nothing about this database, and this database does no
     parsing. They meet here and nowhere else.
 
-    Tokens and cost cover every attempt, not just the one that succeeded - a
+    Tokens and cost cover every attempt, not just the one that succeeded. A
     paid failure before the retry is part of what this answer cost (P6). The
     per-attempt split stays visible in response_attempts.
     """

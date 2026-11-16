@@ -1,14 +1,18 @@
 """Turns a finished run into the numbers the dissertation reports.
 
+You do not run this file. scripts/evaluate_experiment.py calls it after a run
+has finished. It reads the stored rows through database.py and compares them
+with the answer key.
+
 This is the only module allowed to open an answer key. Nothing here calls a
-model, spends money, changes a stored row, or recomputes a vote - the vote was
+model, spends money, changes a stored row, or recomputes a vote. The vote was
 decided by `voting.py` when the run happened and is read back as it was stored.
 
 The three headline measures (D009), never collapsed into one figure:
 
   1. per-agent Round 1 accuracy, over that agent's valid answers only
-  2. Round 1 group vote accuracy - aggregation, no communication
-  3. Round 2 group vote accuracy - after one round of communication
+  2. Round 1 group vote accuracy: aggregation, no communication
+  3. Round 2 group vote accuracy: after one round of communication
 
 (2) - (1) is the aggregation gain and is reported against both the mean and the
 best agent, because those two answer different questions (D021). (3) - (2) is
@@ -53,15 +57,12 @@ from mad.voting import (
 
 EVALUATION_VERSION = "evaluation_v2"
 
-# The date D011 was recorded. Fixed before the formal pilot and the main
-# experiment, which is what D011's rule protects: a seed that is a date was
-# not chosen by looking at a result.
+# The date D011 was recorded, fixed before the pilot and main run, so no result influenced the seed.
 BOOTSTRAP_SEED = 20260828
 BOOTSTRAP_RESAMPLES = 10_000
 CONFIDENCE_LEVEL = 0.95
 
-# The OpenRouter key limit that stands in for the £15 budget. Stored costs are
-# in US dollars, so the budget is tracked in the same currency as the data.
+# The OpenRouter key limit standing in for the £15 budget, in US dollars like the stored costs.
 BUDGET_USD = 20.0
 
 ROUNDS = (1, 2)
@@ -86,7 +87,7 @@ class AgentRoundResult:
     """One agent's accuracy and failures in one round.
 
     `accuracy` is None when the agent produced no valid answer at all. Zero
-    would be a lie: it did not answer wrongly, it did not answer.
+    would be wrong, because the agent gave no answer and not a wrong one.
     """
 
     agent_id: str
@@ -124,7 +125,7 @@ class GroupRoundResult:
 
 @dataclass(frozen=True)
 class TransitionCounts:
-    """The four-way move between rounds. The off-diagonals are the substance."""
+    """The four-way move between rounds. The off-diagonal counts are the ones that matter."""
 
     stayed_correct: int = 0
     became_incorrect: int = 0
@@ -207,8 +208,8 @@ class UsageTotals:
 
     `api_attempts` counts only attempts this run actually made. A cache hit
     carries `attempt_count = 1` naming the original paid call that produced the
-    stored body, so counting it here would report calls that never happened -
-    the run that served all five Round 1 responses from cache made zero.
+    stored body, so counting it here would report calls that never happened.
+    The run that served all five Round 1 responses from cache made zero.
     """
 
     round: int
@@ -377,9 +378,9 @@ def evaluate_run(
     stops a pilot run being scored against the experimental key: the two frozen
     sets do not overlap, so every ID would be missing.
 
-    Pass `expected_questions` for a formal run - 20 for the pilot, 300 for the
-    main experiment - and a run that lost questions is refused rather than
-    scored over a smaller denominator, which would quietly change every figure.
+    Pass `expected_questions` for a formal run (20 for the pilot, 300 for the
+    main experiment), and a run that lost questions is refused rather than
+    scored over a smaller denominator, which would change every figure.
     """
     run = db.read_run(run_id)
     if run is None:
@@ -565,11 +566,11 @@ def mcnemar_exact(*, became_correct: int, became_incorrect: int) -> McNemarResul
 
     Only the discordant pairs carry information. Under the null the group is as
     likely to have been repaired as broken, so this is Binomial(n, 0.5), which
-    is symmetric and exact from `math.comb` - no `scipy` needed (D021).
+    is symmetric and exact from `math.comb`, so no `scipy` is needed (D021).
 
     With no discordant pairs there is nothing to test and p = 1, reported rather
     than raised, because a run where debate changed no group answer is a real
-    and interesting result.
+    result.
     """
     if became_correct < 0 or became_incorrect < 0:
         raise EvaluationError("transition counts cannot be negative")
@@ -788,7 +789,7 @@ def _assert_every_agent_answered(
 ) -> None:
     """Every agent must have a row for every question in both rounds.
 
-    A missing row is not a failure - a failure is stored as `API_ERROR` and
+    A missing row is not a failure. A failure is stored as `API_ERROR` and
     counted. A missing row is a run that did not finish what it claims to have
     finished, and scoring it would understate the failure rate.
     """
@@ -798,8 +799,7 @@ def _assert_every_agent_answered(
             f"{list(agent_ids)}. The three-of-five threshold assumes five."
         )
 
-    # The same five in both rounds. An agent that only appears in Round 2 never
-    # answered alone, so it has no Round 1 accuracy and nothing to reconsider.
+    # The same five in both rounds. An agent seen only in Round 2 has no Round 1 answer.
     second_round_agents = {row["agent_id"] for row in responses[2]}
     if second_round_agents != set(agent_ids):
         only_first = sorted(set(agent_ids) - second_round_agents)
@@ -828,8 +828,7 @@ def _assert_every_agent_answered(
                 "A failed call is stored as API_ERROR; a missing row means the "
                 "run did not complete."
             )
-        # No gaps and the wrong count means rows for something else entirely -
-        # an extra agent, or a question with no outcome row.
+        # No gaps but the wrong count means extra rows, e.g. an extra agent or a missing outcome.
         if len(rows) != expected_rows:
             raise EvaluationError(
                 f"run {run_id!r} stored {len(rows)} Round {round_number} responses "

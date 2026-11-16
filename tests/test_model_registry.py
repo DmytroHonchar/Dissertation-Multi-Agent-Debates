@@ -1,5 +1,10 @@
 """Tests for the five-agent config in configs/models/agents_v1.yaml.
 
+These tests check the agent settings files in configs/models/. Run them alone
+with:
+
+    .venv/bin/python -m pytest tests/test_model_registry.py
+
 Changing a value here changes the experiment, so these tests are meant to fail
 loudly if someone edits the file without meaning to.
 """

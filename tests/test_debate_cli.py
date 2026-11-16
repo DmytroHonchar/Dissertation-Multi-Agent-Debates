@@ -1,4 +1,9 @@
-"""Tests for the complete one-question debate command. Always offline."""
+"""Tests for the complete one-question debate command. Always offline.
+
+These tests check scripts/run_debate.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_debate_cli.py
+"""
 
 from __future__ import annotations
 

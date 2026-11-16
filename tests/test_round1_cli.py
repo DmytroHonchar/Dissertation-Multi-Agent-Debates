@@ -1,4 +1,9 @@
-"""Tests for the one-question Round 1 command. The network is switched off."""
+"""Tests for the one-question Round 1 command. The network is switched off.
+
+These tests check scripts/run_round1.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_round1_cli.py
+"""
 
 from __future__ import annotations
 

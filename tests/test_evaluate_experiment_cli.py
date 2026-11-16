@@ -1,4 +1,9 @@
-"""Offline tests for the accepted-main-run evaluation/export command."""
+"""Offline tests for the accepted-main-run evaluation/export command.
+
+These tests check scripts/evaluate_experiment.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_evaluate_experiment_cli.py
+"""
 
 from __future__ import annotations
 

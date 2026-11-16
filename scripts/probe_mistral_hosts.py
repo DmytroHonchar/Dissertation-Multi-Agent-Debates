@@ -1,5 +1,9 @@
 """Compare Mistral Small 3.2's two alternative hosts on the failed pilot prompts.
 
+Run this file on its own. It reads the stored failures from the private
+storage/ folder, so it does not work in the public copy of the project. It was
+used on 22 September 2026 to choose a new host for Mistral.
+
 This is a bounded diagnostic, not a repaired pilot and not an experiment run.
 It reads the four stored Mistral API failures from the agents_v6 pilot,
 reconstructs their exact messages, and sends each message once to DeepInfra and
@@ -30,13 +34,14 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(ROOT / "src"))
 
-from mad.api_client import ApiRequestError, OpenRouterClient, load_model_registry  # noqa: E402
-from mad.diagnostics import diagnose_attempt  # noqa: E402
-from mad.parser_v1 import parse_response  # noqa: E402
-from mad.prompts_v1 import answer_letters, build_round1_messages, build_round2_messages  # noqa: E402
-from mad.runner import load_pilot_questions, require_spend_confirmation  # noqa: E402
+from mad.api_client import ApiRequestError, OpenRouterClient, load_model_registry
+from mad.diagnostics import diagnose_attempt
+from mad.parser_v1 import parse_response
+from mad.prompts_v1 import answer_letters, build_round1_messages, build_round2_messages
+from mad.runner import load_pilot_questions, require_spend_confirmation
 
 
 SOURCE_RUN = "pilot_agents_v6_20260922T171757Z"
@@ -303,8 +308,7 @@ def main(argv=None) -> int:
             record("endpoint_metadata", endpoints)
             record("reservation", {"usd": total_reservation})
 
-            # Interleave hosts for each prompt so time-of-day affects them as
-            # evenly as a short diagnostic can manage.
+            # Alternate hosts for each prompt so time of day affects both about equally.
             for index, (question, source, messages) in enumerate(plan):
                 pins = CANDIDATE_PINS if index % 2 == 0 else tuple(reversed(CANDIDATE_PINS))
                 for pin in pins:

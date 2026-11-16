@@ -1,7 +1,11 @@
 """Builds the frozen question set from the raw MMLU-Pro download.
 
+You do not run this file, and no other file imports it. Its functions were
+called once to create the frozen files. tests/test_benchmark.py and
+tests/test_sampling.py still check them.
+
 This ran once, back in August, and produced data/frozen/mmlu_pro_v1.
-It is not meant to run again - the frozen data is the experiment's input and
+It is not meant to run again, because the frozen data is the experiment's input and
 must never change. The code stays here so the sampling can be shown to be
 reproducible.
 

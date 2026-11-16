@@ -1,4 +1,9 @@
-"""Guards the parser rules. Offline - no model is ever called."""
+"""Guards the parser rules. Offline: no model is ever called.
+
+These tests check src/mad/parser_v1.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_parser.py
+"""
 
 from __future__ import annotations
 
@@ -141,8 +146,7 @@ def test_truncation_is_guessed_only_when_no_finish_reason_came_back():
 
 @pytest.mark.parametrize("text", ["Yes", "Yes.", "B", "I think so"])
 def test_a_short_reply_is_never_guessed_to_be_truncated(text):
-    # Truncation means the 1024-token limit was hit, so the reply is long.
-    # A short reply is a parse failure - a different column in the failure table.
+    # Truncation means the 1024-token limit was hit, so the reply is long. Short is a parse fail.
     assert parse_response(text, FOUR, finish_reason="").status == STATUS_PARSE_FAIL
 
 
@@ -168,8 +172,7 @@ def test_refusal_text_is_detected(text):
 
 
 def test_a_refusal_phrase_does_not_override_an_answer_that_was_given():
-    # The phrase search is not sentence-aware, so it can appear inside a reply
-    # that does answer. A provider flag is trusted over a letter; text is not.
+    # The phrase can appear inside a real answer. A provider flag beats a letter; text does not.
     text = "I cannot answer A, so FINAL ANSWER: B"
     assert parse_response(text, FOUR, finish_reason="stop").letter == "B"
 

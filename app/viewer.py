@@ -1,11 +1,16 @@
 """Read-only dashboard and replay for the accepted debate experiment.
 
+Run this file on its own. It needs no API key and no private database. It reads
+data/public_viewer/accepted_experiment_v1.json through
+src/mad/public_viewer_data.py, and src/mad/debate_stage.py builds the animated
+stage.
+
 Run from the repository root:
 
     .venv/bin/streamlit run app/viewer.py
 
-The app reads verified exports and SQLite through ``mad.viewer_data``. It makes
-no model calls, never writes to SQLite and never opens a benchmark key file.
+The app makes no model calls, writes nothing and never opens a benchmark key
+file.
 """
 
 from __future__ import annotations
@@ -24,10 +29,11 @@ import streamlit.components.v1 as components
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from mad.debate_stage import build_stage_payload, load_logos, stage_document  # noqa: E402
-from mad.public_viewer_data import (  # noqa: E402
+from mad.debate_stage import build_stage_payload, load_logos, stage_document
+from mad.public_viewer_data import (
     AgentResponseView,
     ExperimentOverview,
     QuestionReplay,
@@ -60,8 +66,7 @@ CURATED_NOTES = {
 
 REPLAY_VIEWS = ("Animated debate", "Step-by-step evidence")
 
-# The animated stage is one self-contained page. Streamlit needs a starting
-# height; the stage then resizes its own frame to fit the question shown.
+# The stage is one self-contained page. It resizes its own frame after Streamlit's starting height.
 STAGE_TEMPLATE = Path(__file__).with_name("debate_stage.html")
 STAGE_LOGOS = Path(__file__).with_name("logos")
 STAGE_HEIGHT = 780
@@ -86,8 +91,7 @@ MODEL_LABELS = {
     "agent_gemma": "Gemma",
 }
 
-# The stored vote states, in sentence case. The wording stays exactly the
-# wording used in the report; only the capitalisation is for reading.
+# Stored vote states in sentence case. The wording matches the report; only the capitals differ.
 STATE_LABELS = {
     "UNANIMOUS": "Unanimous",
     "CONSENSUS": "Consensus",
@@ -100,8 +104,7 @@ def _state_label(state: str) -> str:
     return STATE_LABELS.get(state, state.replace("_", " ").capitalize())
 
 
-# The stored response statuses. Same wording as the report, without the
-# underscore, so the pill fits a fifth of the row.
+# Stored response statuses, worded as in the report but without the underscore so the pill fits.
 STATUS_LABELS = {
     "OK": "OK",
     "TRUNCATED": "Truncated",
@@ -115,8 +118,7 @@ def _status_label(status: str) -> str:
     return STATUS_LABELS.get(status, status.replace("_", " ").capitalize())
 
 
-# Every overview panel is this tall, so the two left cards match each other
-# and the two right cards match each other.
+# All overview panels share this height, so the left cards match and the right cards match.
 PANEL_HEIGHT = 452
 
 BLUE = "#1F4E79"
@@ -144,10 +146,10 @@ def _load_replay(question_id: str) -> QuestionReplay:
 def _inject_styles() -> None:
     """One stylesheet, built from a small token set.
 
-    The look is a laboratory instrument rather than a dashboard: warm paper
-    ground, one archival blue, and every stored datum set in mono so an ID, a
-    letter and a token count all read as measurements. Colour is reserved for
-    meaning - correct, incorrect, failed - and never used as decoration.
+    The page is styled like a lab instrument, not a dashboard: a warm paper
+    background, one blue, and monospace for stored values so an ID, a
+    letter and a token count all read as measurements. Colour is used only for
+    meaning (correct, incorrect, failed).
     """
     st.markdown(
         """
@@ -938,9 +940,7 @@ def _render_overview(overview: ExperimentOverview) -> None:
          f"{overview.total_failures} failures recorded"),
     ))
 
-    # The finding runs full width and the two charts pair off beneath it.
-    # Stacking the finding above one chart made the right column far taller
-    # than the left, leaving a long empty gap under the accuracy card.
+    # The finding runs full width with both charts under it. Stacked over one chart it left a gap.
     st.markdown(
         f"""
         <div class="finding">
@@ -1136,8 +1136,7 @@ def _render_vote_cards(responses: tuple[AgentResponseView, ...]) -> None:
         badge = "badge-green" if response.status == "OK" else "badge-amber"
         missing = "" if letter else " is-missing"
         with column:
-            # One block, so every card shares the same baselines. Separate
-            # Streamlit containers in columns do not align with each other.
+            # One block, because separate Streamlit containers in columns do not line up.
             st.markdown(
                 f'<div class="vote-card">'
                 f'<div class="vote-agent">{html.escape(MODEL_LABELS[response.agent_id])}</div>'
@@ -1427,8 +1426,7 @@ def _render_debate_stage(replay: QuestionReplay) -> None:
     It shows only stored data: bubbles quote the stored responses and the
     peer arrows follow the stored Round 2 rows.
     """
-    # The caption goes above the stage. The stage grows its own frame past the
-    # height Streamlit reserved, so anything placed after it would be covered.
+    # The caption goes above the stage, because the stage grows and would cover anything below it.
     st.caption(
         "Press Play to watch the debate, or click a scene to jump to it. "
         "The step-by-step view shows every request, parse and vote in full."
@@ -1455,8 +1453,7 @@ def _render_replay(replay: QuestionReplay, example_label: str) -> None:
          f"Benchmark answer {replay.correct_answer}"),
     ))
 
-    # Only the chosen view is drawn. A component inside a hidden tab mounts at
-    # zero width and would measure its lecterns wrongly.
+    # Draw only the chosen view. A component in a hidden tab mounts at zero width.
     view = st.segmented_control(
         "View", REPLAY_VIEWS, default=REPLAY_VIEWS[0], key="replay_view", label_visibility="collapsed"
     )
@@ -1464,9 +1461,7 @@ def _render_replay(replay: QuestionReplay, example_label: str) -> None:
         _render_debate_stage(replay)
         return
 
-    # Switching case starts its replay at step 1. Carrying the previous
-    # case's step over lands the viewer mid-debate on a question they have
-    # not seen the beginning of.
+    # A new case starts at step 1, so the viewer does not land in the middle of an unseen debate.
     if st.session_state.get("replay_question") != replay.question_id:
         st.session_state.replay_question = replay.question_id
         st.session_state.replay_step = 0

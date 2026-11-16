@@ -1,13 +1,16 @@
 """Round 1: five agents answer one question alone, then the group votes.
 
+You do not run this file. Start it with scripts/run_round1.py for one question.
+debate.py also calls it as the first half of every two-round run.
+
 No agent sees another's answer here, and none is told a second round follows.
-That is the whole point of the round - it produces the per-agent accuracy and
+That is why the round exists: it produces the per-agent accuracy and
 the aggregation-only vote, which are two of the three headline numbers.
 
 The caller owns the run lifecycle. It starts one database run before processing
 one or many questions and finishes it only after every required stage succeeds.
-Everything shared with Round 2 - the run guard, the per-agent call, the fixture
-client, the report - lives in `runner.py`, so the two rounds cannot drift apart.
+Everything shared with Round 2 (the run guard, the per-agent call, the fixture
+client, the report) lives in `runner.py`, so the two rounds cannot drift apart.
 
 Money protections, because live calls spend real credit:
   - the default is a dry run on labelled fixture replies, costing nothing
@@ -45,10 +48,7 @@ from mad.voting import EXPECTED_AGENT_COUNT, tally
 
 # 1. Versions
 
-# P8: everything that shaped a run is named, so its results stay citable.
-# v1 was the cacheless Milestone 1 runner; run milestone1_20260901T161852Z is
-# recorded under it and that label stays true. v2 added the response cache
-# path, so new runs must not claim the old recipe.
+# P8: v1 was the cacheless Milestone 1 runner (run milestone1_20260901T161852Z). v2 added the cache.
 CONFIG_VERSION = "round1_config_v2"
 
 
@@ -85,7 +85,7 @@ def run_round1_question(
     The caller must start ``run_id`` first and finish it after all questions and
     rounds succeed. There is at most one API call per agent here; a cache hit
     makes none. One agent failing is stored as API_ERROR and the other four
-    continue - a failure must never end the run.
+    continue. A failure must never end the run.
 
     All five agents receive exactly the same two messages, so nothing here
     depends on the order the registry happens to be in.

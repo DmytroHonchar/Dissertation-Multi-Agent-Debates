@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Create the sanitized, read-only data artifact used by the public viewer.
 
+Run this file on its own, after scripts/evaluate_experiment.py. It needs the
+private databases in storage/. Its output is
+data/public_viewer/accepted_experiment_v1.json, which app/viewer.py reads.
+
 The source databases are opened through ``mad.viewer_data`` in read-only mode.
 Only the accepted overview and six approved replay questions are exported.
 """
@@ -16,16 +20,17 @@ from pathlib import Path
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from mad.public_viewer_data import (  # noqa: E402
+from mad.public_viewer_data import (
     DEFAULT_PUBLIC_BUNDLE,
     PUBLIC_BUNDLE_SCHEMA_VERSION,
     PUBLIC_QUESTION_IDS,
     find_forbidden_public_content,
     sanitize_public_value,
 )
-from mad.viewer_data import (  # noqa: E402
+from mad.viewer_data import (
     DEFAULT_CACHE_PATH,
     DEFAULT_RESULTS_PATH,
     MAIN_RUN_ID,

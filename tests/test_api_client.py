@@ -1,5 +1,9 @@
 """Tests for the OpenRouter client. None of these touch the network.
 
+These tests check src/mad/api_client.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_api_client.py
+
 Real API calls live in scripts/check_models.py, because they cost money.
 """
 
@@ -51,7 +55,7 @@ def _client_with(monkeypatch, responses):
             raise item
         return item
 
-    # No waiting between retries - these tests must stay instant.
+    # No waiting between retries, so these tests stay instant.
     monkeypatch.setattr(api_client.time, "sleep", lambda seconds: None)
     client = OpenRouterClient(api_key="test-key-not-real")
     monkeypatch.setattr(client._session, "post", fake_post)

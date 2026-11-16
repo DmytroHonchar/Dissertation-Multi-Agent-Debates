@@ -1,14 +1,17 @@
 """The machinery both rounds share: run guards, money guards, fixtures, reports.
 
+You do not run this file. round1.py and debate.py call it for every agent, and
+the run files in scripts/ use its guards before any paid call.
+
 Round 1 and Round 2 are two stages of one experiment, and they need the same
-things around them - the same refusal to spend money by accident, the same
+things around them: the same refusal to spend money by accident, the same
 labelled fixture client, the same shaped report, and the same check that the
 database run they are writing into is the run they think it is.
 
 That check exists because the caller, not the round, owns the run lifecycle. A
 script opens one run, processes 1, 20 or 300 questions through both rounds, and
-finishes it only after everything succeeded. The freedom to label a run one way
-and then execute another is the price of that, so it is taken away here.
+finishes it only after everything succeeded. A run could then be labelled one way
+and executed another, so this file checks the labels first.
 
 Nothing in this file knows which round is calling it.
 """
@@ -50,8 +53,7 @@ EXPERIMENTAL_QUESTIONS_FILE = (
 )
 EXPERIMENTAL_IDS_FILE = FROZEN_ROOT / "metadata" / "experimental_ids.json"
 
-# The real results database. A dry run is refused this path, so fixture rows
-# can never sit next to experimental ones.
+# The real results database. A dry run is refused this path, so fixture rows never mix with it.
 PRODUCTION_DATABASE = Path("storage") / "results.sqlite"
 
 
@@ -90,7 +92,7 @@ def require_spend_confirmation(
 def production_database_path() -> Path:
     """The real results database, resolved from the repository root.
 
-    Absolute, so launching the script from another directory cannot quietly
+    Absolute, so launching the script from another directory cannot
     create a second storage/ somewhere else.
     """
     return _repository_root() / PRODUCTION_DATABASE
@@ -156,8 +158,7 @@ def assert_run_is_open(db: ResultsDatabase, run_id: str, config: RunConfig) -> N
         if run[field] != expected
     ]
 
-    # A two-round run records both prompts as "round1_v1+round2_v1", so each
-    # round asks whether its own prompt is one component of that label.
+    # A two-round run records "round1_v1+round2_v1", so each round checks for its own prompt in it.
     if config.prompt_version not in str(run["prompt_version"]).split("+"):
         mismatches.append(
             f"prompt_version: stored {run['prompt_version']!r}, "
@@ -174,8 +175,7 @@ def assert_run_is_open(db: ResultsDatabase, run_id: str, config: RunConfig) -> N
 # 5. Loading frozen questions
 
 
-# The pilot is exactly this many questions. A run that holds fewer is not the
-# pilot, and evaluation refuses to score it as one.
+# The pilot is exactly this many questions. Evaluation refuses to score a smaller run as the pilot.
 PILOT_QUESTION_COUNT = 20
 EXPERIMENTAL_QUESTION_COUNT = 300
 
@@ -260,12 +260,10 @@ def load_pilot_question(stable_id: str) -> dict[str, Any]:
 
 # 6. The fixture client
 
-# Labelled test fixture. Deterministic, free, and never mistakable for a model:
-# provider and generation IDs say "fixture" on every row it produces.
+# Labelled test fixture: free, deterministic, and marked "fixture" in every row's provider and ID.
 FIXTURE_PROVIDER = "fixture"
 
-# Deterministic plan: three agents agree on the first option, one picks the
-# second, one refuses. Exercises an agreeing vote, a dissent and a failure.
+# Fixed plan: three agents pick the first option, one picks the second, one refuses.
 FIXTURE_REFUSAL_TEXT = "I cannot answer this question."
 
 
@@ -433,10 +431,7 @@ def run_one_agent(
             cache_hit=cache_hit,
             peer_response_ids=peer_response_ids,
         )
-        # The winning attempt gets its parse; failed earlier ones get none.
-        # A cache hit stores no attempt rows at all - this run made no API
-        # attempt. Its attempt_count of 1 names the original call that
-        # produced the cached body, and cache_hit=1 marks the difference.
+        # Only the winning attempt gets its parse. A cache hit stores no attempt rows (cache_hit=1).
         rows = attempt_rows(
             result.attempt_log,
             parsed_by_attempt={max(result.attempts, 1): parsed},
@@ -444,12 +439,9 @@ def run_one_agent(
         )
 
     db.record_response(record, rows)
-    # Cached only after the paid call is on the audit record. The other way
-    # round, a crash between the two would leave a cached reply whose cost
-    # never reached the results database.
+    # Cache only after the paid call is stored, or a crash could leave a cached reply with no cost.
     if cache is not None and not cache_hit and failure is None:
-        # A genuine outcome, even a refusal, is worth keeping. A failure is
-        # not cached - it might work next time.
+        # A real outcome, even a refusal, is kept. A failure is not cached; it might work next time.
         cache.store(spec, messages, result)
 
     agent_result = AgentResult(

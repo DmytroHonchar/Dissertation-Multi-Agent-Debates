@@ -1,5 +1,11 @@
 """Evaluate the one accepted 300-question experiment and export result tables.
 
+Run this file on its own, after scripts/run_experiment.py has finished. It
+needs the private results database in storage/, so it does not work in the
+public copy of the project. Its saved output is in
+reports/main_experiment_20260923/. It uses src/mad/evaluation.py for the
+scoring and src/mad/database.py to read the rows.
+
 This command is offline and read-only with respect to experimental data. It
 opens the completed results database, joins the separate frozen answer key,
 requires exactly 300 questions, and writes Markdown, JSON and CSV reports. It
@@ -27,16 +33,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from mad.database import ResultsDatabase  # noqa: E402
-from mad.evaluation import (  # noqa: E402
+from mad.database import ResultsDatabase
+from mad.evaluation import (
     EvaluationError,
     EvaluationReport,
     evaluate_run,
     load_answer_key,
 )
-from mad.parser_v1 import (  # noqa: E402
+from mad.parser_v1 import (
     STATUS_API_ERROR,
     STATUS_PARSE_FAIL,
     STATUS_REFUSAL,

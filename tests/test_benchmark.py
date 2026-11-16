@@ -1,4 +1,9 @@
-"""Tests for loading, checking and ID-ing the raw MMLU-Pro questions."""
+"""Tests for loading, checking and ID-ing the raw MMLU-Pro questions.
+
+These tests check src/mad/benchmark.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_benchmark.py
+"""
 
 from pathlib import Path
 

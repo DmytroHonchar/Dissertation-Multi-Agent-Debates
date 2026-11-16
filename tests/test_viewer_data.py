@@ -1,4 +1,9 @@
-"""Offline tests for the read-only Streamlit data layer."""
+"""Offline tests for the read-only Streamlit data layer.
+
+These tests check src/mad/viewer_data.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_viewer_data.py
+"""
 
 from __future__ import annotations
 

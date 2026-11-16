@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""Fail closed if the Streamlit deployment package is incomplete or unsafe."""
+"""Fail closed if the Streamlit deployment package is incomplete or unsafe.
+
+Run this file on its own, with no options, before the viewer is published:
+
+    .venv/bin/python scripts/check_public_deployment.py
+
+It needs git, but no API key and no private database. It checks that the files
+the viewer needs are there, that no private file is tracked by git, and that
+the public data file holds the accepted 300-question run. It reads that file
+through src/mad/public_viewer_data.py.
+"""
 
 from __future__ import annotations
 
@@ -9,9 +19,10 @@ from pathlib import Path
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
-from mad.public_viewer_data import (  # noqa: E402
+from mad.public_viewer_data import (
     DEFAULT_PUBLIC_BUNDLE,
     PUBLIC_QUESTION_IDS,
     load_public_experiment_overview,

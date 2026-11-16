@@ -1,5 +1,12 @@
 """Run one pilot question through Round 1.
 
+This is the smallest runner in the project. Five agents answer one question
+alone, the replies are parsed and stored, and the group votes. Use it to check
+that one round works from start to end. It accepts pilot questions only.
+
+The round itself is in ``src/mad/round1.py``. This file reads the command
+line, opens the database run, calls the round and prints the result.
+
 Dry run (free, fixture replies, throwaway database):
 
     .venv/bin/python scripts/run_round1.py --question mmlu_pro_v1:test:7296
@@ -21,6 +28,7 @@ from collections.abc import Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from mad.api_client import ApiConfigurationError, OpenRouterClient, load_env_file, load_model_registry
@@ -58,14 +66,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                         help="skip the response cache, e.g. to measure non-determinism")
     args = parser.parse_args(argv)
 
-    # The cache only matters live: fixture replies are free and are refused by
-    # the cache anyway.
+    # The cache only matters live. Fixture replies are free and the cache refuses them anyway.
     use_cache = args.live and not args.no_cache
 
-    # One config drives everything: the client below is built from it, the
-    # runner checks it, and the same labels end up stored on the run. The
-    # settings version is whichever registry was actually selected. A later
-    # registry must never be labelled as an earlier one.
+    # One config builds the client, is checked by the runner and is stored on the run.
     config = Round1Config(settings_version=args.agents, cache_enabled=use_cache)
 
     # Every check that can refuse the command runs before a client exists.
@@ -127,8 +131,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 question, registry=registry, client=client, db=db,
                 run_id=run_id, config=config, cache=cache,
             )
-            # Deliberately not in finally: a crash must leave ended_at NULL so
-            # the database says honestly that the run is incomplete.
+            # Not in finally on purpose: a crash must leave ended_at NULL (run incomplete).
             db.finish_run(run_id)
     finally:
         client.close()

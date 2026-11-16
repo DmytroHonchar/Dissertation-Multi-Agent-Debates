@@ -1,4 +1,9 @@
-"""Tests for three-of-five voting. Pure logic - no API, no database, no key."""
+"""Tests for three-of-five voting. Pure logic: no API, no database, no key.
+
+These tests check src/mad/voting.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_voting.py
+"""
 
 from __future__ import annotations
 
@@ -135,7 +140,7 @@ def test_one_lone_survivor_does_not_make_a_group_answer():
 
 
 def test_exactly_three_is_the_boundary():
-    """Two fails, three passes. This is the line the whole rule turns on."""
+    """Two fails, three passes. This is the boundary of the rule."""
     two = tally(group(answered("A"), answered("A"), answered("B"), answered("C"), failed()))
     three = tally(group(answered("A"), answered("A"), answered("A"), answered("C"), failed()))
     assert two.consensus_answer is None
@@ -160,7 +165,7 @@ def test_no_failure_status_contributes_a_vote(status):
 
 @pytest.mark.parametrize("status", FAILURE_STATUSES)
 def test_a_failure_cannot_tip_a_question_into_consensus(status):
-    """A failure is an absence, not a wrong answer, and not a vote either."""
+    """A failure is a missing answer. It is not a wrong answer and not a vote."""
     outcome = tally(group(answered("A"), answered("A"), answered("B"), failed(status), failed(status)))
     assert outcome.state == STATE_NO_CONSENSUS
 

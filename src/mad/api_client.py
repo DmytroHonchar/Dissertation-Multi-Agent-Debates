@@ -1,7 +1,12 @@
 """Talks to OpenRouter. Every paid API call in the project goes through here.
 
+You do not run this file. The run files in scripts/ create one client from it,
+and runner.py uses that client for each agent's call. Live calls need the
+OpenRouter key in the .env file. Dry runs use the fixture client in runner.py
+and never come here.
+
 One key, five models. Nothing else in the project may contact a provider
-directly - if it did, the run would stop being auditable.
+directly. If it did, the run would stop being auditable.
 
 Every reply comes back with its cost, timing and which provider actually served
 it, so the results can be checked later.
@@ -28,13 +33,10 @@ DEFAULT_TIMEOUT_SECONDS = 120.0
 # One try, then one retry. That is the whole retry budget.
 DEFAULT_MAX_ATTEMPTS = 2
 
-# Temporary problems worth retrying: timeouts, rate limits, provider outages.
-# Anything else (bad key, unknown model) fails immediately - retrying won't help.
+# Temporary problems get one retry (timeouts, rate limits, outages). A bad key fails at once.
 RETRYABLE_STATUS_CODES = frozenset({408, 409, 429, 500, 502, 503, 504})
 
-# A model is accepted for a live experiment only while at least three separate
-# companies can serve it. The run stays pinned to one exact provider; this rule
-# ensures that losing one host does not force another model replacement.
+# A model is accepted for a live run only while three separate companies can serve it.
 MINIMUM_HEALTHY_PROVIDERS = 3
 
 
@@ -64,7 +66,7 @@ class ModelSpec:
     """One agent: which model it is and how to sample it.
 
     Built from configs/models/agents_v1.yaml. Frozen means it can't be edited
-    after creation, so nothing can quietly change a model's settings mid-run.
+    after creation, so nothing can change a model's settings mid-run.
     """
 
     agent_id: str
@@ -77,11 +79,9 @@ class ModelSpec:
     allow_provider_fallbacks: bool
     require_parameters: bool
 
-    # Set to a provider name to route every call for this agent there and
-    # nowhere else. None keeps automatic routing (D015).
+    # A provider name sends every call for this agent there only. None keeps auto routing (D015).
     pinned_provider: str | None = None
-    # Ceiling on hidden reasoning tokens, spent inside max_tokens. Guards the
-    # space for the visible answer; None keeps the model's default behaviour.
+    # Cap on hidden reasoning tokens inside max_tokens, to leave room for the visible answer.
     reasoning_max_tokens: int | None = None
 
 
@@ -98,9 +98,7 @@ class AttemptRecord:
                                  # bad_json, malformed_body
     latency_seconds: float
     status_code: int | None = None
-    # The response body exactly as it arrived, untruncated. P4 stores this per
-    # attempt, so a failed attempt is as auditable as a successful one. Empty
-    # only when the request never got a response at all.
+    # The full response body as it arrived, stored per attempt (P4). Empty if nothing came back.
     raw_response: str = ""
     finish_reason: str = ""
     error: str = ""              # short summary for logs; raw_response is the record
@@ -114,23 +112,30 @@ class AttemptRecord:
 
 @dataclass(frozen=True)
 class CompletionResult:
-    """One reply from a model, plus everything needed to audit it later."""
+    """One reply from a model, plus everything needed to audit it later.
+
+    requested_slug is the model ID the config asked for. served_slug is the
+    model ID OpenRouter says it used. The two can differ, so both are kept and
+    a reply is never rejected for the difference. provider is the company that
+    ran the model, for example DeepInfra. finish_reason says why the reply
+    ended: "stop" means the model finished, and "length" means it reached the
+    token limit, which the parser marks as TRUNCATED.
+    """
 
     text: str
     agent_id: str
-    requested_slug: str      # the model we asked for
-    served_slug: str         # the model OpenRouter actually used
-    provider: str            # who served it, e.g. DeepInfra
+    requested_slug: str
+    served_slug: str
+    provider: str
     generation_id: str
-    finish_reason: str       # "stop" = finished, "length" = ran out of tokens
+    finish_reason: str
     prompt_tokens: int
     completion_tokens: int
     cost_usd: float
     latency_seconds: float
     attempts: int
 
-    # OpenRouter's reply exactly as it arrived. The cache stores this whole body,
-    # so nothing is lost by the fields above being a selection.
+    # OpenRouter's reply as it arrived. The cache stores this whole body, so nothing is lost.
     raw_response: dict[str, Any] = field(default_factory=dict)
     # Every attempt, including ones that failed before this one succeeded.
     attempt_log: tuple[AttemptRecord, ...] = ()
@@ -224,8 +229,7 @@ class OpenRouterClient:
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
         self._max_attempts = max_attempts
-        # One Session, so connections can be reused between calls instead of a new
-        # handshake each time. It reopens one when it has to.
+        # One Session, so connections are reused between calls instead of a new handshake each time.
         self._session = requests.Session()
         self._session.headers.update(_build_headers(api_key or load_api_key()))
 
@@ -250,8 +254,7 @@ class OpenRouterClient:
             "usage": {"include": True},   # ask for token counts and cost back
             "provider": {
                 "allow_fallbacks": spec.allow_provider_fallbacks,
-                # Only use providers that honour temperature and top_p, so
-                # temperature 0 can't be silently ignored.
+                # Only providers that honour temperature and top_p, so temperature 0 is applied.
                 "require_parameters": spec.require_parameters,
             },
         }
@@ -276,7 +279,7 @@ class OpenRouterClient:
         )
 
     def list_available_models(self) -> dict[str, dict[str, Any]]:
-        """Every model OpenRouter currently serves. Free - uses no tokens."""
+        """Every model OpenRouter currently serves. This call is free and uses no tokens."""
         response = self._session.get(f"{self._base_url}/models", timeout=self._timeout_seconds)
         response.raise_for_status()
         return {model["id"]: model for model in response.json()["data"]}
@@ -359,8 +362,7 @@ class OpenRouterClient:
     def close(self) -> None:
         self._session.close()
 
-    # These two let you write:  with OpenRouterClient() as client:
-    # so the connection always closes, even if something crashes.
+    # These two allow `with OpenRouterClient() as client:`, so the connection always closes.
     def __enter__(self) -> OpenRouterClient:
         return self
 
@@ -402,8 +404,7 @@ class OpenRouterClient:
                     try:
                         body = response.json()
                     except ValueError as error:
-                        # HTTP 200 with a body that isn't JSON. Usually a proxy
-                        # or gateway page, so it is worth one more go.
+                        # HTTP 200 with a non-JSON body is usually a gateway page. Try once more.
                         last_error = f"invalid JSON: {error}"
                         log.append(
                             AttemptRecord(
@@ -417,10 +418,7 @@ class OpenRouterClient:
                             )
                         )
                     else:
-                        # OpenRouter sometimes reports upstream failures as HTTP 200
-                        # with an "error" key inside, so 200 alone isn't success.
-                        # A JSON array/null or malformed usage used to crash here
-                        # before the paid response could be attached to an error.
+                        # OpenRouter can report a failure as HTTP 200 with an "error" key inside.
                         try:
                             if not isinstance(body, dict):
                                 raise TypeError("response must be a JSON object")
@@ -491,8 +489,7 @@ class OpenRouterClient:
                     )
 
             if attempt < self._max_attempts:
-                # Wait before retrying, plus a random fraction of a second so
-                # five agents retrying at once don't all hit the API together.
+                # Wait before retrying, plus a random fraction so agents don't all retry at once.
                 time.sleep(min(2.0**attempt, 30.0) + random.uniform(0.0, 1.0))
 
         raise ApiRequestError(
@@ -541,10 +538,7 @@ def _parse_completion(
         if not isinstance(text, str):
             raise TypeError("message content must be text or null")
     except (KeyError, IndexError, TypeError) as error:
-        # The reply arrived and was paid for, but has no usable choices/message
-        # structure. Keep every attempt on the error - including this one, with
-        # a truthful outcome instead of the "ok" it was logged as - so the run
-        # can still store and cost the failure.
+        # Paid reply with no usable choices/message. Keep every attempt so it is stored and costed.
         if attempt_log:
             last = replace(
                 attempt_log[-1],
@@ -578,7 +572,7 @@ def _parse_completion(
 def _finish_reason_of(body: dict[str, Any]) -> str:
     """Read the finish reason out of a reply body, or "" if it has none.
 
-    Metadata, not parsing - the answer letter is the parser's job, not this file's.
+    This is metadata only. Reading the answer letter is the parser's job.
     """
     try:
         return body["choices"][0].get("finish_reason") or ""

@@ -1,6 +1,10 @@
 """Tests for the Round 2 debate runner. Offline: any network attempt fails.
 
-Round 2 is where the project's claim lives, so most of these tests are about
+These tests check src/mad/debate.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_debate.py
+
+Round 2 is what the project is testing, so most of these tests are about
 what an agent is and is not shown: never its own response as a peer, never a
 model identity, never a Round 1 reply the parser judged unusable.
 """
@@ -47,8 +51,7 @@ REGISTRY_PATH = Path(__file__).resolve().parents[1] / "configs" / "models" / "ag
 PILOT_ID = "mmlu_pro_v1:test:7296"
 RUN = "debate_test_run"
 
-# Registry order. Peer order follows it, so the tests can name what each agent
-# should have seen.
+# Registry order. Peer order follows it, so the tests can name what each agent should have seen.
 AGENTS = ("agent_llama", "agent_qwen", "agent_mistral", "agent_deepseek", "agent_gemma")
 
 
@@ -81,10 +84,9 @@ def db(tmp_path):
         yield database
 
 
-# --- Clients --------------------------------------------------------------
+# Clients
 
-# Deliberately free of agent names, slugs and provider names, so a test can
-# assert that none of those reached a prompt.
+# No agent names, slugs or provider names here, so a test can assert none of them reached a prompt.
 ANSWER_TEXTS = {
     "agent_llama": "REASONING: the alpha argument.\nFINAL ANSWER: A",
     "agent_qwen": "REASONING: the bravo argument.\nFINAL ANSWER: A",
@@ -126,8 +128,7 @@ class ScriptedClient:
         if isinstance(reply, ApiRequestError):
             raise reply
         text, finish_reason = reply if isinstance(reply, tuple) else (reply, "stop")
-        # A realistic body, because the cache stores it whole and rebuilds the
-        # reply from it on a hit.
+        # A realistic body, because the cache stores it whole and rebuilds the reply on a hit.
         body = {
             "id": f"scripted-{spec.agent_id}",
             "model": spec.slug,
@@ -166,7 +167,7 @@ class ScriptedClient:
         pass
 
 
-# --- Helpers --------------------------------------------------------------
+# Helpers
 
 
 def start_debate_run(db, run_id=RUN, config=Round2Config()):

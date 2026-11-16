@@ -1,4 +1,9 @@
-"""Static and pure-logic tests for the Streamlit replay page."""
+"""Static and pure-logic tests for the Streamlit replay page.
+
+These tests check app/viewer.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_viewer_app.py
+"""
 
 from __future__ import annotations
 

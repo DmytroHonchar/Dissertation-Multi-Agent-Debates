@@ -1,8 +1,13 @@
 """Round 2: each agent reconsiders its own answer alongside the other four.
 
+You do not run this file. Start it with scripts/run_debate.py (one question),
+scripts/run_pilot.py (20 questions) or scripts/run_experiment.py (300
+questions). It runs Round 1 through round1.py first and then Round 2. It uses
+runner.py for each agent's call and voting.py for the vote.
+
 This is the only stage where the agents communicate, so the difference between
 the Round 1 vote and the Round 2 vote is the answer to the research question.
-Everything here exists to make that difference mean what it claims to mean:
+The rules below keep that comparison fair:
 
   - an agent is shown its own Round 1 response as its own earlier turn, never
     as an anonymous peer, so Round 2 continues an opinion instead of forming a
@@ -10,11 +15,11 @@ Everything here exists to make that difference mean what it claims to mean:
   - the other four arrive without identity labels and in a deterministic order,
     so a stored conversation can be reconstructed exactly; fixed order may still
     create a positional effect and is reported as a design limitation
-  - only a genuinely valid Round 1 response is shown at all (D019), so a
+  - only a valid Round 1 response is shown at all (D019), so a
     refusal or a truncated reply cannot be argued with as though it were an
     answer
   - an agent whose own Round 1 failed still answers, and so does an agent with
-    no surviving peers - dropping either would quietly change which questions
+    no surviving peers, because dropping either would change which questions
     the two rounds are compared on
 
 How many peers each agent actually saw is stored per response, because it is a
@@ -57,10 +62,7 @@ from mad.voting import EXPECTED_AGENT_COUNT, tally
 
 # 1. Versions
 
-# A run that contains both rounds is not a Round 1 run, so it is not labelled
-# like one. Its run row records this name and the combined prompt version
-# DEBATE_PROMPT_VERSION; each response row still records only its own round's
-# prompt (D020).
+# A two-round run has its own label and combined prompt version. Rows keep their own (D020).
 DEBATE_CONFIG_VERSION = "debate_config_v1"
 
 
@@ -230,8 +232,7 @@ def run_round2_question(
             question_id=question_id,
             round=2,
             prompt_version=config.prompt_version,
-            # Exactly the rows shown, in the order shown, so the conversation
-            # can be rebuilt from the database alone.
+            # The rows shown, in order, so the conversation can be rebuilt from the database.
             peer_response_ids=[peer.response_id for peer in peers],
         )
         parsed_by_agent[agent_id] = parsed

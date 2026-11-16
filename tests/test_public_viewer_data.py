@@ -1,4 +1,11 @@
-"""Safety and fidelity tests for the public deployment artifact."""
+"""Safety and fidelity tests for the public deployment artifact.
+
+These tests check src/mad/public_viewer_data.py and the public data file. Six
+of these tests need the private databases in storage/ and are skipped without
+them. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_public_viewer_data.py
+"""
 
 from __future__ import annotations
 

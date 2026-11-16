@@ -1,5 +1,9 @@
 """Read-only data for the Streamlit replay interface.
 
+You do not run this file. scripts/export_public_viewer_bundle.py uses it to
+read the private databases and build the public data file. It needs the
+storage/ folder, which is not in the public copy of the project.
+
 This module reconstructs what one accepted debate question did without calling
 a model or changing experimental evidence. Correctness comes from the verified
 evaluation export, never from an answer-key file. Prompts come from the real

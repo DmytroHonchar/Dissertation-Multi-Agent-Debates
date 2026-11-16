@@ -1,4 +1,9 @@
-"""Tests for the response cache. Offline: the network is switched off."""
+"""Tests for the response cache. Offline: the network is switched off.
+
+These tests check src/mad/cache.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_cache.py
+"""
 
 from __future__ import annotations
 
@@ -187,8 +192,7 @@ class CountingFixtureClient(FixtureClient):
     def complete(self, spec, messages):
         self.calls += 1
         result = super().complete(spec, messages)
-        # Give the fixture a real-looking provider so the cache accepts it.
-        # This stays inside tmp_path caches - never the real cache file.
+        # Give the fixture a real-looking provider so the cache accepts it. tmp_path caches only.
         from dataclasses import replace
 
         body = {"id": f"t-{spec.agent_id}", "model": spec.slug, "provider": "TestBench",
@@ -224,8 +228,7 @@ def test_a_second_run_is_served_from_the_cache_with_no_client_calls(tmp_path, re
         # The first run paid and says so.
         assert all(row["cache_hit"] == 0 for row in db.read_responses("run_1"))
 
-        # A hit made no API attempt, so it stores no attempt rows. Its
-        # attempt_count of 1 names the original call behind the cached body.
+        # A hit made no API attempt, so it stores no attempt rows. attempt_count 1 is the old call.
         for row in rows:
             assert db.read_attempts(row["response_id"]) == []
             assert row["attempt_count"] == 1

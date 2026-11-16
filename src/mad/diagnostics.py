@@ -1,5 +1,8 @@
 """Explain observed API/output failures without claiming an unseen root cause.
 
+You do not run this file. scripts/diagnose_pilot.py and
+scripts/probe_mistral_hosts.py import it to label each failed attempt.
+
 Pure logic: no calls, storage or answer keys. Used by the diagnostic runner.
 Categories describe evidence, not whether a model answer is correct.
 """

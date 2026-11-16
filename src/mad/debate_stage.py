@@ -1,8 +1,11 @@
 """Turn one stored debate into the data the animated debate stage plays back.
 
+You do not run this file. app/viewer.py imports it to build the animated replay
+of one stored debate.
+
 The stage is presentation only: it makes no model calls and invents nothing.
 Every speech bubble is a verbatim slice of a stored response, never a summary,
-so the animation cannot put words in a model's mouth. Who received which peer
+so the animation cannot show words a model did not write. Who received which peer
 response comes from the stored Round 2 rows, not from the protocol on paper,
 so a failed agent visibly sends nothing.
 """
@@ -19,8 +22,7 @@ from typing import Any
 from mad.viewer_data import AgentResponseView, QuestionReplay, RoundReplay
 
 
-# Long enough to show how an agent starts its reasoning, short enough that
-# five bubbles fit side by side.
+# Long enough to show how an agent starts reasoning, short enough for five bubbles side by side.
 EXCERPT_CHARACTERS = 140
 
 STAGE_DATA_PLACEHOLDER = "__STAGE_DATA__"
@@ -48,7 +50,7 @@ def load_logos(directory: Path) -> dict[str, str]:
     """Read each agent's logo as an inline image.
 
     Inlining keeps the stage self-contained: the public app never fetches an
-    image from another site. A missing file simply leaves the agent's letter.
+    image from another site. A missing file leaves the agent's letter.
     """
     logos = {}
     for agent_id, filename in LOGO_FILES.items():
@@ -88,8 +90,7 @@ def reasoning_excerpt(raw_response: str, limit: int = EXCERPT_CHARACTERS) -> tup
 
 def _speech(response: AgentResponseView) -> dict[str, Any]:
     """What one agent says in one round, as the stage shows it."""
-    # An API error body is provider text, not model text, so it never
-    # appears in a speech bubble.
+    # An API error body is provider text, not model text, so it never goes in a speech bubble.
     has_model_text = response.status != "API_ERROR" and bool(response.raw_response.strip())
     excerpt, cut = reasoning_excerpt(response.raw_response) if has_model_text else ("", False)
     return {

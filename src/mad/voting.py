@@ -1,12 +1,15 @@
 """Three-of-five voting. Turns five agents' answers into one group answer.
 
+You do not run this file. round1.py and debate.py call it after all five agents
+have answered, and evaluation.py uses the vote states it defines.
+
 The whole rule is: an answer needs three of the five configured agents to give
-it. Not three of the ones that worked - three of five. If two agents fail, the
+it, counting all five and not only the ones that worked. If two agents fail, the
 remaining three must all agree.
 
-That distinction is the point of the file. Lowering the bar to a majority of the
+This matters. Lowering the bar to a majority of the
 survivors would make a round with more failures look more decisive, which is
-exactly the flaw this project is measuring. D004 fixes the threshold at three.
+the flaw this project is measuring. D004 fixes the threshold at three.
 
 Nothing here knows the correct answer. Whether a group answer is right is
 evaluation.py's job, and it is the only module allowed to read the key.
@@ -86,13 +89,13 @@ def tally(
     """Count the votes of exactly five agents and return the group's position.
 
     Only a response the parser marked OK carries a vote. REFUSAL, TRUNCATED,
-    PARSE_FAIL and API_ERROR contribute nothing - they are not wrong answers,
-    they are absences.
+    PARSE_FAIL and API_ERROR contribute nothing. They are missing answers,
+    not wrong ones.
 
     Pass `expected_agents` to check that the five are the configured five, not
     just any five. The runner should pass `load_model_registry()`'s keys. This
-    module does not read the registry itself, because voting has no business
-    knowing which models the agents are.
+    module does not read the registry itself, because voting does not need to
+    know which models the agents are.
 
     The responses are read, never modified.
     """
@@ -148,7 +151,7 @@ def _leader(votes: Counter[str]) -> tuple[str | None, int]:
 def _check_group(
     responses: Mapping[str, ParsedResponse], expected_agents: Collection[str] | None
 ) -> None:
-    """The group must be five identified agents. Not four, not six.
+    """The group must be exactly five identified agents.
 
     The threshold is three out of five. Voting on a different number of agents
     would silently change what a "majority" means, so it is refused rather than

@@ -1,5 +1,10 @@
 """Tests that the 300 and the 20 are picked the same way every time.
 
+These tests check the question selection in src/mad/benchmark.py. Run them
+alone with:
+
+    .venv/bin/python -m pytest tests/test_sampling.py
+
 Seed 42, no overlap between the two sets, every subject represented.
 """
 

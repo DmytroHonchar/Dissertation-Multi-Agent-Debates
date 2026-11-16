@@ -1,5 +1,9 @@
 """Tests for the Round 1 prompt.
 
+These tests check src/mad/prompts_v1.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_prompts.py
+
 The prompt gets frozen after the pilot, so these tests pin down the things that
 must stay true: no answer leaks in, no hint that a debate follows, and the
 option count always comes from the data.
@@ -51,7 +55,7 @@ def frozen_questions(filename: str):
     return [json.loads(line) for line in path.read_text().splitlines()]
 
 
-# --- option formatting -------------------------------------------------------
+# Option formatting
 
 
 def test_options_are_lettered_in_stored_order():
@@ -85,7 +89,7 @@ def test_frozen_questions_span_several_option_counts():
     assert min(counts) < 10
 
 
-# --- message construction ----------------------------------------------------
+# Message construction
 
 
 def test_round1_messages_are_system_then_user():
@@ -130,7 +134,7 @@ def test_two_round_run_records_both_prompt_versions():
     assert DEBATE_PROMPT_VERSION == "round1_v1+round2_v1"
 
 
-# --- Round 2 ---------------------------------------------------------------
+# Round 2
 
 
 def test_round2_restores_the_agents_complete_previous_response():
@@ -207,7 +211,7 @@ def test_round2_refuses_a_question_carrying_an_answer():
         )
 
 
-# --- answer leakage ----------------------------------------------------------
+# Answer leakage
 
 
 @pytest.mark.parametrize(
@@ -225,7 +229,7 @@ def test_no_frozen_question_text_contains_the_answer_marker():
             assert FINAL_ANSWER_MARKER not in format_question(q).upper()
 
 
-# --- malformed input ---------------------------------------------------------
+# Malformed input
 
 
 @pytest.mark.parametrize(

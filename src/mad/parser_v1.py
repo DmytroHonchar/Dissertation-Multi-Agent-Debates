@@ -1,5 +1,9 @@
 """Reads the answer letter out of a model reply and labels what went wrong.
 
+You do not run this file. runner.py calls it for every reply, in both rounds.
+The status it returns decides whether that reply counts as a vote. The answer
+marker it looks for comes from prompts_v1.py.
+
 One parser for all five agents. If each model got its own reading rules, the
 results would measure how forgiving the parser was, not how good the models are.
 
@@ -9,7 +13,7 @@ Two things it never does:
 
 The raw text is stored elsewhere, whole. This file only reads it.
 
-Change any rule here and you change the results - bump PARSER_VERSION.
+Change any rule here and you change the results, so bump PARSER_VERSION.
 """
 
 from __future__ import annotations
@@ -36,15 +40,10 @@ ALL_STATUSES = frozenset(
     {STATUS_OK, STATUS_REFUSAL, STATUS_TRUNCATED, STATUS_PARSE_FAIL, STATUS_API_ERROR}
 )
 
-# How the letter was found. Only one method exists, but it is recorded so a
-# second one can never be added silently.
+# How the letter was found. Only one method exists, but it is recorded in case a second is added.
 EXTRACTION_LAST_MATCH = "LAST_FINAL_ANSWER_MATCH"
 
-# Built from the marker in prompts_v1, so the prompt and the parser can't drift
-# apart. Comes out as: FINAL\s+ANSWER\s*:\s*([A-Za-z])(?![A-Za-z])
-#   \s+ and \s*  - tolerate odd spacing
-#   ([A-Za-z]) - one bare letter, so "FINAL ANSWER: [B]" does not match
-#   (?!\w)     - nothing word-like after it, so "Berlin", "BC" and "B2" do not
+# Built from the prompts_v1 marker. Matches one bare letter, so "[B]", "Berlin" and "B2" fail.
 ANSWER_LINE_PATTERN = re.compile(
     r"\s+".join(FINAL_ANSWER_MARKER.rstrip(":").split())
     + r"\s*:\s*([A-Za-z])(?!\w)",
@@ -55,9 +54,7 @@ ANSWER_LINE_PATTERN = re.compile(
 FINISH_REASON_TRUNCATED = frozenset({"length", "max_tokens"})
 FINISH_REASON_REFUSAL = frozenset({"content_filter"})
 
-# A reply is only called a refusal on one of these. The list is deliberately
-# short - a phrase that could show up in real reasoning would throw away valid
-# answers, which is far worse than missing a refusal.
+# A refusal needs one of these. The list is short, because a common phrase would lose answers.
 REFUSAL_PHRASES = (
     "i cannot answer",
     "i can't answer",
@@ -72,10 +69,7 @@ REFUSAL_PHRASES = (
     "unable to provide an answer",
 )
 
-# When no finish reason comes back, truncation has to be guessed. A truncated
-# reply ran into the 1024-token limit, so it is long and stops mid-sentence.
-# Both conditions are required: "Yes" is short junk, not a cut-off answer.
-# This is weak evidence and must be checked against the pilot transcripts.
+# With no finish reason, truncation is guessed: long and stopping mid-sentence. Weak evidence.
 MIN_TRUNCATION_LENGTH = 200
 SENTENCE_ENDINGS = tuple(".!?\"')]}")
 
@@ -137,16 +131,11 @@ def parse_response(
     if not body:
         return ParsedResponse(STATUS_PARSE_FAIL, note="empty response")
 
-    # Models bold their answer line constantly ("**FINAL ANSWER:** B"). The
-    # asterisks are formatting, not an answer, so drop them before matching.
-    # Several answer lines can appear if the model restates itself; the last one
-    # is its final word.
+    # Models often bold the answer line, so drop asterisks. If several lines match, use the last.
     matches = ANSWER_LINE_PATTERN.findall(body.replace("*", ""))
     letter = matches[-1].upper() if matches else None
 
-    # A refusal phrase in the text is much weaker evidence than a provider flag,
-    # so it only counts when nothing was answered. "I cannot answer A, so
-    # FINAL ANSWER: B" is an answer, not a refusal.
+    # A refusal phrase is weaker evidence than a provider flag, so it counts only with no answer.
     if letter is None and _is_refusal_text(body):
         return ParsedResponse(STATUS_REFUSAL, note="reply text is a refusal")
 
@@ -187,8 +176,8 @@ def _is_refusal_text(body: str) -> bool:
 def _looks_truncated(body: str) -> bool:
     """Guess whether a reply was cut off. Only used when no finish reason came back.
 
-    Long and stopping mid-sentence. A short reply is a parse failure instead -
-    claiming truncation without evidence would move it into the wrong column of
+    Long and stopping mid-sentence. A short reply is a parse failure instead.
+    Claiming truncation without evidence would move it into the wrong column of
     the failure table.
     """
     return len(body) >= MIN_TRUNCATION_LENGTH and not body.endswith(SENTENCE_ENDINGS)

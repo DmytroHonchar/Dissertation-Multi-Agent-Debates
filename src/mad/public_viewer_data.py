@@ -1,5 +1,9 @@
 """Load the small, sanitized data bundle used by the public Streamlit app.
 
+You do not run this file. app/viewer.py reads the public data file through it.
+scripts/export_public_viewer_bundle.py uses it when it writes that file, and
+scripts/check_public_deployment.py uses it to check the file.
+
 The deployed viewer must not depend on the private ``storage/`` directory. Its
 only data source is a versioned JSON artifact containing the verified overview
 and six curated debates from the accepted experiment. This module performs no
@@ -45,8 +49,7 @@ DEFAULT_PUBLIC_BUNDLE = (
     REPOSITORY_ROOT / "data" / "public_viewer" / "accepted_experiment_v1.json"
 )
 
-# These strings have no legitimate reason to occur in a deployment artifact.
-# Refusing them makes an accidental secret or local-path export fail closed.
+# These strings should never appear in a deployment file, so finding one stops the export.
 FORBIDDEN_PUBLIC_TEXT = (
     "sk-or-",
     "OPENROUTER_API_KEY",

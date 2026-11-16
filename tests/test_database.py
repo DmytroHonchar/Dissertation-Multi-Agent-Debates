@@ -1,4 +1,8 @@
-"""Tests for the results database. Offline - no API calls, no frozen data.
+"""Tests for the results database. Offline: no API calls, no frozen data.
+
+These tests check src/mad/database.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_database.py
 
 Every test builds its own database under tmp_path, so the real
 storage/results.sqlite is never created or touched.
@@ -119,7 +123,7 @@ def test_a_file_from_a_different_schema_version_is_refused(tmp_path):
 
 
 def test_opening_an_existing_database_changes_none_of_its_bytes(tmp_path):
-    """Reading results must never modify them - not even the file header."""
+    """Reading results must never modify them, not even the file header."""
     import hashlib
 
     path = tmp_path / "results.sqlite"
@@ -164,7 +168,7 @@ def test_foreign_keys_are_enforced(db):
 
 
 def test_no_table_has_a_column_that_could_hold_the_answer(tmp_path):
-    """The hard rule made structural: the key cannot be stored even by mistake."""
+    """The hard rule is built into the schema: the key cannot be stored even by mistake."""
     banned = set(FORBIDDEN_FIELDS) | {
         "is_correct", "correct", "correctness", "score", "ground_truth", "expected_answer"
     }
@@ -289,7 +293,7 @@ def test_a_failure_is_stored_with_no_letter_and_contributes_no_vote(db, status):
 
 @pytest.mark.parametrize("status", ["REFUSAL", "TRUNCATED", "PARSE_FAIL", "API_ERROR"])
 def test_a_failure_carrying_a_letter_is_rejected(db, status):
-    """A failure is never a wrong answer, so it may never smuggle a vote in."""
+    """A failure is never a wrong answer, so it may never carry a vote."""
     with pytest.raises(DatabaseError, match="never an answer"):
         db.record_response(_response(status=status, extracted_letter="C"))
 

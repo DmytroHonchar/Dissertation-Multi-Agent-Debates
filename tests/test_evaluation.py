@@ -1,5 +1,9 @@
 """Tests for the evaluation calculator. Offline: it never calls a model.
 
+These tests check src/mad/evaluation.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_evaluation.py
+
 Every fixture run here is built by hand so the right answer is known in advance
 and the arithmetic can be checked against it.
 """
@@ -33,7 +37,7 @@ RUN = "eval_test_run"
 AGENTS = ("agent_a", "agent_b", "agent_c", "agent_d", "agent_e")
 
 
-# --- Building a run by hand ------------------------------------------------
+# Building a run by hand
 
 
 @pytest.fixture
@@ -395,8 +399,7 @@ def test_every_agent_gets_its_own_transition_table(db, tmp_path):
 
 
 def test_aggregation_is_reported_against_the_mean_and_the_best_agent(db, tmp_path):
-    # agent_a alone is perfect; the other four are wrong on q2. The group vote
-    # follows the majority, so the group gets q2 wrong and loses to agent_a.
+    # agent_a is perfect and the other four are wrong on q2, so the vote loses to agent_a on q2.
     letters = {("q2", 1, "agent_a"): "A"}
     simple_run(db, votes={"q1": ("A", "A"), "q2": ("B", "B")}, agent_letters=letters)
     key = load_answer_key(key_file(tmp_path, {"q1": "A", "q2": "A"}))
@@ -548,8 +551,7 @@ def test_rounds_scoring_different_questions_are_refused(db, tmp_path):
 def test_a_question_missing_an_agent_response_is_refused(db, tmp_path):
     """A failure is stored as API_ERROR and counted. A missing row is a run
     that did not finish what it claims to have finished."""
-    # agent_e is present in Round 2, just not for q2. The group is intact, so
-    # this must be caught by the per-question check rather than the agent check.
+    # agent_e is in Round 2 but not for q2, so the per-question check must catch this.
     for question_id in ("q1", "q2"):
         store_outcome(db, question_id, 1, state="UNANIMOUS", answer="A")
         store_outcome(db, question_id, 2, state="UNANIMOUS", answer="A")

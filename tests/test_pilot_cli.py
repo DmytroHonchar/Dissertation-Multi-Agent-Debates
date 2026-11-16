@@ -1,4 +1,9 @@
-"""Tests for the 20-question pilot command. Always offline."""
+"""Tests for the 20-question pilot command. Always offline.
+
+These tests check scripts/run_pilot.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_pilot_cli.py
+"""
 
 from __future__ import annotations
 
@@ -104,7 +109,7 @@ def test_a_dry_pilot_cannot_write_to_the_real_results_database(cli, capsys):
 
 
 def test_a_crash_part_way_leaves_the_run_unfinished_and_unscorable(cli, monkeypatch, tmp_path):
-    """A half-finished pilot must be refused later, not quietly scored."""
+    """A half-finished pilot must be refused later, not scored."""
     real = cli.run_debate_question
     calls = {"n": 0}
 
@@ -159,7 +164,6 @@ def test_token_totals_match_the_stored_outcome_rows(cli, tmp_path, capsys):
         run_id = db.read_runs()[0]["run_id"]
         stored = sum(int(row["total_prompt_tokens"]) for row in db.read_outcomes(run_id))
 
-    # The fixture client reports zero tokens, so this pins the plumbing, not a
-    # number: the printed total is whatever the rows hold.
+    # The fixture client reports zero tokens, so this checks the plumbing, not a number.
     assert stored == 0
     assert "prompt" in capsys.readouterr().out

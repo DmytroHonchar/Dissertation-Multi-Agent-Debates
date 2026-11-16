@@ -1,5 +1,9 @@
 """Run all 20 frozen pilot questions through both rounds, in one database run.
 
+This is the rehearsal for the main experiment. It calls src/mad/debate.py for
+each of the 20 pilot questions. Run it on its own. Without options it is a free
+dry run that needs no API key.
+
 Dry run (free, fixture replies, throwaway database):
 
     .venv/bin/python scripts/run_pilot.py
@@ -18,7 +22,7 @@ truncation by agent, failures by status, consensus states per round, real token
 usage read back from the stored rows, and a cost projection taken per paid
 response so cached questions cannot make the 300-question estimate read low.
 
-A crash part-way leaves `ended_at` NULL, so the run is honestly marked
+A crash part-way leaves `ended_at` NULL, so the run is marked
 incomplete and evaluation will refuse it. Pilot results are development data and
 never enter the final results.
 """
@@ -35,6 +39,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from time import monotonic
 
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from mad.api_client import (
@@ -78,9 +83,7 @@ KNOWN_REGISTRIES = (
     "agents_v7",
 )
 
-# Five agents, two rounds, twenty questions: 200 responses. Each may be retried
-# once (D012), so the ceiling on billable attempts is twice that. The money
-# guard quotes the attempt figure, because that is what can be charged.
+# 5 agents x 2 rounds x 20 questions = 200 responses. Each may retry once (D012), so 400 attempts.
 MAXIMUM_RESPONSES = PILOT_QUESTION_COUNT * 10
 MAXIMUM_ATTEMPTS = MAXIMUM_RESPONSES * DEFAULT_MAX_ATTEMPTS
 
@@ -217,8 +220,7 @@ def _print_usage(usage: Mapping[str, Any], questions: int, wall_clock: float, li
         f"{usage['api_attempts']} paid attempts for {usage['paid_responses']} paid responses"
     )
 
-    # Per paid response, not per question: a cached question cost nothing and
-    # would drag the projection below what the main run will actually cost.
+    # Per paid response, not per question. Cached questions cost nothing and would lower it.
     if usage["paid_responses"]:
         per_paid = usage["cost_usd"] / usage["paid_responses"]
         projected = per_paid * 10 * EXPERIMENTAL_QUESTION_COUNT
@@ -338,12 +340,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 parser_version=round1_config.parser_version,
             )
             for index, question in enumerate(questions, start=1):
-                # A dry run needs one fixture per question; a live run shares
-                # the one HTTP client.
+                # A dry run needs one fixture per question. A live run shares one HTTP client.
                 client = shared_client or FixtureClient(question)
                 question_started = monotonic()
-                # Not caught: a raised error must leave ended_at NULL, so a
-                # half-finished pilot is refused later rather than scored.
+                # Not caught: an error must leave ended_at NULL so the pilot is refused later.
                 report = run_debate_question(
                     question,
                     registry=registry,

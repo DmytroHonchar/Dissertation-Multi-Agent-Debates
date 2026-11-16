@@ -1,5 +1,10 @@
 """Run the frozen 300-question main experiment through both debate rounds.
 
+This is the main run file. It calls src/mad/debate.py for each of the 300
+questions, one after the other. Run it on its own. Without options it is a free
+dry run that needs no API key. Score the result later with
+scripts/evaluate_experiment.py.
+
 Dry validation (free fixture replies and a temporary database):
 
     .venv/bin/python scripts/run_experiment.py
@@ -31,9 +36,10 @@ from pathlib import Path
 from time import monotonic
 from typing import Any
 
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from mad.api_client import (  # noqa: E402
+from mad.api_client import (
     ApiConfigurationError,
     DEFAULT_MAX_ATTEMPTS,
     ModelSpec,
@@ -41,24 +47,24 @@ from mad.api_client import (  # noqa: E402
     load_env_file,
     load_model_registry,
 )
-from mad.cache import ResponseCache  # noqa: E402
-from mad.database import ResultsDatabase  # noqa: E402
-from mad.debate import (  # noqa: E402
+from mad.cache import ResponseCache
+from mad.database import ResultsDatabase
+from mad.debate import (
     DEBATE_CONFIG_VERSION,
     DebateReport,
     Round2Config,
     run_debate_question,
 )
-from mad.parser_v1 import (  # noqa: E402
+from mad.parser_v1 import (
     STATUS_API_ERROR,
     STATUS_OK,
     STATUS_PARSE_FAIL,
     STATUS_REFUSAL,
     STATUS_TRUNCATED,
 )
-from mad.prompts_v1 import DEBATE_PROMPT_VERSION  # noqa: E402
-from mad.round1 import Round1Config  # noqa: E402
-from mad.runner import (  # noqa: E402
+from mad.prompts_v1 import DEBATE_PROMPT_VERSION
+from mad.round1 import Round1Config
+from mad.runner import (
     EXPERIMENTAL_QUESTION_COUNT,
     FixtureClient,
     RunnerError,
@@ -74,8 +80,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FROZEN_SETTINGS_VERSION = "agents_v7"
 RUN_PREFIX = f"experiment_{FROZEN_SETTINGS_VERSION}_"
 
-# Five agents, two rounds and 300 questions. Each response can make the initial
-# attempt plus one retry under D012, so the spend confirmation names attempts.
+# 5 agents x 2 rounds x 300 questions. Each response may retry once (D012), so this counts attempts.
 MAXIMUM_RESPONSES = EXPERIMENTAL_QUESTION_COUNT * 10
 MAXIMUM_ATTEMPTS = MAXIMUM_RESPONSES * DEFAULT_MAX_ATTEMPTS
 
@@ -349,8 +354,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    # The main experiment is frozen. There is deliberately no --agents or
-    # --no-cache switch here: either would change the accepted recipe.
+    # The main experiment is frozen, so there is no --agents or --no-cache switch here.
     use_cache = args.live
     round1_config = Round1Config(
         config_version=DEBATE_CONFIG_VERSION,
@@ -440,8 +444,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         with ResultsDatabase(db_path) as db:
             if args.resume:
-                # Recheck after the preflight, in case another process changed
-                # the database while the free endpoint checks were running.
+                # Check again after the preflight, in case another process changed the database.
                 completed, _ = _question_states(
                     db,
                     run_id,

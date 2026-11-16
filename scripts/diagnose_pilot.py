@@ -1,5 +1,9 @@
 """Replay failed pilot requests under their original settings, with a separate audit.
 
+Run this file on its own. It reads the stored pilot failures from the private
+storage/ folder, so it does not work in the public copy of the project. Without
+options it is a free check. Real calls need --live and --yes-spend-real-money.
+
 Dry by default. This is not a repaired pilot: original rows and cache are read
 only. A fresh request bypasses cache intentionally; no answer key is loaded.
 """
@@ -13,6 +17,7 @@ import sqlite3
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(ROOT / 'src'))
 from mad.api_client import OpenRouterClient, ApiRequestError, load_model_registry
 from mad.cache import cache_key
@@ -126,8 +131,7 @@ def main():
                 metadata = response.json()
                 endpoints = metadata['data']['endpoints']
                 endpoint = next((e for e in endpoints if e.get('tag') == spec.pinned_provider), None)
-                # We intentionally test the pinned route even if metadata says
-                # unavailable: its actual HTTP reply is the evidence requested.
+                # Test the pinned route even if marked unavailable. Its HTTP reply is the evidence.
                 pricing = endpoint['pricing'] if endpoint else {'prompt': '0.00002', 'completion': '0.00002'}
                 price_source = 'endpoint' if endpoint else 'conservative allowance ($20/million); no listed price'
                 allowed = {'prompt', 'completion', 'input_cache_read', 'input_cache_write', 'discount'}

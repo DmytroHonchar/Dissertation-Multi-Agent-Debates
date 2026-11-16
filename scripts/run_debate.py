@@ -1,5 +1,13 @@
 """Run one pilot question through Round 1 and Round 2.
 
+This runs one complete debate for one question: Round 1, the first vote,
+Round 2 and the second vote. It is the quick check before the 20-question
+pilot (``run_pilot.py``) and the 300-question experiment
+(``run_experiment.py``). It accepts pilot questions only.
+
+The debate itself is in ``src/mad/debate.py``. This file reads the command
+line, opens the database run, calls both rounds and prints each one.
+
 Dry run (free, fixture replies, throwaway database):
 
     .venv/bin/python scripts/run_debate.py --question mmlu_pro_v1:test:7296
@@ -21,6 +29,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Tell Python where the mad package is (the src folder), so the imports below work.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from mad.api_client import ApiConfigurationError, ModelSpec, OpenRouterClient, load_env_file, load_model_registry
@@ -198,7 +207,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 round2_config=round2_config,
                 cache=cache,
             )
-            # A crash leaves ended_at NULL, accurately marking an incomplete run.
+            # A crash leaves ended_at NULL, which marks the run as incomplete.
             db.finish_run(run_id)
     finally:
         client.close()

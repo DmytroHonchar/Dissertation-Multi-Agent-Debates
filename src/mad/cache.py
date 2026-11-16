@@ -1,12 +1,16 @@
 """The response cache. Exists so the same call is never paid for twice.
 
-Separate file from results.sqlite - this is a wallet protection, not part of
+You do not run this file. The run files open the cache for a live run and pass
+it to runner.py, which looks up each request before it calls the API. Dry runs
+do not use the cache.
+
+Separate file from results.sqlite. It only saves money and is not part of
 the experimental record. Deleting it loses money, not results.
 
 What gets cached: genuine model outcomes, refusals and unparseable replies
-included - a refusal is what the model really did, and asking again costs money
+included. A refusal is what the model really did, and asking again costs money
 to hear it again. What never gets cached: transport errors, rate limits and
-provider failures - caching those would make a temporary problem permanent.
+provider failures. Caching those would make a temporary problem permanent.
 
 A hit returns the stored reply with its original tokens and latency, costs
 nothing, and makes no API call.
@@ -47,7 +51,7 @@ def cache_key(spec: ModelSpec, messages: list[dict[str, str]]) -> str:
     Hashes everything that changes what a call would return: the agent, the
     model, the full messages, and the sampling settings. agent_id is included
     even though the API never sees it, so two agents making an identical
-    request cannot share one reply. The run ID is left out on purpose - a
+    request cannot share one reply. The run ID is left out on purpose: a
     reply is reusable across runs, that is the point of the cache.
     """
     payload = {
@@ -58,9 +62,7 @@ def cache_key(spec: ModelSpec, messages: list[dict[str, str]]) -> str:
         "top_p": spec.top_p,
         "max_tokens": spec.max_tokens,
     }
-    # Both of these change what a call would return, so they are part of the
-    # request's identity. Added only when set, so every reply cached before
-    # they existed keeps its key.
+    # Both change what a call returns. In the key only when set, so older cached keys still match.
     if spec.pinned_provider:
         payload["pinned_provider"] = spec.pinned_provider
     if spec.reasoning_max_tokens is not None:
@@ -118,17 +120,14 @@ class ResponseCache:
 
     def store(self, spec: ModelSpec, messages: list[dict[str, str]], result: CompletionResult) -> None:
         """Keep one genuine reply. First write wins; nothing is ever overwritten."""
-        # "fixture" marks dry-run stand-ins. One in the cache could later be
-        # served as if a model had said it, which is fabrication.
+        # "fixture" marks dry-run replies. A cached one could later be served as a model's reply.
         if result.provider == "fixture":
             raise CacheError("fixture replies never enter the cache")
         if not result.raw_response:
             raise CacheError("a reply without its raw body cannot be cached")
 
         self._connection.execute(
-            # OR IGNORE: if the key exists, the original stays. A cache that
-            # rewrote its entries would let a rerun quietly replay different
-            # replies than the run before it.
+            # OR IGNORE keeps the original entry, so a rerun can never replay different replies.
             "INSERT OR IGNORE INTO cached_responses "
             "(cache_key, agent_id, slug, raw_response, latency_seconds, created_at) "
             "VALUES (?, ?, ?, ?, ?, ?)",

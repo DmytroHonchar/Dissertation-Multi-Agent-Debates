@@ -1,5 +1,10 @@
 """Proves the frozen question files carry no answers.
 
+These tests check the frozen question files and every file that could reach the
+answer key. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_no_answer_leakage.py
+
 This is the most important test in the project. If it ever fails, every
 result produced afterwards is worthless.
 """
@@ -38,8 +43,7 @@ def test_frozen_model_inputs_contain_only_safe_fields(filename: str) -> None:
         assert set(record) == ALLOWED_MODEL_INPUT_FIELDS
 
 
-# Round 2 sends far more text than Round 1 - the question, the agent's own
-# reply and four peer replies - so the same guarantee is asserted again there.
+# Round 2 sends much more text than Round 1, so the same guarantee is asserted again there.
 
 
 def _pilot_question():
@@ -75,15 +79,14 @@ def test_no_forbidden_field_name_reaches_a_round2_prompt() -> None:
         assert forbidden not in whole
 
 
-# The answer key has exactly one reader. Every other module on the run path
-# must not even know where it lives.
+# Only one module reads the answer key. No other module on the run path may know where it lives.
 
 
 def test_only_evaluation_and_the_freezing_code_touch_the_answer_key_directory() -> None:
     """benchmark.py wrote the keys once; evaluation.py is the only reader.
 
     If a new module ever names that directory, this fails and someone has to
-    justify it. That is the point: the rule is worth more than the convenience.
+    justify it. The rule matters more than the convenience.
     """
     package = REPOSITORY_ROOT / "src" / "mad"
     allowed = {"benchmark.py", "evaluation.py"}
@@ -106,8 +109,7 @@ def test_the_run_path_never_imports_the_evaluation_module() -> None:
     run_path = ("prompts_v1.py", "parser_v1.py", "api_client.py", "cache.py",
                 "round1.py", "debate.py", "runner.py", "voting.py", "database.py")
 
-    # An import, not a mention: voting.py names the module in a comment
-    # explaining why scoring is not its job, which is the rule being kept.
+    # An import, not a mention: voting.py names the module in a comment about not scoring.
     imports = re.compile(r"^\s*(?:from\s+mad\.evaluation\b|import\s+mad\.evaluation\b)", re.M)
     offenders = sorted(
         name for name in run_path if imports.search((package / name).read_text())

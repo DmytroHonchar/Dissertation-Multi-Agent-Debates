@@ -1,4 +1,9 @@
-"""Tests for the protected 300-question main-experiment command. Offline only."""
+"""Tests for the protected 300-question main-experiment command. Offline only.
+
+These tests check scripts/run_experiment.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_experiment_cli.py
+"""
 
 from __future__ import annotations
 
@@ -85,7 +90,7 @@ def test_dry_main_run_stores_and_scores_all_300_once(cli, tmp_path, capsys):
     assert "expected_questions=300" in output
     assert "answer key never entered this process" in output
 
-    # A formal database cannot quietly acquire a second main run.
+    # A formal database must not get a second main run.
     assert cli.main(["--db", str(path)]) == 1
     assert "main-experiment run already exists" in capsys.readouterr().out
 

@@ -1,3 +1,10 @@
+"""Tests for the failure labels in src/mad/diagnostics.py. Offline.
+
+Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_diagnostics.py
+"""
+
 import pytest
 from mad.api_client import AttemptRecord
 from mad.diagnostics import diagnose_attempt, diagnose_output

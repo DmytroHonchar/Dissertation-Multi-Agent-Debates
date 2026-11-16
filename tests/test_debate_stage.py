@@ -1,4 +1,9 @@
-"""The animated stage may only replay stored evidence, never invent it."""
+"""The animated stage may only replay stored evidence, never invent it.
+
+These tests check src/mad/debate_stage.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_debate_stage.py
+"""
 
 from __future__ import annotations
 

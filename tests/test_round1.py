@@ -1,4 +1,9 @@
-"""Tests for the Round 1 runner. Offline: any network attempt fails the test."""
+"""Tests for the Round 1 runner. Offline: any network attempt fails the test.
+
+These tests check src/mad/round1.py. Run them alone with:
+
+    .venv/bin/python -m pytest tests/test_round1.py
+"""
 
 from __future__ import annotations
 
