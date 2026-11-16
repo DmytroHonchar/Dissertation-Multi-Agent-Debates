@@ -105,9 +105,11 @@ Everything in this section is free. No model is called.
 python -m pytest -q
 ```
 
-Expected result: `548 passed, 6 skipped`, in a few seconds. The six skipped
-tests compare the public replay data with the private databases, which are not
-part of this copy of the project.
+Expected result: `548 passed, 6 skipped`, in a few seconds.
+
+The project has 554 tests. Six of them compare the public replay data with
+the private databases, which are not part of this copy of the project, so
+those six are skipped. With the private databases present, all 554 pass.
 
 To run the tests of one file only, name it:
 
@@ -177,43 +179,114 @@ The files in `scripts/` are the ones you run. The files in `src/mad/` are the
 parts they use. Each Python file starts with a short text that says what the
 file is for, whether you run it, and which files call it.
 
-```text
-scripts/run_round1.py ─────────────► round1.py
-scripts/run_debate.py ──┐
-scripts/run_pilot.py ───┼──► debate.py ──► round1.py   (Round 1 comes first)
-scripts/run_experiment.py ┘
+There is also an interactive map of the project. Open
+`docs/project_map.html` in a browser. It has two views: every folder and file
+with the reason it exists, and the path of one question with the file and line
+of each function.
 
-round1.py and debate.py use, for every agent:
-    prompts_v1.py   builds the messages
-    runner.py       gets the reply, has it read, stores it
-        api_client.py   sends the request to OpenRouter (live runs only)
-        cache.py        reuses a stored reply for an identical request
-        parser_v1.py    reads the answer letter and gives the reply a status
-        database.py     stores the reply and every attempt
-    voting.py       gives the group answer after all five have replied
+### The path of one question
 
-After a run has finished:
-    scripts/evaluate_experiment.py ──► evaluation.py   (the only reader of the answer key)
-    scripts/export_public_viewer_bundle.py ──► the data file for app/viewer.py
-```
+The main run is `scripts/run_experiment.py`. Its `main()` function manages
+every step below. Both rounds finish for one question before the next question
+starts, and the agents are called one at a time.
 
-Two rules shape this layout. The answer key never reaches code that builds
-prompts or calls models, so scoring happens in a separate step. And both rounds
-share the same calling code in `runner.py`, so they cannot differ in how they
-retry, read or store a reply.
+**Preparation, done once before any run.** `benchmark.py` checked the MMLU-Pro
+download and saved the question sets, the separate answer keys and their
+metadata. The run scripts do not call this code again.
+
+**Before any question**
+
+1. `require_spend_confirmation()` refuses a paid run unless both flags are
+   given.
+2. `load_experimental_questions()` loads and checks the 300 frozen questions.
+   They have no answers.
+3. `load_model_registry()` reads `agents_v7.yaml`: the five models, their
+   providers and their settings.
+4. `_inspect_existing_run()` checks a resume, or refuses a second main run in
+   the same database.
+5. `assert_registry_routes_available()` checks, in live mode only, that each
+   model's provider is available. The check is free.
+6. `db.start_run()` saves the record of this run.
+
+**Round 1, for one question.** `run_debate_question()` in `debate.py` organises
+both rounds. It first calls `run_round1_question()` in `round1.py`:
+
+1. `build_round1_messages()` makes two messages: the instructions, and the
+   question with lettered options. All five agents get the same messages.
+2. For each of the five agents, one by one, `run_one_agent()` in `runner.py`
+   does this:
+   - `cache.lookup()` looks for a stored reply to this exact request. If there
+     is one, the API request is skipped.
+   - If there is none, `complete()` in `api_client.py` builds the request and
+     `_post_with_retries()` sends it, with one retry after a temporary failure.
+     In a dry run a fixture client gives a prepared reply instead.
+   - `parse_response()` in `parser_v1.py` finds "FINAL ANSWER: X" and gives a
+     letter or a failure status. It checks if the reply is usable. It does not
+     check if it is correct.
+   - `db.record_response()` saves the response and its attempt records
+     together.
+   - `cache.store()` puts a new model reply in the cache.
+   - If the API call fails, `run_one_agent()` records `API_ERROR` and goes on
+     to the next agent.
+3. `tally()` in `voting.py` counts the votes. A group answer needs three
+   matching letters out of five.
+4. `record_round_outcome()` saves the group result of Round 1.
+
+**Round 2, for the same question.** `run_round2_question()` in `debate.py`:
+
+1. `valid_round1_responses()` reads the stored Round 1 replies and keeps the
+   usable ones.
+2. For each agent, `peers_for()` takes the valid replies of the other agents,
+   and `build_round2_messages()` builds the conversation: the question, the
+   agent's own Round 1 reply, and the peer replies labelled PEER RESPONSE 1 to
+   4. There are no model names, and the Round 1 vote is not shown.
+3. `run_one_agent()` gets the new reply. It is the same function as in Round 1.
+4. `tally()` and `record_round_outcome()` give and save the Round 2 result.
+
+**Closing the run.** `_question_states()` checks that every required record
+exists, and `db.finish_run()` saves the end time.
+
+**Scoring, a separate command that you run later.**
+`scripts/evaluate_experiment.py` checks the accepted run, loads the answer key
+with `load_answer_key()`, compares the stored answers with it in
+`evaluate_run()`, and writes the files in `reports/`. This is the only place
+where the answers are read.
+
+Five things are never saved: the correct answer in the experiment database,
+the API key, a fixture reply in the cache, a failed call in the cache, and any
+overwrite of an existing record.
 
 ## Folder guide
 
-| Folder | What is in it |
+| Folder | What is in it | Why it exists |
+|---|---|---|
+| `data/` | The questions. `raw/` is the MMLU-Pro download. `frozen/mmlu_pro_v1/model_inputs/` holds the 300 + 20 questions without answers. `answer_keys/` holds the correct answers. `metadata/` holds the chosen IDs, checksums and the validation report. | All five agents must answer the same questions, and the models must never see the answers. |
+| `configs/` | Settings. `benchmark/mmlu_pro_v1.yaml` names the dataset and its file hashes. `models/agents_v7.yaml` is the frozen setup of the five agents. | The code reads its settings from these files. Versions v1 to v6 stay because old runs refer to them. |
+| `src/mad/` | The main code, with one job in each file. See the table below. | The scripts call this code. |
+| `scripts/` | The commands you run. Four runners in growing size (1 question and 1 round, 1 question and 2 rounds, 20 questions, 300 questions), the scoring command, three check scripts and two scripts for the public viewer. | The project was built in small steps, and each step kept its own command. |
+| `app/` | The Streamlit viewer: `viewer.py`, the page template `debate_stage.html`, and the model logos. | To look at the results. |
+| `tests/` | The automated tests. `test_no_answer_leakage.py` is the most important one. | They check the code without the internet. |
+| `reports/` | The final result tables: a Markdown report, a JSON summary and seven CSV files. | The scoring command writes the scores here. |
+| `docs/` | The written record of the project. See the table further down. | To explain the decisions and the history. |
+| `storage/` | The private results database, the cache and their backups. This folder is not in the repository. | A run saves its data here. |
+
+The files in `src/mad/`:
+
+| File | Its job |
 |---|---|
-| `src/mad/` | The package. One file for each job: prompts, API client, parser, voting, database, cache, the two rounds, evaluation, and the data layers of the viewer. |
-| `scripts/` | The files you run: the four runners, the evaluation exporter, the viewer data exporter, and the diagnostic scripts used during the pilot. |
-| `app/` | The Streamlit replay viewer and its page template and logos. |
-| `tests/` | The automated tests. All of them run offline. |
-| `configs/` | The benchmark settings and seven versions of the agent settings. `agents_v7.yaml` is the frozen version used in the experiment. |
-| `data/` | The MMLU-Pro download, the frozen question sets with their separate answer keys, and the data file of the viewer. |
-| `reports/` | The saved results of the real experiment: a report, a summary and seven tables. |
-| `docs/` | The project records. See the next section. |
+| `benchmark.py` | Picks and freezes the 300 + 20 questions. This was done once. |
+| `prompts_v1.py` | Builds the messages sent to the models. It stops if a question carries an answer field. |
+| `api_client.py` | Sends requests to OpenRouter and retries once. The real network call happens here. |
+| `cache.py` | Saves replies, so the same request is not paid for twice. |
+| `parser_v1.py` | Reads the answer letter and gives a status: `OK`, `REFUSAL`, `TRUNCATED`, `PARSE_FAIL` or `API_ERROR`. |
+| `database.py` | Saves everything in the results database. |
+| `voting.py` | The three-out-of-five vote. |
+| `runner.py` | The code that both rounds share, with `run_one_agent()`. |
+| `round1.py` | Runs Round 1 for one question. |
+| `debate.py` | Runs Round 2, and runs both rounds together. |
+| `evaluation.py` | The only file that reads the answer key. It computes accuracy and the statistics. |
+| `viewer_data.py`, `public_viewer_data.py`, `debate_stage.py` | Make the data for the viewer. |
+| `diagnostics.py` | Labels why an API call failed. |
 
 ## Where to start reading
 

@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debate Project Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: tabs on top, drawing on the left, one fixed detail panel on the right. Light theme only, by request. */
+:root{
+  color-scheme: light;
+  --bg:#f5f6f8;
+  --surface:#ffffff;
+  --ink:#1b2230;
+  --muted:#596273;
+  --line:#d8dce3;
+  --answers:#be123c;
+  --answers-tint:#ffe4ea;
+  --s0:#6b7280; --s0-tint:#eef0f3;
+  --s1:#2563eb; --s1-tint:#e6eefe;
+  --s2:#15803d; --s2-tint:#e3f4e8;
+  --s3:#7c3aed; --s3-tint:#efe8fd;
+  --s4:#d9580b; --s4-tint:#fdebdd;
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #1d4ed8;outline-offset:2px}
+
+/* Header and tabs */
+.top{padding:14px 20px 0;display:flex;flex-wrap:wrap;gap:6px 20px;align-items:baseline}
+.top h1{font-size:19px;margin:0;font-weight:700}
+.top p{margin:0;color:var(--muted);font-size:14px}
+.top p b{color:var(--ink)}
+.bar{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.tabs{display:flex;gap:6px}
+.tab{border:1px solid var(--line);background:var(--surface);padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14.5px}
+.tab[aria-selected="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.switch{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:500;cursor:pointer;margin-left:auto}
+.switch input{appearance:none;width:38px;height:22px;border-radius:11px;background:#b8bfca;position:relative;cursor:pointer;margin:0;transition:background .15s}
+.switch input::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+.switch input:checked{background:var(--answers)}
+.switch input:checked::after{left:18px}
+@media (prefers-reduced-motion: reduce){.switch input,.switch input::after{transition:none}}
+
+/* Page grid */
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;padding:16px 20px 28px;align-items:start}
+.view[hidden]{display:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:13.5px;color:var(--muted);margin-bottom:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:4px;display:inline-block}
+.dash{width:26px;border-top:2.5px dashed var(--answers);display:inline-block}
+.dbi{width:15px;height:15px;flex:none;color:var(--ink)}
+
+/* Side panel */
+#panel{position:sticky;top:64px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;max-height:calc(100vh - 84px);overflow:auto}
+#panel h2{font-size:17px;margin:0 0 2px;font-weight:700;overflow-wrap:anywhere}
+#panel .loc{font-family:var(--mono);font-size:12.5px;color:var(--muted);margin:0 0 10px;overflow-wrap:anywhere}
+#panel h3{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:14px 0 3px;font-weight:600}
+#panel p{margin:0}
+#panel ul{margin:0;padding-left:18px}
+#panel li{margin:4px 0}
+#panel .loc + .loc{margin-top:-8px}
+.rule{margin:0 0 12px;font-size:14px;font-weight:600}
+.foot{margin:10px 0 0;font-size:13px;color:var(--muted)}
+#panel .chip{display:inline-block;font-size:12px;font-weight:600;color:#fff;border-radius:999px;padding:2px 10px;margin-bottom:8px}
+#panel .safety{border-left:4px solid var(--answers);background:var(--answers-tint);padding:8px 10px;border-radius:0 8px 8px 0}
+#panel .hint{color:var(--muted)}
+#panel code{font-family:var(--mono);font-size:13px}
+
+/* View 1: mind map */
+.mapbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto;padding:6px}
+#map{display:block;width:100%;min-width:980px;height:auto;font-family:var(--font)}
+#map .node{cursor:pointer}
+#map .node text{pointer-events:none}
+#map .node:hover rect{filter:brightness(.96)}
+#map .node.sel rect{stroke:var(--ink);stroke-width:3}
+#map .node:focus-visible rect{stroke:#1d4ed8;stroke-width:3}
+#map .node:focus{outline:none}
+
+/* View 2: flowchart */
+#flow{position:relative;padding-left:76px}
+#rails{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.exbanner{display:none;background:var(--answers-tint);border:1px solid #f5b5c3;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.exbanner code{font-family:var(--mono);font-size:13px}
+body.show-ex .exbanner{display:block}
+.stage{--bw:400px;border-left:5px solid var(--c);background:var(--t);border-radius:0 12px 12px 0;padding:10px 12px 12px}
+.stage > header{font-size:13px;font-weight:700;color:var(--c);letter-spacing:.03em;margin-bottom:10px}
+.stage > header span{font-weight:500;color:var(--muted);letter-spacing:0}
+.sp{--c:#8a6d1c;--t:#f6efd6;border-left-style:dashed} .s0{--c:var(--s0);--t:var(--s0-tint)} .s1{--c:var(--s1);--t:var(--s1-tint)} .s2{--c:var(--s2);--t:var(--s2-tint)} .s3{--c:var(--s3);--t:var(--s3-tint)} .s4{--c:var(--s4);--t:var(--s4-tint)}
+.row{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.box{flex:0 1 var(--bw);min-width:0;text-align:left;background:var(--surface);border:1.5px solid var(--c);border-radius:9px;padding:7px 10px;cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 9px;align-items:center}
+.box .fn,.box .lc,.box .ds{grid-column:1}
+.box .ds{font-size:13px;line-height:1.35;margin-top:2px}
+.box .tg{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1.5px solid currentColor;border-radius:999px;padding:0 7px;margin-left:4px;white-space:nowrap;vertical-align:1px}
+.box.hot{border:2.5px solid #b45309;background:#fff4d6}
+.kids{margin:8px 0 0 14px;padding-left:14px;border-left:2.5px solid var(--c)}
+.both{--c:var(--ink);--bw:400px;border:2.5px solid var(--ink);border-radius:14px;padding:10px;background:var(--surface)}
+.both > .row > .box{border-width:2.5px}
+.markrow{padding-left:17px}
+.mark{display:inline-block;border:2px dashed var(--ink);border-radius:999px;padding:5px 14px;font-weight:600;font-size:13.5px;background:var(--surface)}
+.notes{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.notes p{margin:3px 0}
+.box:hover{box-shadow:0 2px 0 var(--c)}
+.box.sel{box-shadow:0 0 0 3px var(--ink)}
+.box .n{grid-row:1 / span 2;font-size:12px;font-weight:700;color:#fff;background:var(--c);border-radius:6px;min-width:24px;height:24px;display:grid;place-items:center;padding:0 5px}
+.box .fn{font-weight:700;font-size:14.5px;overflow-wrap:anywhere}
+.box .lc{font-family:var(--mono);font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.box .dbi{grid-column:2;grid-row:1 / span 3}
+.ex{display:none;flex:1 1 190px;font-size:13px;background:var(--surface);border:1.5px dashed var(--answers);color:#7f1230;border-radius:8px;padding:5px 9px}
+.ex b{color:var(--answers)}
+body.show-ex .ex{display:block}
+.arr{height:18px;position:relative;max-width:var(--bw)}
+.arr::before{content:"";position:absolute;left:50%;top:1px;bottom:6px;width:2px;background:var(--muted);transform:translateX(-50%)}
+.arr::after{content:"";position:absolute;left:50%;bottom:1px;transform:translateX(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid var(--muted)}
+.arr.between{--bw:400px;margin-left:17px;height:22px}
+.arr.later::before{background:none;border-left:2px dashed var(--muted);width:0}
+.arr.later span{position:absolute;left:calc(50% + 14px);top:1px;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.big{--bw:372px;border:2.5px solid var(--ink);background:#fffbe8;border-radius:12px;padding:10px 12px 12px;max-width:calc(400px + 240px)}
+.big > .row > .box{border-color:var(--ink);background:var(--ink);color:#fff}
+.big > .row > .box .lc{color:#cfd5df}
+.big > .row > .box .dbi{color:#fff}
+.big .steps{--c:var(--ink)}
+.big > .row > .box .n{background:#fde68a;color:var(--ink)}
+.big .steps{margin-top:10px;padding-left:10px;border-left:3px solid #e6d58a}
+.big .steps .box .n{background:var(--ink)}
+.big .cap{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+.loopbox{--bw:372px;border:2px dashed var(--c);border-radius:12px;padding:10px 12px 12px;max-width:calc(400px + 240px)}
+.loopbox > .lt{font-size:13px;font-weight:700;margin-bottom:8px}
+.loopbox > .lt small{font-weight:500;color:var(--muted);font-size:12.5px}
+.nextq{display:inline-block;margin-top:2px;border:2px dashed var(--ink);border-radius:999px;padding:5px 14px;font-weight:600;font-size:13.5px;background:var(--surface)}
+.never{margin-top:18px;background:var(--surface);border:2px solid var(--ink);border-radius:12px;padding:12px 14px}
+.never h2{font-size:15px;margin:0 0 6px}
+.never ul{margin:0;padding-left:20px}
+.never li{margin:2px 0}
+
+@media (max-width:860px){
+  .wrap{grid-template-columns:minmax(0,1fr);padding-bottom:46vh}
+  #panel{position:fixed;left:0;right:0;bottom:0;top:auto;max-height:42vh;border-radius:14px 14px 0 0;z-index:6;box-shadow:0 -6px 20px rgba(0,0,0,.12)}
+  .switch{margin-left:0}
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>Debate project map</h1>
+  <p>Five AI agents answer the same 300 questions (MMLU-Pro). Does debate beat the vote alone? <b>81.7% → 85.0%</b></p>
+</div>
+
+<div class="bar">
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-files" aria-controls="view-files" aria-selected="true">Folders and files</button>
+    <button class="tab" role="tab" id="tab-journey" aria-controls="view-journey" aria-selected="false">One question's journey</button>
+  </div>
+  <label class="switch" id="exwrap" for="extoggle" hidden>
+    <input type="checkbox" id="extoggle"> Show real example
+  </label>
+</div>
+
+<div class="wrap">
+  <main>
+    <!-- View 1 -->
+    <section class="view" id="view-files" role="tabpanel" aria-labelledby="tab-files">
+      <div class="legend">
+        <span>Click any box.</span>
+        <span>One colour = one folder.</span>
+        <span><i class="dash"></i> the only place answers are read</span>
+      </div>
+      <div class="mapbox">
+        <svg id="map" role="img" aria-label="Mind map of the project folders and files. answer_keys and evaluation.py are linked: the only place answers are read."></svg>
+      </div>
+    </section>
+
+    <!-- View 2 -->
+    <section class="view" id="view-journey" role="tabpanel" aria-labelledby="tab-journey" hidden>
+      <div class="legend">
+        <span>Click any box.</span>
+        <span><i class="sw" style="background:#8a6d1c"></i>Preparation</span>
+        <span><i class="sw" style="background:var(--s0)"></i>Before any question</span>
+        <span><i class="sw" style="background:var(--s1)"></i>Round 1</span>
+        <span><i class="sw" style="background:var(--s2)"></i>Round 2</span>
+        <span><i class="sw" style="background:var(--s3)"></i>Closing the run</span>
+        <span><i class="sw" style="background:var(--s4)"></i>Scoring</span>
+        <span><svg class="dbi" viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="3.5" rx="6" ry="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 3.5v9c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-9M2 8c0 1.4 2.7 2.5 6 2.5S14 9.400 14 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>this step saves data</span>
+      </div>
+      <p class="rule">Three "run" functions, three sizes: run_debate_question() = both rounds. run_round1_question() = one whole round. run_one_agent() = one agent's result. The real network request happens inside api_client.py.</p>
+      <p class="rule">Main rule: both rounds finish for one question before the next question starts. Agents run one by one. A box inside a line = called by the box above it.</p>
+      <div class="exbanner">
+        <b>Real example:</b> question <code>mmlu_pro_v1:test:5503</code>. "When may an issue fail to become securitized?" 3 options. Correct answer: <b>A</b>.
+      </div>
+      <div id="flow">
+        <svg id="rails" aria-hidden="true"></svg>
+        <div id="stages"></div>
+      </div>
+      <div class="notes">
+        <p><b>Cache hit:</b> skip the API request. Continue to parsing and saving.</p>
+        <p><b>API failure:</b> run_one_agent() records API_ERROR and continues to the next agent. No model reply is parsed or cached for that failed request.</p>
+      </div>
+      <div class="never">
+        <h2>Never saved</h2>
+        <ul>
+          <li>The correct answer in the experiment database.</li>
+          <li>The API key.</li>
+          <li>Fake test replies in the cache.</li>
+          <li>Failed calls in the cache.</li>
+          <li>Any overwrite.</li>
+        </ul>
+      </div>
+      <p class="foot">Grey text on a box = where the function is defined. Line numbers refer to the current files. They can move when the code is edited.</p>
+    </section>
+  </main>
+
+  <aside id="panel" aria-live="polite"></aside>
+</div>
+
+<script>
+/* ---------- Shared ---------- */
+const panel = document.getElementById('panel');
+const DB_ICON = '<svg class="dbi" viewBox="0 0 16 16" role="img" aria-label="saves data"><ellipse cx="8" cy="3.5" rx="6" ry="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 3.5v9c0 1.4 2.7 2.5 6 2.5s6-1.1 6-2.5v-9M2 8c0 1.4 2.7 2.5 6 2.5S14 9.4 14 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>';
+const HINTS = {
+  files: '<h2>Folders and files</h2><p class="hint">Click a folder or a file. You will see what it is and why it exists.</p>',
+  journey: '<h2>One question\'s journey</h2><p class="hint">Click a box. You will see where it is called, what it does, what it saves, and its safety check.</p>'
+};
+
+/* ---------- View 1 data ---------- */
+const ANS = {color:'#be123c', tint:'#ffe4ea'};
+const CHECKS = {
+  what:'One of three scripts for checks and one-off investigations.',
+  why:'They are not part of the main run. They check things or look into one problem.',
+  note:'The three are: check_models.py, diagnose_pilot.py, probe_mistral_hosts.py.'
+};
+const PUBLIC = {
+  what:'One of two scripts for the public website.',
+  why:'The public website needs them.',
+  note:'The two are: export_public_viewer_bundle.py, check_public_deployment.py.'
+};
+const VIEWER = {
+  what:'Makes data for the viewer app.',
+  why:'The viewer in app/ shows this data.',
+  note:'Three files do this: viewer_data.py, public_viewer_data.py, debate_stage.py.'
+};
+const DEV = n => ({why:`The project was built in small steps. This is step ${n} of 4.`, note:'Steps: 1 question 1 round → 1 question 2 rounds → 20 questions → 300 questions.'});
+
+const CENTER = {
+  id:'project', label:'Project', path:'the whole project',
+  what:'A Python research project. Five AI models ("agents") answer the same 300 multiple-choice questions.',
+  why:'To test one question: does debate (Round 2) improve accuracy beyond the vote alone (Round 1)?',
+  note:'Result: 81.7% → 85.0%.'
+};
+
+const FOLDERS = [
+  {id:'data', label:'data/', side:'R', color:'#0f766e', tint:'#dcf3f0',
+   what:'The questions.', why:'All five agents must answer the same questions.',
+   leaves:[
+    {id:'raw', label:'raw/', path:'data/raw/', what:'The original MMLU-Pro download.', why:'The questions come from here.'},
+    {id:'inputs', label:'frozen/…/model_inputs/', path:'data/frozen/mmlu_pro_v1/model_inputs/', what:'300 + 20 questions WITHOUT answers.', why:'This is what the models see.'},
+    {id:'keys', label:'frozen/…/answer_keys/', path:'data/frozen/mmlu_pro_v1/answer_keys/', what:'The correct answers.', why:'They are kept separate on purpose. The models never see them.', note:'Only evaluation.py reads this folder.', ans:true},
+    {id:'meta', label:'frozen/…/metadata/', path:'data/frozen/mmlu_pro_v1/metadata/', what:'Chosen IDs, manifest (seed 42), checksums, validation report.', why:'It records which questions were chosen and lets you check the files.'}
+   ]},
+  {id:'configs', label:'configs/', side:'R', color:'#a16207', tint:'#fbf0cf',
+   what:'Settings.', why:'The code reads its settings from these files.',
+   leaves:[
+    {id:'bench-yaml', label:'benchmark/mmlu_pro_v1.yaml', path:'configs/benchmark/mmlu_pro_v1.yaml', what:'Says which dataset is used. Holds the file hashes.', why:'So the run uses the right question files.'},
+    {id:'agents-yaml', label:'models/agents_v7.yaml', path:'configs/models/agents_v7.yaml', what:'The final frozen settings of the five agents.', why:'load_model_registry() reads it to set up each agent.', note:'v1–v6 are old versions. They are kept because old runs refer to them.'}
+   ]},
+  {id:'src', label:'src/mad/', side:'R', color:'#4338ca', tint:'#e6e6fb',
+   what:'The main code. One job per file.', why:'The scripts call this code.',
+   leaves:[
+    {id:'benchmark', label:'benchmark.py', what:'Picks and freezes the 300 + 20 questions.', why:'So the question set does not change.', note:'Two functions: validate_benchmark_and_save_report() at line 224 and freeze_mmlu_pro_question_sets() at line 357. The main experiment script does not call them. This preparation is already done.'},
+    {id:'prompts', label:'prompts_v1.py', what:'Builds the messages sent to models.', why:'All agents must get the same messages. It also crashes if a question has an answer field.'},
+    {id:'api', label:'api_client.py', what:'Sends requests to OpenRouter. Retries once.', why:'The real internet call happens here.'},
+    {id:'cache', label:'cache.py', what:'Saves replies.', why:'So the same request is not paid twice.'},
+    {id:'parser', label:'parser_v1.py', what:'Reads the answer letter. Gives a status.', why:'The vote counts only answers with status OK.', note:'Statuses: OK, REFUSAL, TRUNCATED, PARSE_FAIL, API_ERROR.'},
+    {id:'database', label:'database.py', what:'Saves everything in results.sqlite.', why:'results.sqlite is the evidence.'},
+    {id:'voting', label:'voting.py', what:'The 3-out-of-5 vote.', why:'Each round ends with a vote.'},
+    {id:'runner', label:'runner.py', what:'Shared code for both rounds (run_one_agent).', why:'Round 1 and Round 2 use the same function.'},
+    {id:'round1', label:'round1.py', what:'Runs Round 1 for one question.', why:'In Round 1 each agent answers alone.'},
+    {id:'debate', label:'debate.py', what:'Runs Round 2. Also runs both rounds together.', why:'In Round 2 each agent sees the other four answers and answers again.'},
+    {id:'evaluation', label:'evaluation.py', what:'The ONLY file that reads the answer key. Computes accuracy and statistics.', why:'Scoring is kept in one place, away from the experiment.', note:'Linked to answer_keys: the only place answers are read.', ans:true},
+    {id:'viewer_data', label:'viewer_data.py', ...VIEWER},
+    {id:'public_viewer_data', label:'public_viewer_data.py', ...VIEWER},
+    {id:'debate_stage', label:'debate_stage.py', ...VIEWER},
+    {id:'diagnostics', label:'diagnostics.py', what:'Labels why an API call failed.', why:'So each failed call has a clear reason.'}
+   ]},
+  {id:'scripts', label:'scripts/', side:'L', color:'#0369a1', tint:'#dbeefa',
+   what:'Commands you run.', why:'They call the code in src/mad.',
+   leaves:[
+    {id:'run_round1', label:'1 · run_round1.py', what:'Runs 1 question, 1 round.', ...DEV(1), dev:true},
+    {id:'run_debate', label:'2 · run_debate.py', what:'Runs 1 question, 2 rounds.', ...DEV(2), dev:true},
+    {id:'run_pilot', label:'3 · run_pilot.py', what:'Runs 20 questions.', ...DEV(3), dev:true},
+    {id:'run_experiment', label:'4 · run_experiment.py', what:'Runs all 300 questions. Its main() starts everything.', ...DEV(4), dev:true},
+    {id:'evaluate_experiment', label:'evaluate_experiment.py', what:'Scores the run. Writes reports/.', why:'Scoring is a separate command. You run it later.'},
+    {id:'check_models', label:'check_models.py', ...CHECKS},
+    {id:'diagnose_pilot', label:'diagnose_pilot.py', ...CHECKS},
+    {id:'probe_mistral_hosts', label:'probe_mistral_hosts.py', ...CHECKS},
+    {id:'export_bundle', label:'export_public_viewer_bundle.py', ...PUBLIC},
+    {id:'check_deploy', label:'check_public_deployment.py', ...PUBLIC}
+   ]},
+  {id:'storage', label:'storage/', side:'L', color:'#475569', tint:'#e7eaef',
+   what:'Private storage. It is not in git.', why:'The run saves its data here.',
+   leaves:[
+    {id:'results', label:'results.sqlite', what:'The results database.', why:'It is the evidence. database.py saves everything here.'},
+    {id:'cachedb', label:'cache.sqlite', what:'The cache.', why:'Saved replies, so the same request is not paid twice.'},
+    {id:'backups', label:'backups/', what:'The backups folder.', why:'It holds backups.'}
+   ]},
+  {id:'reports', label:'reports/', side:'L', color:'#c2410c', tint:'#fde6d8',
+   what:'The final result tables: Markdown, JSON, 7 CSVs.', why:'evaluate_experiment.py writes the scores here.', leaves:[]},
+  {id:'app', label:'app/', side:'L', color:'#a21caf', tint:'#f8e1fa',
+   what:'The Streamlit viewer.', why:'To look at the results.',
+   leaves:[
+    {id:'viewer', label:'viewer.py', what:'A file of the Streamlit viewer.', why:'Part of the viewer app.'},
+    {id:'stage-html', label:'debate_stage.html', what:'An HTML file of the viewer.', why:'Part of the viewer app.'},
+    {id:'logos', label:'logos/', what:'A folder of logos.', why:'Part of the viewer app.'}
+   ]},
+  {id:'tests', label:'tests/', side:'L', color:'#15803d', tint:'#def3e3',
+   what:'554 tests. They need no internet.', why:'They check the code. Six of them need the private databases in storage/. Without those databases, 548 pass and 6 are skipped.',
+   leaves:[
+    {id:'leak-test', label:'test_no_answer_leakage.py', what:'The most important test.', why:'It tests that answers do not leak.'}
+   ]},
+  {id:'docs', label:'docs/', side:'L', color:'#7c5a2e', tint:'#f1e8da',
+   what:'Documents: decisions.md, development_log.md, pipeline.md and reports.', why:'A written record of the project.',
+   leaves:[
+    {id:'decisions', label:'decisions.md', what:'A document in docs/.', why:'Part of the written record.'},
+    {id:'devlog', label:'development_log.md', what:'A document in docs/.', why:'Part of the written record.'},
+    {id:'pipeline', label:'pipeline.md', what:'A document in docs/.', why:'Part of the written record.'},
+    {id:'docreports', label:'reports', what:'Reports kept in docs/.', why:'Part of the written record.'}
+   ]}
+];
+
+/* ---------- View 1 drawing ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+const map = document.getElementById('map');
+const mapNodes = {};
+function el(tag, attrs, parent){
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function clickable(g, fn){
+  g.setAttribute('tabindex','0');
+  g.setAttribute('role','button');
+  g.addEventListener('click', fn);
+  g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(); } });
+}
+function showFile(node, color){
+  document.querySelectorAll('#map .node.sel').forEach(n => n.classList.remove('sel'));
+  mapNodes[node.id].classList.add('sel');
+  panel.innerHTML =
+    `<span class="chip" style="background:${color}">${node.group}</span>` +
+    `<h2>${node.title}</h2><p class="loc">${node.path}</p>` +
+    `<h3>What it is</h3><p>${node.what}</p>` +
+    `<h3>Why it exists</h3><p>${node.why}</p>` +
+    (node.note ? `<h3>Note</h3><p>${node.note}</p>` : '');
+}
+function buildMap(){
+  const W = 1160, ROW = 28, GAP = 16, PAD = 18;
+  const LW = 222, LH = 22, FW = 112, FH = 30, CX = 560;
+  const X = {L:{leaf:24, folder:286}, R:{leaf:860, folder:722}};
+  const tot = {L:0, R:0};
+  FOLDERS.forEach(f => { f.rows = Math.max(f.leaves.length, 1); tot[f.side] += f.rows * ROW + GAP; });
+  tot.L -= GAP; tot.R -= GAP;
+  const H = Math.max(tot.L, tot.R) + PAD * 2;
+  const CY = H / 2;
+  map.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const edges = el('g', {fill:'none'}, map);
+  const nodes = el('g', {}, map);
+  const cur = {L: PAD + (H - PAD*2 - tot.L)/2, R: PAD + (H - PAD*2 - tot.R)/2};
+  const pos = {};
+
+  FOLDERS.forEach(f => {
+    const s = f.side, dir = s === 'R' ? 1 : -1;
+    const top = cur[s], fy = top + f.rows * ROW / 2;
+    cur[s] += f.rows * ROW + GAP;
+    const fx = X[s].folder;
+    const cEdge = CX + dir * 60, fIn = s === 'R' ? fx : fx + FW, fOut = s === 'R' ? fx + FW : fx;
+    el('path', {d:`M${cEdge} ${CY} C${cEdge + dir*55} ${CY} ${fIn - dir*55} ${fy} ${fIn} ${fy}`, stroke:f.color, 'stroke-width':3}, edges);
+
+    const g = el('g', {class:'node'}, nodes);
+    el('rect', {x:fx, y:fy - FH/2, width:FW, height:FH, rx:15, fill:f.color}, g);
+    el('text', {x:fx + FW/2, y:fy + 5, 'text-anchor':'middle', fill:'#fff', 'font-size':14.5, 'font-weight':700}, g).textContent = f.label;
+    mapNodes[f.id] = g;
+    const fn = {id:f.id, title:f.label, path:'folder', group:f.label, what:f.what, why:f.why, note:f.note};
+    clickable(g, () => showFile(fn, f.color));
+
+    f.leaves.forEach((lf, i) => {
+      const ly = top + i * ROW + ROW/2, lx = X[s].leaf;
+      const lIn = s === 'R' ? lx : lx + LW;
+      const col = lf.ans ? ANS.color : f.color, tint = lf.ans ? ANS.tint : f.tint;
+      el('path', {d:`M${fOut} ${fy} C${fOut + dir*16} ${fy} ${lIn - dir*16} ${ly} ${lIn} ${ly}`, stroke:f.color, 'stroke-width':1.4, opacity:.75}, edges);
+      const lg = el('g', {class:'node'}, nodes);
+      el('rect', {x:lx, y:ly - LH/2, width:LW, height:LH, rx:6, fill:tint, stroke:col, 'stroke-width':lf.ans ? 2 : 1.2}, lg);
+      el('text', {x:lx + 9, y:ly + 4.5, fill:lf.ans ? '#8f0e2e' : '#1b2230', 'font-size':13, 'font-weight':lf.ans ? 700 : 500}, lg).textContent = lf.label;
+      mapNodes[lf.id] = lg;
+      pos[lf.id] = {x:lx, y:ly};
+      const title = lf.label.replace(/^\d · /, '');
+      const node = {id:lf.id, title: lf.path ? title.replace('frozen/…/','') : title, path: lf.path || (f.label + title), group:f.label, what:lf.what, why:lf.why, note:lf.note};
+      clickable(lg, () => showFile(node, col));
+      if (lf.dev && i > 0) {
+        const py = top + (i-1) * ROW + ROW/2;
+        el('path', {d:`M13 ${py + 5} V${ly - 9}`, stroke:f.color, 'stroke-width':1.6}, edges);
+        el('path', {d:`M9 ${ly - 10} L13 ${ly - 3} L17 ${ly - 10} Z`, fill:f.color, stroke:'none'}, edges);
+      }
+    });
+  });
+
+  const cg = el('g', {class:'node'}, nodes);
+  el('rect', {x:CX - 60, y:CY - 24, width:120, height:48, rx:12, fill:'#1b2230'}, cg);
+  el('text', {x:CX, y:CY + 6, 'text-anchor':'middle', fill:'#fff', 'font-size':17, 'font-weight':700}, cg).textContent = CENTER.label;
+  mapNodes[CENTER.id] = cg;
+  clickable(cg, () => showFile({...CENTER, title:'Project', group:'Project'}, '#1b2230'));
+
+  const a = pos.keys, b = pos.evaluation, rx = a.x + LW;
+  el('path', {d:`M${rx} ${a.y} C${rx + 62} ${a.y} ${rx + 62} ${b.y} ${rx} ${b.y}`, stroke:ANS.color, 'stroke-width':2.4, 'stroke-dasharray':'7 5'}, edges);
+  const my = (a.y + b.y) / 2, tx = rx + 64;
+  el('text', {x:tx, y:my, transform:`rotate(90 ${tx} ${my})`, 'text-anchor':'middle', fill:ANS.color, 'font-size':13, 'font-weight':700}, nodes).textContent = 'the only place answers are read';
+}
+
+/* ---------- View 2 data ---------- */
+const NOTHING = 'Saves nothing.';
+const INSIDE = 'Saves nothing itself. The steps inside it save.';
+function agentKids(r){
+  const two = r === 2;
+  return [
+    {id:'lookup'+r, fn:'cache.lookup()', loc:'cache.py:100', called:'runner.py:405',
+     d:'Looks for a stored reply to this exact request.',
+     what:'Looks for a stored reply that matches this exact request.',
+     inside:['Cache hit: skip the API request. Continue to parsing and saving.', 'Cache miss: continue to complete().'],
+     saves:NOTHING, note:'The full name is ResponseCache.lookup().'},
+    {id:'complete'+r, fn:'complete()', tag:'only on cache miss', loc:'api_client.py:236', called:'runner.py:411',
+     d: two ? 'Packages this agent\'s Round 2 request.' : 'Packages the model name, messages and settings.',
+     what:'Builds the request as a Python dictionary (the payload): model, messages, temperature 0, and more. Later it unpacks the reply.',
+     inside:[
+       'A pinned provider adds "only": use only this host. A thinking limit is added only for Qwen. The seed is not used.',
+       'It hands the payload to _post_with_retries() and waits.',
+       'Then _parse_completion() (api_client.py:526) pulls out the text, finish reason, provider, tokens and cost. One CompletionResult goes back to run_one_agent().'
+     ],
+     saves:'Saves nothing. Attempt details stay in memory until db.record_response().',
+     note:'In the code the call is client.complete(). Live mode: OpenRouterClient.complete(). Dry run: FixtureClient.complete() (runner.py:291), a fake reply with no API request.',
+     kids:[
+       {id:'post'+r, fn:'_post_with_retries()', loc:'api_client.py:372', called:'api_client.py:271',
+        d:'Handles sending, waiting and permitted retries.',
+        what:'Sends the request and handles temporary failures.', saves:NOTHING,
+        safety:'Temporary errors (network, 429, 500, 502, 503) retry once, after about 2–3 seconds, with the same provider. Permanent errors do not retry.',
+        kids:[
+          {id:'http'+r, hot:true, fn:'self._session.post(...)', loc:'api_client.py:388',
+           d:'ACTUAL HTTP REQUEST TO OPENROUTER. Waits for the reply.',
+           what:'The real internet call. The route is: Python → OpenRouter → selected provider → model. The reply comes back the same way. Python waits on this line, up to 120 seconds.',
+           saves:NOTHING,
+           note:'The session is made once, at api_client.py:233–234. The API key from .env is attached there.'}
+        ]}
+     ]},
+    {id:'parse'+r, fn:'parse_response()', loc:'parser_v1.py:98', called:'runner.py:425',
+     d:'Extracts a usable answer letter or a failure status.',
+     what:'Finds "FINAL ANSWER: X". Gives a letter or a failure status. It checks if the reply is usable. It does NOT check if it is correct.',
+     saves:NOTHING, safety:'It never changes the raw text.',
+     note:'After an API failure there is no model reply to parse.'},
+    {id:'record'+r, fn:'db.record_response()', loc:'database.py:367', called:'runner.py:441', db:true,
+     d: two ? 'SAVES the response, attempt records and the peer IDs used.' : 'SAVES the response and its API-attempt records together.',
+     what:'Saves the response and its attempt records together.',
+     saves:'1 row in "model_responses": the reply or failure, status, letter, settings, usage and cost. Plus 1 row per API attempt in "response_attempts".' + (two ? ' In Round 2 also the peer IDs: which rows this agent saw.' : ''),
+     safety:'If the database save fails, processing stops. This save finishes before the next agent starts.',
+     note:'A failed API request is saved as API_ERROR. A cache hit saves a response record but no new attempt records.',
+     ex: two ? 'All five answered <b>A</b>' : 'Saved rows: <b>741</b> Llama C · <b>742</b> Qwen A · <b>743</b> Mistral C · <b>744</b> DeepSeek C · <b>745</b> Gemma A'},
+    {id:'store'+r, fn:'cache.store()', tag:'new model reply only', loc:'cache.py:121', called:'runner.py:445', db:true,
+     d:'Keeps the reply for possible reuse.',
+     what:'Puts a newly received model reply in the cache.', saves:'The cache.',
+     safety:'ONLY after the results record is saved. A failed request is not cached.'}
+  ];
+}
+const PREP = {cls:'sp', title:'PREPARATION', sub:'Already done · benchmark.py: check original data → select questions → save frozen files', kids:[
+  {id:'p1', fn:'validate_benchmark_and_save_report()', loc:'benchmark.py:224',
+   d:'Checks the original questions. Writes the validation report.',
+   what:'Checks the original questions. Writes the validation report.', saves:'The validation report.',
+   note:'The main experiment script does not call this.'},
+  {id:'p2', fn:'freeze_mmlu_pro_question_sets()', loc:'benchmark.py:357',
+   d:'Selects and saves the question sets, answer keys and metadata.',
+   what:'Selects and saves the question sets, the separate answer keys and the metadata.',
+   saves:'The question sets, answer keys and metadata files.',
+   note:'The main experiment script does not call this.'}
+]};
+const S0 = {cls:'s0', title:'STAGE 0', sub:'Before any question (once)', kids:[
+  {id:'main', fn:'main()', loc:'scripts/run_experiment.py:331', called:'run_experiment.py:534',
+   d:'Manages the whole experiment.',
+   what:'Manages the whole experiment. Every call in this stage happens inside main().',
+   inside:[
+     'Also inside main(), not drawn as boxes:',
+     'ensure_safe_database_path(). Called at line 377. Defined at runner.py:101. A dry run cannot use the production database.',
+     'production_database_path(). Called at line 379. Defined at runner.py:92. The default database path for live mode.',
+     'load_env_file(). Called at line 421. Defined at api_client.py:147. Environment settings for live API access.',
+     'ResultsDatabase(db_path). Called at line 445. Defined at database.py:289. Opens the database and checks or creates its schema. The variable db is this object.'
+   ],
+   saves:INSIDE,
+   kids:[
+    {id:'spend', fn:'require_spend_confirmation()', loc:'runner.py:71', called:'run_experiment.py:370',
+     d:'Checks that real spending was explicitly authorised.',
+     what:'Refuses a live (paid) run unless both flags are given.', saves:NOTHING,
+     safety:'No paid run without the two flags.'},
+    {id:'loadq', fn:'load_experimental_questions()', loc:'runner.py:201', called:'run_experiment.py:375',
+     d:'Loads and checks the frozen 300-question set.',
+     what:'Loads and checks the frozen 300-question set. The questions have no answers.', saves:NOTHING,
+     safety:'Checks: exactly 300, no duplicates, frozen order.'},
+    {id:'registry', fn:'load_model_registry()', loc:'api_client.py:176', called:'run_experiment.py:388',
+     d:'Loads the five models, providers and generation settings.',
+     what:'Reads agents_v7.yaml. Loads the five models, their providers and generation settings (temperature 0, token limit).', saves:NOTHING},
+    {id:'inspect', fn:'_inspect_existing_run()', loc:'run_experiment.py:162', called:'run_experiment.py:392',
+     d:'Checks a resume, or refuses an accidental second main run.',
+     what:'Checks a resume. Or refuses an accidental second main run in the same database.',
+     inside:['_question_states(). Called at run_experiment.py:202. Defined at run_experiment.py:102.',
+             'Complete questions are skipped. Questions with no records can start.'],
+     saves:NOTHING,
+     safety:'A partly recorded question causes a refusal. Nothing is deleted or overwritten.'},
+    {id:'routes', fn:'assert_registry_routes_available()', tag:'live mode', loc:'api_client.py:287', called:'run_experiment.py:427',
+     d:'Checks that the model-provider routes are available.',
+     what:'A free check. Is each configured model-provider route available?', saves:NOTHING,
+     safety:'It runs before any money is spent.'},
+    {id:'start', fn:'db.start_run()', loc:'database.py:326', called:'run_experiment.py:457', db:true,
+     d:'SAVES the run ID, versions and start time.',
+     what:'Adds the record of this experiment run.',
+     saves:'1 row in table "runs": run ID, versions, start time. The end time is empty.',
+     note:'On a resume, the script uses the existing run. It does not call start_run() again. No model answer has been requested yet.'}
+   ]}
+]};
+const RDQ = {id:'rdq', fn:'run_debate_question(question)', tag:'BOTH ROUNDS', loc:'debate.py:265', called:'run_experiment.py:477',
+  d:'Organises both rounds for this question. Checks that the run and round settings are compatible.',
+  what:'Organises both rounds for one question. main() gives it the question, registry, client, db, run ID, the two round configs and the cache.',
+  inside:[
+    'Compares the settings of the two rounds. Also checks the prompt version, the cache settings and that there are no parallel calls.',
+    'assert_run_is_open(), twice. Called at debate.py:331 and 332. Defined at runner.py:125.',
+    'run_round1_question(). Called at debate.py:334.',
+    'run_round2_question(). Called at debate.py:343.',
+    'Returns a DebateReport (debate.py:85): two short summaries. main() prints progress from it.'
+  ],
+  saves:INSIDE,
+  safety:'If the settings do not match, it raises RunnerError. If the run is not open, it stops. Both happen before any model request for this question.',
+  note:'The DebateReport is not the evidence. The evidence is already in the database.'};
+const S1 = {cls:'s1', title:'STAGE 1', sub:'Round 1 for one question', kids:[
+  {id:'r1q', fn:'run_round1_question(question)', tag:'ONE WHOLE ROUND', loc:'round1.py:73', called:'debate.py:334',
+   d:'Organises the whole first round: five agents, then one vote.',
+   what:'Organises the whole first round: five agents, then one vote.',
+   inside:['assert_run_is_open(). Called at round1.py:107. Defined at runner.py:125. It checks the round can write to this run.'],
+   saves:INSIDE,
+   kids:[
+    {id:'b1m', fn:'build_round1_messages(question)', loc:'prompts_v1.py:176', called:'round1.py:111',
+     d:'Builds the instructions + question + lettered options.',
+     what:'Makes 2 messages: instructions + the question with lettered options. All 5 agents get the same messages.',
+     inside:['format_question(). Called at prompts_v1.py:180. Defined at prompts_v1.py:161.',
+             'assert_no_answer_key(). Called at prompts_v1.py:163. Defined at prompts_v1.py:130.'],
+     saves:NOTHING,
+     safety:'assert_no_answer_key() stops everything if the question has an answer-key field.'},
+    {loop:'FOR EACH OF 5 AGENTS, ONE BY ONE', sub:'round1.py:117–118 · Llama → Qwen → Mistral → DeepSeek → Gemma', kids:[
+      {id:'roa1', big:true, fn:'run_one_agent()', tag:'ONE AGENT', loc:'runner.py:381', called:'round1.py:118',
+       d:'Coordinates obtaining, parsing and saving ONE agent\'s result.',
+       what:'Coordinates one agent: cache lookup, request, parsing and saving. Both rounds use this same function.',
+       saves:'db.record_response() and cache.store() save.',
+       safety:'API failure: it records API_ERROR and continues to the next agent.',
+       kids:agentKids(1)}
+    ]},
+    {id:'tally1', fn:'tally()', loc:'voting.py:84', called:'round1.py:134',
+     d:'Counts valid letters. Needs three matching votes.',
+     what:'Counts only OK letters. 5 same = UNANIMOUS. 3–4 same = CONSENSUS. Fewer than 3 valid = INSUFFICIENT_ANSWERS. Otherwise NO_CONSENSUS. The threshold is always 3.',
+     saves:NOTHING, ex:'Round 1 vote: <b>CONSENSUS C</b> (wrong)'},
+    {id:'out1', fn:'record_round_outcome()', loc:'runner.py:460', called:'round1.py:135',
+     d:'Prepares the group-outcome record.',
+     what:'Prepares the group-outcome record. The next call saves it.', saves:'Saves nothing itself. db.record_outcome() saves.',
+     kids:[
+      {id:'dbout1', fn:'db.record_outcome()', loc:'database.py:397', called:'runner.py:470', db:true,
+       d:'SAVES the Round 1 vote.',
+       what:'Saves the Round 1 vote.', saves:'1 row in "question_outcomes" (round 1 vote).',
+       safety:'It does NOT save whether the vote is correct.'}
+     ]}
+   ]}
+]};
+const S2 = {cls:'s2', title:'STAGE 2', sub:'Round 2 for the same question', kids:[
+  {id:'r2q', fn:'run_round2_question(question)', tag:'ONE WHOLE ROUND', loc:'debate.py:170', called:'debate.py:343',
+   d:'Organises the whole second round: reconsideration, then another vote.',
+   what:'Organises the whole second round: the agents reconsider, then there is another vote.',
+   inside:['assert_run_is_open(). Called at debate.py:203. Defined at runner.py:125.'],
+   saves:INSIDE,
+   kids:[
+    {id:'valid', fn:'valid_round1_responses()', loc:'debate.py:114', called:'debate.py:207',
+     d:'Needs all five saved records. Selects the replies marked OK.',
+     what:'Reads the Round 1 rows back from the database. It needs all five records. It selects the replies marked OK.',
+     saves:NOTHING,
+     safety:'A missing Round 1 record stops the question. A recorded failure does not stop it, but that failed reply is never shown to others.'},
+    {loop:'FOR EACH OF 5 AGENTS, ONE BY ONE', sub:'debate.py:217–224', kids:[
+      {id:'peers', fn:'peers_for()', loc:'debate.py:149', called:'debate.py:217',
+       d:'Selects the OTHER agents\' valid Round 1 replies.',
+       what:'Selects the other agents\' valid Round 1 replies.', saves:NOTHING,
+       safety:'Never the agent\'s own reply.',
+       ex:'Llama saw rows <b>[742, 743, 744, 745]</b>'},
+      {id:'b2m', fn:'build_round2_messages()', loc:'prompts_v1.py:184', called:'debate.py:218',
+       d:'Builds question + own usable earlier reply + anonymous peers.',
+       what:'Instructions + question + the agent\'s OWN usable Round 1 reply (as its own earlier message) + up to four anonymous peer replies ("PEER RESPONSE 1–4").',
+       inside:['format_question(). Called at prompts_v1.py:197. Defined at prompts_v1.py:161.',
+               'That calls assert_no_answer_key() again (prompts_v1.py:163, defined at 130).'],
+       saves:NOTHING,
+       safety:'No model names. The Round 1 vote is NOT shown. Agents see Round 1 replies only, never new Round 2 replies.'},
+      {id:'roa2', big:true, fn:'run_one_agent()', tag:'ONE AGENT', loc:'runner.py:381 · the SAME function as Round 1', called:'debate.py:224',
+       d:'Coordinates obtaining, parsing and saving ONE revised result.',
+       what:'The same function as in Round 1. It coordinates one revised result: cache lookup, request, parsing and saving.',
+       saves:'db.record_response() and cache.store() save. Here the peer IDs are saved too.',
+       safety:'API failure: it records API_ERROR and continues to the next agent.',
+       kids:agentKids(2)}
+    ]},
+    {id:'tally2', fn:'tally()', loc:'voting.py:84', called:'debate.py:242',
+     d:'Counts revised valid letters. Same threshold of three.',
+     what:'The same vote, on the revised letters. The threshold is still 3.',
+     saves:NOTHING, ex:'Round 2 vote: <b>UNANIMOUS A</b> (correct)'},
+    {id:'out2', fn:'record_round_outcome()', loc:'runner.py:460', called:'debate.py:243',
+     d:'Prepares the second group-outcome record.',
+     what:'Prepares the second group-outcome record. The next call saves it.', saves:'Saves nothing itself. db.record_outcome() saves.',
+     kids:[
+      {id:'dbout2', fn:'db.record_outcome()', loc:'database.py:397', called:'runner.py:470', db:true,
+       d:'SAVES the Round 2 vote.',
+       what:'Saves the Round 2 vote.', saves:'1 more row in "question_outcomes" (round 2 vote). It is saved separately from the round 1 vote.'}
+     ]}
+   ]}
+]};
+const S3 = {cls:'s3', title:'STAGE 3', sub:'After all 300 questions (once)', kids:[
+  {id:'states', fn:'_question_states()', loc:'run_experiment.py:102', called:'run_experiment.py:494',
+   d:'Checks that every required response and vote record exists.',
+   what:'Checks that every required record exists: for each of the 300 questions, 10 responses and 2 votes.', saves:NOTHING,
+   safety:'If not, the run stays unfinished.',
+   note:'A recorded failure counts as a completed response record.'},
+  {id:'finish', fn:'db.finish_run()', loc:'database.py:353', called:'run_experiment.py:505', db:true,
+   d:'SAVES the run\'s completion time.',
+   what:'Adds the end time of the run.', saves:'The end time, in the "runs" row.',
+   safety:'This is the only update in the whole database.'}
+]};
+const S4 = {cls:'s4', title:'STAGE 4', sub:'Later · a separate evaluation command', kids:[
+  {id:'emain', fn:'main()', loc:'scripts/evaluate_experiment.py:506', called:'evaluate_experiment.py:554',
+   d:'Organises the offline evaluation.',
+   what:'Organises the offline evaluation.', saves:INSIDE,
+   safety:'Evaluation makes no model calls.',
+   kids:[
+    {id:'evaldb', fn:'evaluate_database()', loc:'evaluate_experiment.py:114', called:'evaluate_experiment.py:521',
+     d:'Checks the accepted run and the unchanged database fingerprint.',
+     what:'Checks the accepted run and that the database fingerprint is unchanged. Then it starts the evaluation.', saves:NOTHING,
+     kids:[
+      {id:'key', fn:'load_answer_key()', loc:'evaluation.py:337', called:'evaluate_experiment.py:125',
+       d:'Loads the separate correct answers.',
+       what:'Loads the separate correct answers.', saves:NOTHING,
+       safety:'This is the FIRST time the answers are opened.'},
+      {id:'evalrun', fn:'evaluate_run()', loc:'evaluation.py:363', called:'evaluate_experiment.py:137',
+       d:'Compares stored answers with the key and calculates the measures.',
+       what:'Checks the required records. Compares the stored answers with the key. Computes accuracy, bootstrap and McNemar.',
+       saves:NOTHING, safety:'It does not change the database.',
+       ex:'Counted as <b>"became correct"</b>'}
+     ]},
+    {id:'export', fn:'export_report()', loc:'evaluate_experiment.py:463', called:'evaluate_experiment.py:522', db:true,
+     d:'SAVES the report, JSON summary and CSV tables.',
+     what:'Writes the result files.',
+     saves:'reports/: the Markdown report, the JSON summary and the CSV tables.',
+     safety:'It does not replace saved responses or votes.'}
+   ]}
+]};
+
+/* ---------- View 2 drawing ---------- */
+const STEP = {};
+const stagesEl = document.getElementById('stages');
+const ARR = '<div class="arr"></div>';
+function boxHTML(s){
+  STEP[s.id] = s;
+  return `<div class="row"><button class="box${s.hot ? ' hot' : ''}" type="button" data-step="${s.id}">` +
+    `<span class="fn">${s.fn}${s.tag ? ` <span class="tg">${s.tag}</span>` : ''}</span>` +
+    (s.db ? DB_ICON : '') +
+    (s.loc ? `<span class="lc">${s.loc}</span>` : '') +
+    `<span class="ds">${s.d}</span>` +
+    `</button>${s.ex ? `<div class="ex">${s.ex}</div>` : ''}</div>`;
+}
+function list(kids){ return kids.map(tree).join(ARR); }
+function tree(s){
+  if (s.loop) return `<div class="loopbox"><div class="lt">${s.loop} <small>· ${s.sub}</small></div>${list(s.kids)}</div>`;
+  if (s.big) return `<div class="big">${boxHTML(s)}<div class="steps">${list(s.kids)}</div></div>`;
+  return boxHTML(s) + (s.kids ? `<div class="kids">${list(s.kids)}</div>` : '');
+}
+function stage(st){
+  return `<section class="stage ${st.cls}"><header>${st.title} <span>· ${st.sub}</span></header>${list(st.kids)}</section>`;
+}
+function buildFlow(){
+  const between = '<div class="arr between"></div>';
+  const later = t => `<div class="arr between later"><span>${t}</span></div>`;
+  stagesEl.innerHTML =
+    stage(PREP) + later('the experiment uses these files') +
+    stage(S0) + between +
+    '<div class="markrow"><span class="mark">Take question 1</span></div>' + between +
+    `<div class="both">${boxHTML(RDQ)}${ARR}${stage(S1)}${ARR}${stage(S2)}</div>` + between +
+    '<div class="markrow"><span class="mark" id="nextq">↺ Return to main() · next question → repeat both rounds (300 times)</span></div>' + between +
+    stage(S3) + later('later, a separate command') +
+    stage(S4);
+  stagesEl.addEventListener('click', e => {
+    const b = e.target.closest('.box');
+    if (!b) return;
+    stagesEl.querySelectorAll('.box.sel').forEach(x => x.classList.remove('sel'));
+    b.classList.add('sel');
+    const s = STEP[b.dataset.step];
+    panel.innerHTML = `<h2>${s.fn}</h2>` +
+      (s.loc ? `<p class="loc">Defined at ${s.loc}</p>` : '') +
+      (s.called ? `<p class="loc">Called at ${s.called}</p>` : '') +
+      `<h3>What it does</h3><p>${s.what}</p>` +
+      (s.inside ? `<h3>Inside it</h3><ul>${s.inside.map(x => `<li>${x}</li>`).join('')}</ul>` : '') +
+      `<h3>Saves to</h3><p>${s.saves}</p>` +
+      (s.safety ? `<h3>Safety check</h3><p class="safety">${s.safety}</p>` : '') +
+      (s.note ? `<h3>Note</h3><p>${s.note}</p>` : '');
+  });
+}
+
+const flow = document.getElementById('flow');
+const rails = document.getElementById('rails');
+function rail(src, dst, x, label, dashed){
+  const c = flow.getBoundingClientRect(), a = src.getBoundingClientRect(), b = dst.getBoundingClientRect();
+  const y1 = a.top + a.height/2 - c.top, y2 = b.top + b.height/2 - c.top;
+  const xs = a.left - c.left, xd = b.left - c.left, r = 8;
+  const d = `M${xs} ${y1} H${x + r} Q${x} ${y1} ${x} ${y1 - r} V${y2 + r} Q${x} ${y2} ${x + r} ${y2} H${xd - 9}`;
+  const my = (y1 + y2) / 2, tx = x - 6;
+  return `<path d="${d}" fill="none" stroke="#1b2230" stroke-width="2"${dashed ? ' stroke-dasharray="6 4"' : ''}/>` +
+    `<path d="M${xd - 10} ${y2 - 5} L${xd - 1} ${y2} L${xd - 10} ${y2 + 5} Z" fill="#1b2230"/>` +
+    `<text x="${tx}" y="${my}" transform="rotate(-90 ${tx} ${my})" text-anchor="middle" font-size="12.5" font-weight="600" fill="#1b2230" font-family="IBM Plex Sans, sans-serif">${label}</text>`;
+}
+function drawRails(){
+  const c = flow.getBoundingClientRect();
+  if (!c.width) return;
+  rails.setAttribute('width', c.width);
+  rails.setAttribute('height', c.height);
+  const q = id => stagesEl.querySelector(`[data-step="${id}"]`);
+  rails.innerHTML =
+    rail(document.getElementById('nextq'), q('rdq'), 20, 'next question (300 times)', false) +
+    rail(q('roa2'), q('roa1'), 50, 'same function', true);
+}
+
+/* ---------- Tabs and toggle ---------- */
+const views = {files:document.getElementById('view-files'), journey:document.getElementById('view-journey')};
+const tabs = {files:document.getElementById('tab-files'), journey:document.getElementById('tab-journey')};
+const exwrap = document.getElementById('exwrap');
+function show(name){
+  for (const k in views) {
+    views[k].hidden = k !== name;
+    tabs[k].setAttribute('aria-selected', String(k === name));
+  }
+  exwrap.hidden = name !== 'journey';
+  document.querySelectorAll('.sel').forEach(n => n.classList.remove('sel'));
+  panel.innerHTML = HINTS[name];
+  if (name === 'journey') drawRails();
+}
+function route(){ show(location.hash === '#journey' ? 'journey' : 'files'); }
+tabs.files.addEventListener('click', () => { location.hash = 'files'; show('files'); });
+tabs.journey.addEventListener('click', () => { location.hash = 'journey'; show('journey'); });
+window.addEventListener('hashchange', route);
+document.getElementById('extoggle').addEventListener('change', e => {
+  document.body.classList.toggle('show-ex', e.target.checked);
+  drawRails();
+});
+
+buildMap();
+buildFlow();
+route();
+if (window.ResizeObserver) new ResizeObserver(drawRails).observe(flow);
+window.addEventListener('resize', drawRails);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawRails);
+</script>
+</body>
+</html>
